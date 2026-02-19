@@ -13,7 +13,8 @@ import time
 import signal
 import sys
 import logging
-import psycopg2
+from app.db import get_session, engine
+from app.models.orm_models import WorkerAudit, Inspection as InspectionORM
 import redis
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -35,28 +36,7 @@ signal.signal(signal.SIGINT, handle_signal)
 signal.signal(signal.SIGTERM, handle_signal)
 
 
-def ensure_audit_table(conn):
-    cur = conn.cursor()
-    cur.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS worker_audit (
-            id SERIAL PRIMARY KEY,
-            item TEXT,
-            processed_at TIMESTAMP DEFAULT now()
-        );
-        '''
-    )
-    conn.commit()
-    cur.close()
-
-
-def process_item(item, conn):
-    # Placeholder for real processing logic: parse item, call APIs, update records, etc.
-    logger.info('Processing item: %s', item)
-    cur = conn.cursor()
-    cur.execute('INSERT INTO worker_audit(item) VALUES (%s)', (item,))
-    conn.commit()
-    cur.close()
+# note: legacy psycopg2-based helpers removed; worker now uses SQLAlchemy ORM
 
 
 def main():
@@ -65,38 +45,39 @@ def main():
     # Use blocking loop to pop items
     logger.info('Worker started. Connecting to Redis: %s', REDIS_URL)
 
-    # Establish DB connection once and reuse
-    conn = None
+    # Ensure tables exist (simple helper) - for production use Alembic
+    try:
+        # create tables if they don't exist
+        from app.db import Base
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        logger.exception('Failed to create tables via SQLAlchemy')
+
     while not SHUTDOWN:
         try:
-            if conn is None:
-                conn = psycopg2.connect(DATABASE_URL)
-                ensure_audit_table(conn)
-
             item = r.lpop(QUEUE_KEY)
             if item:
-                process_item(item, conn)
+                # process and write audit row via SQLAlchemy
+                session = get_session()
+                try:
+                    logger.info('Processing item: %s', item)
+                    ins = session.get(InspectionORM, item)
+                    # Insert audit row with the raw item for now
+                    audit = WorkerAudit(item=item)
+                    session.add(audit)
+                    session.commit()
+                    logger.info('Inserted audit row for item: %s', item)
+                finally:
+                    session.close()
             else:
                 # no item -> sleep briefly
                 time.sleep(1)
         except Exception as e:
             logger.exception('Error in worker loop: %s', e)
-            # close and retry connection after short backoff
-            try:
-                if conn:
-                    conn.close()
-            except Exception:
-                pass
-            conn = None
             time.sleep(5)
 
     # graceful shutdown
     logger.info('Worker exiting, closing connections')
-    try:
-        if conn:
-            conn.close()
-    except Exception:
-        pass
     try:
         r.close()
     except Exception:

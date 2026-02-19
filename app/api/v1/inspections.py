@@ -1,9 +1,14 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Optional
 from app.models import inspection_models
+from app.db import get_session
+from app.models.orm_models import Inspection as InspectionORM
+import uuid
+import os
 
 router = APIRouter()
+
 
 class CreateInspectionRequest(BaseModel):
     batch_id: str
@@ -13,37 +18,74 @@ class CreateInspectionRequest(BaseModel):
     defect_count: int = 0
     notes: Optional[str]
 
+
 @router.post("/", response_model=inspection_models.InspectionOut)
 def create_inspection(req: CreateInspectionRequest, background_tasks: BackgroundTasks):
-    # TODO: persist to DB
-    inspection = inspection_models.InspectionOut(
-        id="ins-1",
-        batch_id=req.batch_id,
-        operator_id=req.operator_id,
-        status=req.status,
-        defect_count=req.defect_count,
-        notes=req.notes,
-        created_at="2026-02-18T00:00:00Z"
-    )
-    # simulate background processing (notifications, event publish)
-    background_tasks.add_task(_post_create_actions, inspection.dict())
-    return inspection
+    """Persist an inspection and enqueue it for background processing.
 
-async def _post_create_actions(inspection_payload: dict):
+    This endpoint writes the inspection to Postgres and pushes the
+    inspection ID onto the Redis queue `worker:queue` for the worker to
+    consume.
+    """
+    # persist to DB
+    session = get_session()
+    try:
+        ins_id = f"ins-{uuid.uuid4().hex[:12]}"
+        ins = InspectionORM(
+            id=ins_id,
+            batch_id=req.batch_id,
+            operator_id=req.operator_id,
+            status=req.status,
+            defect_count=req.defect_count,
+            notes=req.notes,
+        )
+        session.add(ins)
+        session.commit()
+        session.refresh(ins)
+
+        # enqueue for worker
+        try:
+            import redis as _redis
+            redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+            r = _redis.from_url(redis_url, decode_responses=True)
+            r.rpush('worker:queue', ins.id)
+        except Exception:
+            # enqueue failure should not break API response; log via background task
+            background_tasks.add_task(_post_create_actions, {'id': ins.id})
+
+        return inspection_models.InspectionOut(
+            id=ins.id,
+            batch_id=ins.batch_id,
+            operator_id=ins.operator_id,
+            status=ins.status,
+            defect_count=ins.defect_count,
+            notes=ins.notes,
+            created_at=ins.created_at.isoformat() if ins.created_at is not None else None,
+        )
+    finally:
+        session.close()
+
+
+def _post_create_actions(inspection_payload: dict):
     # placeholder for event publish to Redis/Kafka or workflow trigger
     print("[worker] post create actions", inspection_payload)
 
+
 @router.get("/{inspection_id}", response_model=inspection_models.InspectionOut)
 def get_inspection(inspection_id: str):
-    # TODO: fetch from DB
-    if inspection_id != "ins-1":
-        raise HTTPException(status_code=404, detail="Not found")
-    return inspection_models.InspectionOut(
-        id="ins-1",
-        batch_id="batch-123",
-        operator_id="op-1",
-        status="pass",
-        defect_count=0,
-        notes=None,
-        created_at="2026-02-18T00:00:00Z"
-    )
+    session = get_session()
+    try:
+        ins = session.get(InspectionORM, inspection_id)
+        if not ins:
+            raise HTTPException(status_code=404, detail="Not found")
+        return inspection_models.InspectionOut(
+            id=ins.id,
+            batch_id=ins.batch_id,
+            operator_id=ins.operator_id,
+            status=ins.status,
+            defect_count=ins.defect_count,
+            notes=ins.notes,
+            created_at=ins.created_at.isoformat() if ins.created_at is not None else None,
+        )
+    finally:
+        session.close()
