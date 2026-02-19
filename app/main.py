@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import PlainTextResponse, RedirectResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from app.api.v1 import inspections, documents, telemetry
 import time
 import os
@@ -42,6 +43,14 @@ except Exception:
 from redis.asyncio import Redis
 
 app = FastAPI(title="Quality Control Monolith", version="0.1.0")
+
+# mount dev UI static files at /ui
+# Use an absolute path based on this file location so static files are found
+# regardless of the process working directory (Render can change the CWD).
+from pathlib import Path
+_here = Path(__file__).resolve().parent
+static_dir = str(_here / 'static')
+app.mount("/ui", StaticFiles(directory=static_dir, html=True), name="ui")
 
 # Prometheus metrics (real or no-op depending on availability)
 REQUEST_COUNT = Counter('qc_requests_total', 'Total API requests', ['method', 'endpoint', 'http_status'])
