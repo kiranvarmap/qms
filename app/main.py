@@ -1,15 +1,49 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import PlainTextResponse
 from app.api.v1 import inspections, documents, telemetry
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, Gauge
 import time
 import os
-from redis.asyncio import Redis
 from typing import Optional
+
+# Attempt to import prometheus_client but tolerate its absence at import time.
+# This prevents a hard crash during startup if dependencies are out-of-sync
+# (e.g., a build that didn't install the package yet). We provide simple
+# no-op fallbacks so the rest of the app can run; the /metrics endpoint
+# will return 503 when real metrics are not available.
+try:
+    from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, Gauge
+    METRICS_AVAILABLE = True
+except Exception:
+    METRICS_AVAILABLE = False
+
+    class _DummyMetric:
+        def labels(self, *a, **k):
+            return self
+
+        def inc(self, *a, **k):
+            return None
+
+        def observe(self, *a, **k):
+            return None
+
+        def set(self, *a, **k):
+            return None
+
+    # Provide light-weight no-op replacements so code using metrics doesn't explode
+    Counter = lambda *a, **k: _DummyMetric()
+    Histogram = lambda *a, **k: _DummyMetric()
+    Gauge = lambda *a, **k: _DummyMetric()
+
+    def generate_latest():
+        return b""
+
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+
+from redis.asyncio import Redis
 
 app = FastAPI(title="Quality Control Monolith", version="0.1.0")
 
-# Prometheus metrics
+# Prometheus metrics (real or no-op depending on availability)
 REQUEST_COUNT = Counter('qc_requests_total', 'Total API requests', ['method', 'endpoint', 'http_status'])
 REQUEST_LATENCY = Histogram('qc_request_latency_seconds', 'Request latency', ['endpoint'])
 WORKER_QUEUE_LENGTH = Gauge('worker_queue_length', 'Approximate number of items in background worker queue')
