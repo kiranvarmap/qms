@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse, JSONResponse
 from app.api.v1 import inspections, documents, telemetry
 import time
 import os
@@ -116,6 +116,39 @@ async def metrics():
 app.include_router(inspections.router, prefix="/api/v1/inspections", tags=["inspections"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])
+
+
+@app.get("/")
+async def root_redirect():
+    """Redirect root to the interactive docs for convenience."""
+    return RedirectResponse(url="/docs")
+
+
+@app.get('/_dev/audit/latest')
+async def latest_audit(n: int = 10):
+    """Return the last `n` rows from worker_audit table. This is a dev-only
+    convenience endpoint to verify worker processing and DB writes.
+    """
+    # Keep imports local to avoid import-time failures in environments
+    # where psycopg2 isn't installed (we already guard health checks similarly).
+    try:
+        import os as _os
+        import psycopg2 as _psycopg2
+        DATABASE_URL = _os.getenv('DATABASE_URL')
+        if not DATABASE_URL:
+            return JSONResponse({'error': 'DATABASE_URL not configured'}, status_code=400)
+
+        conn = _psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute('SELECT id, item, processed_at FROM worker_audit ORDER BY processed_at DESC LIMIT %s', (n,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        results = [{'id': r[0], 'item': r[1], 'processed_at': r[2].isoformat() if r[2] is not None else None} for r in rows]
+        return JSONResponse(results)
+    except Exception as ex:
+        return JSONResponse({'error': str(type(ex).__name__), 'detail': str(ex)}, status_code=500)
 
 
 @app.get("/healthz")
