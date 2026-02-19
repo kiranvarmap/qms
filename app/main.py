@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import PlainTextResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from app.api.v1 import inspections, documents, telemetry
+from app.api.v1 import inspections, documents, telemetry, products, operators, defects, signatures, stats, auth
 import time
 import os
 from typing import Optional
@@ -86,6 +86,30 @@ async def startup_event():
     except Exception as _mig_err:
         print(f'[startup] Migration warning (non-fatal): {_mig_err}')
 
+    # --- seed default admin user ---
+    try:
+        from app.db import get_session
+        from app.models.orm_models import User
+        from sqlalchemy import select
+        from app.api.v1.auth import _hash_password
+        import uuid as _uuid
+        _s = get_session()
+        existing = _s.execute(select(User).where(User.username == 'admin')).scalars().first()
+        if not existing:
+            _s.add(User(
+                id=f"usr-{_uuid.uuid4().hex[:12]}",
+                username='admin',
+                hashed_password=_hash_password('admin123'),
+                full_name='System Admin',
+                role='admin',
+            ))
+            _s.commit()
+            print('[startup] Default admin user created (username: admin, password: admin123)')
+        _s.close()
+    except Exception as _seed_err:
+        print(f'[startup] Seed warning (non-fatal): {_seed_err}')
+
+
     global redis_client
     # Support both a REDIS_URL (Render-managed Redis) or REDIS_HOST/REDIS_PORT env vars
     redis_url = os.getenv("REDIS_URL")
@@ -145,6 +169,12 @@ async def metrics():
 app.include_router(inspections.router, prefix="/api/v1/inspections", tags=["inspections"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])
+app.include_router(products.router, prefix="/api/v1", tags=["products"])
+app.include_router(operators.router, prefix="/api/v1/operators", tags=["operators"])
+app.include_router(defects.router, prefix="/api/v1/defects", tags=["defects"])
+app.include_router(signatures.router, prefix="/api/v1/inspections", tags=["signatures"])
+app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 
 
 @app.get("/")

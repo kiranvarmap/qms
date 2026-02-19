@@ -1,64 +1,63 @@
-import { useState, useEffect } from 'react'
-import { getAuditRows } from '../api.js'
+import { useState, useEffect, useRef } from 'react'
+import { getAuditRows } from '../api'
 
 export default function AuditLog() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
+  const timerRef = useRef(null)
 
   const load = () => {
-    setLoading(true)
-    setErr(null)
-    getAuditRows(50)
-      .then(setRows)
-      .catch(e => setErr(e.message))
-      .finally(() => setLoading(false))
+    getAuditRows().then(d => setRows(Array.isArray(d) ? d : d.items || [])).catch(console.error).finally(() => setLoading(false))
   }
 
   useEffect(() => {
     load()
-    const t = setInterval(load, 5000) // auto-refresh every 5s
-    return () => clearInterval(t)
+    timerRef.current = setInterval(load, 5000)
+    return () => clearInterval(timerRef.current)
   }, [])
 
   return (
     <div className="page">
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
-        <h2>Worker Audit Log</h2>
-        <button className="btn btn-primary btn-sm" onClick={load}>↻ Refresh</button>
+      <div className="page-header">
+        <h2>Audit Log</h2>
+        <span style={{ color: 'var(--muted)', fontSize: 13 }}>Auto-refresh every 5s</span>
       </div>
-      <p style={{color:'#6b7280', marginBottom:16, fontSize:13}}>
-        Auto-refreshes every 5 seconds. Shows items processed by the background worker.
-      </p>
-
-      {err && <div className="alert alert-error">{err}</div>}
-
-      <div className="card" style={{padding:0}}>
-        {loading && rows.length === 0 ? (
-          <p style={{padding:24}}>Loading...</p>
-        ) : rows.length === 0 ? (
-          <p style={{padding:24, color:'#6b7280'}}>No audit rows yet. Create an inspection first.</p>
-        ) : (
+      {loading ? <span className="spinner" /> : (
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Item (Inspection ID)</th>
-                <th>Processed At</th>
+                <th>Event</th><th>Inspection</th><th>Worker</th><th>Status</th><th>Message</th><th>Timestamp</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
-                <tr key={r.id}>
-                  <td>{r.id}</td>
-                  <td style={{fontFamily:'monospace', fontSize:12}}>{r.item}</td>
-                  <td style={{fontSize:12, color:'#6b7280'}}>{r.processed_at ? new Date(r.processed_at).toLocaleString() : '-'}</td>
+              {rows.length === 0 && (
+                <tr><td colSpan={6}><div className="empty">No audit entries yet</div></td></tr>
+              )}
+              {rows.map((r, i) => (
+                <tr key={r.id || i}>
+                  <td><span className="badge" style={{ background: '#e0e7ff', color: '#3730a3' }}>{r.event_type || 'event'}</span></td>
+                  <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{r.inspection_id || '—'}</td>
+                  <td>{r.worker_id || '—'}</td>
+                  <td>
+                    {r.status === 'ok'
+                      ? <span className="badge badge-pass">ok</span>
+                      : r.status === 'error'
+                        ? <span className="badge badge-fail">error</span>
+                        : <span className="badge">{r.status || '—'}</span>}
+                  </td>
+                  <td style={{ color: 'var(--muted)', fontSize: 12, maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.message || r.payload || '—'}
+                  </td>
+                  <td style={{ color: 'var(--muted)', fontSize: 12 }}>
+                    {r.created_at?.slice(0, 19).replace('T', ' ') || '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
