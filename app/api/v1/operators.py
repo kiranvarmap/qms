@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 class OperatorIn(BaseModel):
-    employee_id: str
+    employee_id: Optional[str] = None
     name: str
     email: Optional[str] = None
     department: Optional[str] = None
@@ -19,7 +19,7 @@ class OperatorIn(BaseModel):
 
 class OperatorOut(BaseModel):
     id: str
-    employee_id: str
+    employee_id: Optional[str]
     name: str
     email: Optional[str]
     department: Optional[str]
@@ -66,7 +66,8 @@ def create_operator(req: OperatorIn):
     try:
         op = Operator(
             id=f"op-{uuid.uuid4().hex[:12]}",
-            employee_id=req.employee_id, name=req.name,
+            employee_id=req.employee_id or f"EMP-{uuid.uuid4().hex[:6].upper()}",
+            name=req.name,
             email=req.email, department=req.department, role=req.role,
         )
         session.add(op)

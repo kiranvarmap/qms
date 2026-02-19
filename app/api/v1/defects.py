@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 class DefectTypeIn(BaseModel):
-    code: str
+    code: Optional[str] = None
     name: str
     description: Optional[str] = None
     severity: str = "minor"  # minor | major | critical
@@ -18,7 +18,7 @@ class DefectTypeIn(BaseModel):
 
 class DefectTypeOut(BaseModel):
     id: str
-    code: str
+    code: Optional[str]
     name: str
     description: Optional[str]
     severity: str
@@ -60,7 +60,7 @@ def create_defect_type(req: DefectTypeIn):
     try:
         dt = DefectType(
             id=f"dt-{uuid.uuid4().hex[:12]}",
-            code=req.code, name=req.name,
+            code=req.code or f"DT-{uuid.uuid4().hex[:6].upper()}", name=req.name,
             description=req.description, severity=req.severity,
         )
         session.add(dt)

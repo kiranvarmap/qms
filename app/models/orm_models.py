@@ -12,7 +12,7 @@ from app.db import Base
 class Product(Base):
     __tablename__ = 'products'
     id = Column(String(64), primary_key=True, index=True)
-    sku = Column(String(128), unique=True, nullable=False)
+    sku = Column(String(128), unique=True, nullable=True)
     name = Column(String(256), nullable=False)
     category = Column(String(128), nullable=True)
     description = Column(Text, nullable=True)
@@ -28,10 +28,12 @@ class Product(Base):
 class Batch(Base):
     __tablename__ = 'batches'
     id = Column(String(64), primary_key=True, index=True)
-    product_id = Column(String(64), ForeignKey('products.id'), nullable=False)
+    product_id = Column(String(64), ForeignKey('products.id'), nullable=True)
     batch_number = Column(String(128), unique=True, nullable=False)
     quantity = Column(Integer, default=0)
     production_date = Column(DateTime(timezone=True), nullable=True)
+    expiry_date = Column(String(32), nullable=True)
+    status = Column(String(32), default='active', nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -45,7 +47,7 @@ class Batch(Base):
 class Operator(Base):
     __tablename__ = 'operators'
     id = Column(String(64), primary_key=True, index=True)
-    employee_id = Column(String(64), unique=True, nullable=False)
+    employee_id = Column(String(64), unique=True, nullable=True)
     name = Column(String(256), nullable=False)
     email = Column(String(256), unique=True, nullable=True)
     department = Column(String(128), nullable=True)

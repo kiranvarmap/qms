@@ -12,7 +12,7 @@ router = APIRouter()
 # ── Products ──────────────────────────────────────────────────────────────
 
 class ProductIn(BaseModel):
-    sku: str
+    sku: Optional[str] = None
     name: str
     category: Optional[str] = None
     description: Optional[str] = None
@@ -20,7 +20,7 @@ class ProductIn(BaseModel):
 
 class ProductOut(BaseModel):
     id: str
-    sku: str
+    sku: Optional[str]
     name: str
     category: Optional[str]
     description: Optional[str]
@@ -86,20 +86,23 @@ def delete_product(product_id: str):
 # ── Batches ──────────────────────────────────────────────────────────────
 
 class BatchIn(BaseModel):
-    product_id: str
+    product_id: Optional[str] = None
     batch_number: str
     quantity: int = 0
     production_date: Optional[str] = None
+    expiry_date: Optional[str] = None
     notes: Optional[str] = None
 
 
 class BatchOut(BaseModel):
     id: str
-    product_id: str
+    product_id: Optional[str]
     product_name: Optional[str]
     batch_number: str
     quantity: int
     production_date: Optional[str]
+    expiry_date: Optional[str]
+    status: Optional[str]
     notes: Optional[str]
     created_at: Optional[str]
 
@@ -120,9 +123,10 @@ def list_batches():
 def create_batch(req: BatchIn):
     session = get_session()
     try:
-        prod = session.get(Product, req.product_id)
-        if not prod:
-            raise HTTPException(400, "Product not found")
+        if req.product_id:
+            prod = session.get(Product, req.product_id)
+            if not prod:
+                raise HTTPException(400, "Product not found")
         from datetime import datetime
         prod_date = None
         if req.production_date:
@@ -132,7 +136,7 @@ def create_batch(req: BatchIn):
                 pass
         b = Batch(id=f"batch-{uuid.uuid4().hex[:12]}", product_id=req.product_id,
                   batch_number=req.batch_number, quantity=req.quantity,
-                  production_date=prod_date, notes=req.notes)
+                  production_date=prod_date, expiry_date=req.expiry_date, notes=req.notes)
         session.add(b)
         session.commit()
         session.refresh(b)
@@ -174,6 +178,8 @@ def _batch_out(b: Batch) -> BatchOut:
         batch_number=b.batch_number,
         quantity=b.quantity or 0,
         production_date=b.production_date.isoformat() if b.production_date else None,
+        expiry_date=b.expiry_date if hasattr(b, 'expiry_date') else None,
+        status=b.status if hasattr(b, 'status') else 'active',
         notes=b.notes,
         created_at=b.created_at.isoformat() if b.created_at else None,
     )
