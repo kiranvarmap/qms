@@ -4,7 +4,8 @@ uvicorn[standard]==0.21.1
 SQLAlchemy==2.0.19
 psycopg2-binary==2.9.6
 alembic==1.11.1
-pydantic==1.10.7
+# Pydantic v2 required by recent FastAPI releases
+pydantic==2.7.0
 python-multipart==0.0.6
 boto3==1.28.46
 python-dotenv==1.0.0
