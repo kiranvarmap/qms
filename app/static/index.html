@@ -41,6 +41,24 @@
     </section>
 
     <section>
+      <h3>Create Inspection</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:720px">
+        <input id="ins-batch" placeholder="batch_id" />
+        <input id="ins-operator" placeholder="operator_id" />
+        <select id="ins-status">
+          <option value="pass">pass</option>
+          <option value="fail">fail</option>
+        </select>
+        <input id="ins-defects" type="number" placeholder="defect_count" value="0" />
+        <input id="ins-notes" placeholder="notes" />
+        <div class="row">
+          <button id="btn-create">Create Inspection</button>
+        </div>
+        <pre id="out-create">(not created)</pre>
+      </div>
+    </section>
+
+    <section>
       <h3>Audit Rows (last n)</h3>
       <div class="row">
         <input id="audit-n" type="number" value="10" style="width:80px" />
