@@ -8,7 +8,8 @@ router = APIRouter()
 class CreateInspectionRequest(BaseModel):
     batch_id: str
     operator_id: str
-    status: str = Field(..., regex='^(pass|fail)$')
+    # pydantic v2 removed `regex` kwarg; use `pattern` instead
+    status: str = Field(..., pattern='^(pass|fail)$')
     defect_count: int = 0
     notes: Optional[str]
 
