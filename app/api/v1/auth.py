@@ -58,6 +58,7 @@ class LoginResponse(BaseModel):
     username: str
     role: str
     full_name: Optional[str]
+    is_admin: bool = False
 
 
 class RegisterRequest(BaseModel):
@@ -75,10 +76,17 @@ def login(req: LoginRequest):
             select(User).where(User.username == req.username, User.active == True)
         ).scalars().first()
         if not user or user.hashed_password != _hash_password(req.password):
-            raise HTTPException(401, "Invalid credentials")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
         token = _make_token(user.id, user.username, user.role)
-        return LoginResponse(token=token, user_id=user.id, username=user.username,
-                             role=user.role, full_name=user.full_name)
+        return LoginResponse(
+            token=token, user_id=user.id, username=user.username,
+            role=user.role, full_name=user.full_name,
+            is_admin=(user.role == 'admin'),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")
     finally:
         session.close()
 
@@ -105,9 +113,40 @@ def register(req: RegisterRequest):
         session.refresh(user)
         token = _make_token(user.id, user.username, user.role)
         return LoginResponse(token=token, user_id=user.id, username=user.username,
-                             role=user.role, full_name=user.full_name)
+                             role=user.role, full_name=user.full_name,
+                             is_admin=(user.role == 'admin'))
     finally:
         session.close()
+
+
+@router.get("/debug")
+def debug_auth():
+    """Temporary debug endpoint — shows DB state for auth troubleshooting."""
+    from sqlalchemy import text
+    from app.db import engine
+    try:
+        with engine.connect() as conn:
+            # check if table exists
+            tables = conn.execute(text(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+            )).fetchall()
+            table_names = [r[0] for r in tables]
+            users_exist = 'users' in table_names
+            user_count = 0
+            admin_exists = False
+            if users_exist:
+                user_count = conn.execute(text("SELECT COUNT(*) FROM users")).scalar()
+                admin_exists = conn.execute(
+                    text("SELECT COUNT(*) FROM users WHERE username='admin'")
+                ).scalar() > 0
+            return {
+                "tables": table_names,
+                "users_table_exists": users_exist,
+                "user_count": user_count,
+                "admin_exists": admin_exists,
+            }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/me")
