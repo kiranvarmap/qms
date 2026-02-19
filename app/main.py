@@ -86,6 +86,27 @@ async def startup_event():
     except Exception as _mig_err:
         print(f'[startup] Migration warning (non-fatal): {_mig_err}')
 
+    # --- ensure users table exists via raw SQL (resilient fallback) ---
+    try:
+        from app.db import engine as _engine
+        from sqlalchemy import text as _text
+        with _engine.connect() as _conn:
+            _conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id VARCHAR(64) PRIMARY KEY,
+                    username VARCHAR(128) NOT NULL UNIQUE,
+                    hashed_password VARCHAR(256) NOT NULL,
+                    full_name VARCHAR(256),
+                    role VARCHAR(64) NOT NULL DEFAULT 'operator',
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """))
+            _conn.commit()
+        print('[startup] users table ensured')
+    except Exception as _tbl_err:
+        print(f'[startup] users table warning: {_tbl_err}')
+
     # --- seed default admin user ---
     try:
         from app.db import get_session
@@ -102,9 +123,12 @@ async def startup_event():
                 hashed_password=_hash_password('admin123'),
                 full_name='System Admin',
                 role='admin',
+                active=True,
             ))
             _s.commit()
             print('[startup] Default admin user created (username: admin, password: admin123)')
+        else:
+            print(f'[startup] Admin user already exists: {existing.username}')
         _s.close()
     except Exception as _seed_err:
         print(f'[startup] Seed warning (non-fatal): {_seed_err}')
