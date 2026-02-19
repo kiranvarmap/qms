@@ -14,14 +14,21 @@ export default function Login({ onLogin }) {
     try {
       const data = await login(username, password)
       if (data.token) {
+        const user = {
+          username: data.username,
+          role: data.role,
+          full_name: data.full_name,
+          is_admin: data.is_admin,
+          user_id: data.user_id,
+        }
         localStorage.setItem('qms_token', data.token)
-        localStorage.setItem('qms_user', JSON.stringify(data.user))
-        onLogin(data.user)
+        localStorage.setItem('qms_user', JSON.stringify(user))
+        onLogin(user)
       } else {
         setError(data.detail || 'Login failed')
       }
-    } catch {
-      setError('Invalid credentials')
+    } catch (err) {
+      setError(err?.message || 'Invalid credentials')
     } finally {
       setLoading(false)
     }
