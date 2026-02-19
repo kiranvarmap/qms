@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>QMS Dev UI</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Roboto, Arial; padding: 24px; }
+      h1 { font-size: 20px }
+      pre { background:#f6f8fa; padding:12px; border-radius:6px }
+      button { margin:6px 0 }
+      .row { display:flex; gap:12px; align-items:center }
+    </style>
+  </head>
+  <body>
+    <h1>Quality Monolith — Dev UI</h1>
+
+    <section>
+      <h3>Service Health</h3>
+      <div class="row">
+        <button id="btn-health">Check /healthz</button>
+        <pre id="out-health">(not checked)</pre>
+      </div>
+    </section>
+
+    <section>
+      <h3>Metrics</h3>
+      <div class="row">
+        <button id="btn-metrics">Fetch /metrics (first 200 chars)</button>
+        <pre id="out-metrics">(not fetched)</pre>
+      </div>
+    </section>
+
+    <section>
+      <h3>Worker Queue</h3>
+      <div class="row">
+        <input id="queue-item" placeholder="item value" style="flex:1" />
+        <button id="btn-push">Push to queue</button>
+      </div>
+      <pre id="out-push">(not pushed)</pre>
+    </section>
+
+    <section>
+      <h3>Audit Rows (last n)</h3>
+      <div class="row">
+        <input id="audit-n" type="number" value="10" style="width:80px" />
+        <button id="btn-audit">Fetch latest audit rows</button>
+      </div>
+      <pre id="out-audit">(not fetched)</pre>
+    </section>
+
+    <script src="/ui/app.js"></script>
+  </body>
+</html>
