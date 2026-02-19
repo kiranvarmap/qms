@@ -1,13 +1,38 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from app.models import inspection_models
 from app.db import get_session
 from app.models.orm_models import Inspection as InspectionORM
+from sqlalchemy import select
 import uuid
 import os
 
 router = APIRouter()
+
+
+@router.get("/", response_model=List[inspection_models.InspectionOut])
+def list_inspections():
+    """Return all inspections ordered by creation time descending."""
+    session = get_session()
+    try:
+        rows = session.execute(
+            select(InspectionORM).order_by(InspectionORM.created_at.desc())
+        ).scalars().all()
+        return [
+            inspection_models.InspectionOut(
+                id=r.id,
+                batch_id=r.batch_id,
+                operator_id=r.operator_id,
+                status=r.status,
+                defect_count=r.defect_count,
+                notes=r.notes,
+                created_at=r.created_at.isoformat() if r.created_at else None,
+            )
+            for r in rows
+        ]
+    finally:
+        session.close()
 
 
 class CreateInspectionRequest(BaseModel):

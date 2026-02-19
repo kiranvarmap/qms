@@ -52,6 +52,11 @@ _here = Path(__file__).resolve().parent
 static_dir = str(_here / 'static')
 app.mount("/ui", StaticFiles(directory=static_dir, html=True), name="ui")
 
+# Mount the built React SPA at /app (built by `npm run build` in webui/)
+_react_dist = _here / 'static' / 'ui'
+if _react_dist.exists():
+    app.mount("/app", StaticFiles(directory=str(_react_dist), html=True), name="react_app")
+
 # Prometheus metrics (real or no-op depending on availability)
 REQUEST_COUNT = Counter('qc_requests_total', 'Total API requests', ['method', 'endpoint', 'http_status'])
 REQUEST_LATENCY = Histogram('qc_request_latency_seconds', 'Request latency', ['endpoint'])
@@ -66,6 +71,21 @@ redis_client: Optional[Redis] = None
 
 @app.on_event("startup")
 async def startup_event():
+    # --- run DB migrations automatically on startup ---
+    try:
+        import sys as _sys
+        _sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+        from alembic.config import Config as _AlembicConfig
+        from alembic import command as _alembic_command
+        _cfg = _AlembicConfig(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+        db_url = os.getenv('DATABASE_URL')
+        if db_url:
+            _cfg.set_main_option('sqlalchemy.url', db_url)
+        _alembic_command.upgrade(_cfg, 'head')
+        print('[startup] DB migrations applied')
+    except Exception as _mig_err:
+        print(f'[startup] Migration warning (non-fatal): {_mig_err}')
+
     global redis_client
     # Support both a REDIS_URL (Render-managed Redis) or REDIS_HOST/REDIS_PORT env vars
     redis_url = os.getenv("REDIS_URL")
@@ -129,8 +149,10 @@ app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetr
 
 @app.get("/")
 async def root_redirect():
-    """Redirect root to the interactive docs for convenience."""
-    return RedirectResponse(url="/docs")
+    """Redirect root to the React app if built, otherwise the dev UI."""
+    from pathlib import Path as _Path
+    react_built = (_Path(__file__).resolve().parent / 'static' / 'ui' / 'index.html').exists()
+    return RedirectResponse(url="/app" if react_built else "/ui")
 
 
 @app.get('/_dev/audit/latest')
