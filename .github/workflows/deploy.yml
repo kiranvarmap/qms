@@ -1,0 +1,59 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  IMAGE_NAME: qc-monolith
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.REGISTRY_HOST }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.REGISTRY_HOST }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Set image and rollout
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // This step assumes you have set KUBE_CONFIG_DATA secret (base64 kubeconfig)
+            const exec = require('@actions/exec');
+            const fs = require('fs');
+            fs.writeFileSync('kubeconfig', Buffer.from(process.env.KUBE_CONFIG_DATA, 'base64'));
+            process.env.KUBECONFIG = 'kubeconfig';
+            const image = `${process.env.REGISTRY_HOST}/${process.env.IMAGE_NAME}:${process.env.GITHUB_SHA}`;
+            (async () => {
+              await exec.exec('kubectl', ['set', 'image', 'deployment/qc-monolith', `qc-monolith=${image}` ]);
+              await exec.exec('kubectl', ['rollout', 'status', 'deployment/qc-monolith', '--timeout=120s']);
+            })();
+        env:
+          REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+  
+  rollback-on-failed-rollout:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: failure()
+    steps:
+      - name: Attempt rollback
+        run: |
+          echo "Rollout failed — triggering kubectl rollout undo"
+          echo $KUBE_CONFIG_DATA | base64 --decode > kubeconfig
+          export KUBECONFIG=kubeconfig
+          kubectl rollout undo deployment/qc-monolith || true
