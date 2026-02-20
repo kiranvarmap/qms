@@ -6,7 +6,7 @@ export default function AuditLog() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api('/audit-log?limit=100').catch(() => []).then(d => {
+    api('/stats/audit-log?limit=100').catch(() => []).then(d => {
       setRows(Array.isArray(d) ? d : [])
       setLoading(false)
     })

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
+import { api } from './api.js'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Inspections from './pages/Inspections'
 import CreateInspection from './pages/CreateInspection'
@@ -8,24 +10,39 @@ import Products from './pages/Products'
 import Operators from './pages/Operators'
 import Defects from './pages/Defects'
 import AuditLog from './pages/AuditLog'
+import Documents from './pages/Documents'
+import DocumentDetail from './pages/DocumentDetail'
+import MyTasks from './pages/MyTasks'
+import UsersAdmin from './pages/UsersAdmin'
 
-const NAV = [
-  { to:'/dashboard',  label:'Dashboard',    icon:'⬛' },
-  { to:'/inspections',label:'Inspections',  icon:'🔍' },
-  { to:'/products',   label:'Products',     icon:'📦' },
-  { to:'/operators',  label:'Operators',    icon:'👷' },
-  { to:'/defects',    label:'Defect Types', icon:'⚠' },
-  { to:'/audit',      label:'Audit Log',    icon:'📋' },
+const NAV_MAIN = [
+  { to:'/dashboard',   label:'Dashboard',    icon:'⬛' },
+  { to:'/inspections', label:'Inspections',  icon:'🔍' },
+  { to:'/products',    label:'Products',     icon:'📦' },
+  { to:'/operators',   label:'Operators',    icon:'👷' },
+  { to:'/defects',     label:'Defect Types', icon:'⚠️' },
+  { to:'/audit',       label:'Audit Log',    icon:'📋' },
 ]
 
 function Shell({ user, onLogout }) {
   const nav = useNavigate()
+  const [taskCount, setTaskCount] = useState(0)
+  const isAdmin = user?.role === 'admin' || user?.role === 'manager'
+
+  useEffect(() => {
+    api('/documents/my-tasks').then(data => {
+      const pending = Array.isArray(data) ? data.filter(t => t.status === 'pending').length : 0
+      setTaskCount(pending)
+    }).catch(() => {})
+  }, [])
+
   const logout = () => {
     localStorage.removeItem('qms_token')
     localStorage.removeItem('qms_user')
     onLogout()
     nav('/login')
   }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -43,12 +60,37 @@ function Shell({ user, onLogout }) {
 
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Navigation</div>
-          {NAV.map(n => (
+          {NAV_MAIN.map(n => (
             <NavLink key={n.to} to={n.to} className={({isActive}) => `sidebar-item${isActive?' active':''}`}>
               <span className="sidebar-icon">{n.icon}</span>
               {n.label}
             </NavLink>
           ))}
+
+          <div className="sidebar-section-label" style={{marginTop:'1rem'}}>Workflows</div>
+
+          <NavLink to="/my-tasks" className={({isActive}) => `sidebar-item${isActive?' active':''}`}>
+            <span className="sidebar-icon">✍️</span>
+            My Tasks
+            {taskCount > 0 && (
+              <span style={{marginLeft:'auto',background:'rgba(245,158,11,0.9)',color:'#000',borderRadius:'999px',padding:'1px 7px',fontSize:'0.7rem',fontWeight:800,lineHeight:1.6}}>{taskCount}</span>
+            )}
+          </NavLink>
+
+          <NavLink to="/documents" className={({isActive}) => `sidebar-item${isActive?' active':''}`}>
+            <span className="sidebar-icon">📄</span>
+            Documents
+          </NavLink>
+
+          {isAdmin && (
+            <>
+              <div className="sidebar-section-label" style={{marginTop:'1rem'}}>Admin</div>
+              <NavLink to="/users-admin" className={({isActive}) => `sidebar-item${isActive?' active':''}`}>
+                <span className="sidebar-icon">👥</span>
+                User Management
+              </NavLink>
+            </>
+          )}
         </nav>
 
         <div className="sidebar-footer">
@@ -74,6 +116,10 @@ function Shell({ user, onLogout }) {
           <Route path="/operators" element={<Operators />} />
           <Route path="/defects" element={<Defects />} />
           <Route path="/audit" element={<AuditLog />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/documents/:id" element={<DocumentDetail />} />
+          <Route path="/my-tasks" element={<MyTasks />} />
+          {isAdmin && <Route path="/users-admin" element={<UsersAdmin />} />}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -92,6 +138,7 @@ export default function App() {
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={u => setUser(u)} />
         } />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/*" element={
           user ? <Shell user={user} onLogout={() => setUser(null)} /> : <Navigate to="/login" replace />
         } />

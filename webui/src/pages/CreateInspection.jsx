@@ -20,7 +20,7 @@ export default function CreateInspection() {
     Promise.all([
       api('/batches').catch(() => []),
       api('/operators').catch(() => []),
-      api('/defect-types').catch(() => []),
+      api('/defects/types').catch(() => []),
     ]).then(([b, o, d]) => {
       setBatches(Array.isArray(b) ? b : [])
       setOperators(Array.isArray(o) ? o : [])
@@ -49,7 +49,7 @@ export default function CreateInspection() {
       if (!ins?.id) throw new Error('Create failed')
       for (const d of defects) {
         if (!d.defect_type_id) continue
-        await api(`/inspections/${ins.id}/defects`, {
+        await api(`/defects/inspection/${ins.id}`, {
           method:'POST',
           body: JSON.stringify({ defect_type_id: parseInt(d.defect_type_id), quantity: parseInt(d.quantity)||1, notes: d.notes })
         }).catch(() => {})

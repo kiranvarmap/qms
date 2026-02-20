@@ -155,9 +155,13 @@ async def startup_event():
             """CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(64) PRIMARY KEY,
                 username VARCHAR(128) NOT NULL UNIQUE,
+                email VARCHAR(256) UNIQUE,
                 hashed_password VARCHAR(256) NOT NULL,
                 full_name VARCHAR(256),
                 role VARCHAR(64) NOT NULL DEFAULT 'operator',
+                approval_status VARCHAR(32) NOT NULL DEFAULT 'approved',
+                approved_by VARCHAR(64),
+                approved_at TIMESTAMPTZ,
                 active BOOLEAN NOT NULL DEFAULT TRUE,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             )""",
@@ -182,6 +186,33 @@ async def startup_event():
                 revoked_at TIMESTAMPTZ,
                 revoked_by VARCHAR(256)
             )""",
+            """CREATE TABLE IF NOT EXISTS signoff_documents (
+                id VARCHAR(64) PRIMARY KEY,
+                title VARCHAR(256) NOT NULL,
+                description TEXT,
+                batch_id VARCHAR(64),
+                batch_number VARCHAR(128),
+                created_by VARCHAR(64),
+                created_by_name VARCHAR(256),
+                status VARCHAR(32) NOT NULL DEFAULT 'draft',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS sign_requests (
+                id VARCHAR(64) PRIMARY KEY,
+                document_id VARCHAR(64) REFERENCES signoff_documents(id) ON DELETE CASCADE,
+                assigned_to_id VARCHAR(64),
+                assigned_to_name VARCHAR(256) NOT NULL,
+                assigned_to_role VARCHAR(64) NOT NULL DEFAULT 'operator',
+                assigned_to_email VARCHAR(256),
+                sign_order INTEGER DEFAULT 1,
+                status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                signed_at TIMESTAMPTZ,
+                signed_by_ip VARCHAR(64),
+                notes TEXT,
+                rejection_reason TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
             "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS severity VARCHAR(32) DEFAULT 'minor'",
             "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
             "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS event_type VARCHAR(128)",
@@ -191,6 +222,10 @@ async def startup_event():
             "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS message TEXT",
             "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS payload TEXT",
             "ALTER TABLE signatures ADD COLUMN IF NOT EXISTS notes TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(256)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(32) DEFAULT 'approved'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by VARCHAR(64)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ",
         ]
         with _engine.connect() as _conn:
             for _stmt in _all_ddl:
@@ -295,7 +330,6 @@ app.include_router(defects.router, prefix="/api/v1/defects", tags=["defects"])
 app.include_router(signatures.router, prefix="/api/v1/inspections", tags=["signatures"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
-
 
 @app.get("/")
 async def root_redirect():

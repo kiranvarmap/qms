@@ -11,7 +11,7 @@ export default function Defects() {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
 
-  const load = () => api('/defect-types').catch(() => []).then(d => {
+  const load = () => api('/defects/types').catch(() => []).then(d => {
     setRows(Array.isArray(d) ? d : [])
     setLoading(false)
   })
@@ -27,7 +27,7 @@ export default function Defects() {
     e.preventDefault()
     setSaving(true)
     try {
-      const res = await api('/defect-types', { method:'POST', body: JSON.stringify(form) })
+      const res = await api('/defects/types', { method:'POST', body: JSON.stringify(form) })
       if (!res?.id) throw new Error('Failed')
       showToast('Defect type created!')
       setModal(false)

@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from sqlalchemy import select, func
+from typing import Optional
 from app.db import get_session
 from app.models.orm_models import Inspection, DefectType, InspectionDefect, WorkerAudit
 
@@ -85,16 +86,53 @@ def get_stats():
 
         return {
             "total_inspections": total,
+            "pass_count": passes,
+            "fail_count": fails,
+            "pending_count": pending,
+            "in_review_count": in_review,
             "pass": passes,
             "fail": fails,
             "pending": pending,
-            "in_review": in_review,
             "pass_rate": pass_rate,
             "fail_rate": fail_rate,
+            "avg_defects_per_ins": avg_defects,
             "avg_defects_per_inspection": avg_defects,
+            "total_defects": session.execute(select(func.sum(InspectionDefect.quantity)).select_from(InspectionDefect)).scalar() or 0,
+            "total_products": 0,
+            "total_operators": 0,
             "top_defects": top_defects,
             "recent_activity": recent,
             "trend": trend_list,
         }
+    finally:
+        session.close()
+
+
+@router.get("/summary")
+def get_summary():
+    """Alias for / - used by dashboard."""
+    return get_stats()
+
+
+@router.get("/audit-log")
+def get_audit_log(limit: int = Query(100, le=500)):
+    session = get_session()
+    try:
+        rows = session.execute(
+            select(WorkerAudit).order_by(WorkerAudit.created_at.desc()).limit(limit)
+        ).scalars().all()
+        return [
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "inspection_id": r.inspection_id,
+                "worker_id": r.worker_id,
+                "status": r.status,
+                "message": r.message,
+                "item": r.item,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ]
     finally:
         session.close()

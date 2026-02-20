@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { login } from '../api'
 
 export default function Login({ onLogin }) {
@@ -56,6 +57,9 @@ export default function Login({ onLogin }) {
         </form>
         <p style={{textAlign:'center',marginTop:20,fontSize:12,color:'rgba(255,255,255,.3)'}}>
           Default: admin / admin123
+        <p style={{textAlign:'center',marginTop:12,fontSize:12,color:'rgba(255,255,255,.3)'}}>
+          New user? <Link to="/signup" style={{color:'#818cf8',textDecoration:'none',fontWeight:600}}>Request access</Link>
+        </p>
         </p>
       </div>
     </div>
