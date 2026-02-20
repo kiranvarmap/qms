@@ -100,19 +100,28 @@ function PdfViewer({ docId, signRequests, currentUserId, currentUserName, curren
     const cy = (e.clientY - rect.top) * (canvasRef.current.height / rect.height)
     const cw = canvasRef.current.width
     const ch = canvasRef.current.height
-    const hit = signRequests.find(sr =>
-      (sr.placeholder_page || 1) === pageNum &&
-      sr.placeholder_x != null &&
-      sr.status === 'pending' && (
-        sr.assigned_to_id === currentUserId ||
-        sr.assigned_to_name?.toLowerCase() === (currentUserName||'').toLowerCase() ||
-        sr.assigned_to_email === currentUserEmail
-      ) &&
-      cx >= sr.placeholder_x/100*cw &&
-      cx <= (sr.placeholder_x + sr.placeholder_w)/100*cw &&
-      cy >= sr.placeholder_y/100*ch &&
-      cy <= (sr.placeholder_y + sr.placeholder_h)/100*ch
-    )
+    const hit = signRequests.find(sr => {
+      if ((sr.placeholder_page || 1) !== pageNum) return false
+      if (sr.placeholder_x == null) return false
+      if (sr.status !== 'pending') return false
+      // same logic as isMyRequest
+      const uid    = currentUserId
+      const srName = (sr.assigned_to_name  || '').toLowerCase().trim()
+      const srEmail= (sr.assigned_to_email || '').toLowerCase().trim()
+      const myName = (currentUserName  || '').toLowerCase().trim()
+      const myEmail= (currentUserEmail || '').toLowerCase().trim()
+      const isMe =
+        (uid && sr.assigned_to_id && sr.assigned_to_id === uid) ||
+        (myEmail && srEmail && myEmail === srEmail) ||
+        (myName && srName && myName === srName)
+      if (!isMe) return false
+      return (
+        cx >= sr.placeholder_x/100*cw &&
+        cx <= (sr.placeholder_x + sr.placeholder_w)/100*cw &&
+        cy >= sr.placeholder_y/100*ch &&
+        cy <= (sr.placeholder_y + sr.placeholder_h)/100*ch
+      )
+    })
     if (hit) onSign(hit)
   }
 
@@ -213,15 +222,20 @@ export default function DocumentDetail() {
   // Robust "is this sign-request mine?" helper
   function isMyRequest(r) {
     if (!r) return false
-    const uid = user.user_id || user.id || user.sub
-    const myName = (user.full_name || user.username || '').toLowerCase().trim()
-    const myEmail = (user.email || '').toLowerCase().trim()
+    const uid      = user.user_id || user.id || user.sub
+    const myEmail  = (user.email    || '').toLowerCase().trim()
+    const myName   = (user.full_name|| '').toLowerCase().trim()
+    const myUser   = (user.username || '').toLowerCase().trim()
+    const srEmail  = (r.assigned_to_email || '').toLowerCase().trim()
+    const srName   = (r.assigned_to_name  || '').toLowerCase().trim()
+    // 1. Hard id match (most reliable — only works if assigned_to_id was set at creation)
     if (uid && r.assigned_to_id && r.assigned_to_id === uid) return true
-    if (myEmail && r.assigned_to_email && r.assigned_to_email.toLowerCase() === myEmail) return true
-    if (myName && r.assigned_to_name && r.assigned_to_name.toLowerCase().trim() === myName) return true
-    // username match fallback
-    const myUsername = (user.username || '').toLowerCase().trim()
-    if (myUsername && r.assigned_to_name && r.assigned_to_name.toLowerCase().trim() === myUsername) return true
+    // 2. Email match
+    if (myEmail && srEmail && myEmail === srEmail) return true
+    // 3. Full name match
+    if (myName && srName && myName === srName) return true
+    // 4. Username match (when admin types the username as the signer name)
+    if (myUser && srName && myUser === srName) return true
     return false
   }
 

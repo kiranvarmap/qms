@@ -301,7 +301,7 @@ function CreateDocModal({ onClose, onCreated }) {
 
   useEffect(() => {
     api('/batches').catch(() => []).then(d => setBatches(Array.isArray(d) ? d : []))
-    api('/auth/users').catch(() => []).then(d => setUsersList(Array.isArray(d) ? d : []))
+    api('/auth/users/basic').catch(() => []).then(d => setUsersList(Array.isArray(d) ? d : []))
   }, [])
 
   const setF = k => e => setForm(f => ({ ...f, [k]: e.target.value }))

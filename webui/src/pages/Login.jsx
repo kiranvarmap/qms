@@ -19,6 +19,7 @@ export default function Login({ onLogin }) {
           username:  data.username,
           role:      data.role,
           full_name: data.full_name,
+          email:     data.email,
           is_admin:  data.is_admin,
           user_id:   data.user_id,
         }

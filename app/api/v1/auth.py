@@ -185,6 +185,33 @@ def list_users(authorization: Optional[str] = Header(None)):
         session.close()
 
 
+class UserBasic(BaseModel):
+    id: str
+    username: str
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: str = 'operator'
+
+
+@router.get("/users/basic", response_model=List[UserBasic])
+def list_users_basic(authorization: Optional[str] = Header(None)):
+    """Minimal user list for any authenticated user — used for signer lookup/autocomplete."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Not authenticated")
+    token_data = decode_token(authorization[7:])
+    if not token_data:
+        raise HTTPException(401, "Invalid or expired token")
+    session = get_session()
+    try:
+        rows = session.execute(
+            select(User).where(User.approval_status == 'approved').order_by(User.full_name)
+        ).scalars().all()
+        return [UserBasic(id=r.id, username=r.username, full_name=r.full_name,
+                          email=getattr(r, 'email', None), role=r.role) for r in rows]
+    finally:
+        session.close()
+
+
 @router.patch("/users/{user_id}/approval")
 def approve_user(user_id: str, req: ApprovalRequest, authorization: Optional[str] = Header(None)):
     admin = _require_admin(authorization)
