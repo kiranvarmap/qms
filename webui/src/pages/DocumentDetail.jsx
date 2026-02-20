@@ -18,7 +18,7 @@ const DOC_STATUS = {
 }
 
 /* ─── PDF Viewer with signature overlays ─────────────── */
-function PdfViewer({ docId, signRequests, currentUserId, currentUserName, onSign }) {
+function PdfViewer({ docId, signRequests, currentUserId, currentUserName, currentUserEmail, onSign }) {
   const canvasRef = useRef(null)
   const [pdfDoc, setPdfDoc] = useState(null)
   const [pageNum, setPageNum] = useState(1)
@@ -105,7 +105,8 @@ function PdfViewer({ docId, signRequests, currentUserId, currentUserName, onSign
       sr.placeholder_x != null &&
       sr.status === 'pending' && (
         sr.assigned_to_id === currentUserId ||
-        sr.assigned_to_name?.toLowerCase() === (currentUserName||'').toLowerCase()
+        sr.assigned_to_name?.toLowerCase() === (currentUserName||'').toLowerCase() ||
+        sr.assigned_to_email === currentUserEmail
       ) &&
       cx >= sr.placeholder_x/100*cw &&
       cx <= (sr.placeholder_x + sr.placeholder_w)/100*cw &&
@@ -209,6 +210,21 @@ export default function DocumentDetail() {
 
   const user = (() => { try { return JSON.parse(localStorage.getItem('qms_user')||'{}') } catch { return {} } })()
 
+  // Robust "is this sign-request mine?" helper
+  function isMyRequest(r) {
+    if (!r) return false
+    const uid = user.user_id || user.id || user.sub
+    const myName = (user.full_name || user.username || '').toLowerCase().trim()
+    const myEmail = (user.email || '').toLowerCase().trim()
+    if (uid && r.assigned_to_id && r.assigned_to_id === uid) return true
+    if (myEmail && r.assigned_to_email && r.assigned_to_email.toLowerCase() === myEmail) return true
+    if (myName && r.assigned_to_name && r.assigned_to_name.toLowerCase().trim() === myName) return true
+    // username match fallback
+    const myUsername = (user.username || '').toLowerCase().trim()
+    if (myUsername && r.assigned_to_name && r.assigned_to_name.toLowerCase().trim() === myUsername) return true
+    return false
+  }
+
   function showToast(msg, type='success') {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
@@ -259,11 +275,7 @@ export default function DocumentDetail() {
   const progress = requests.length > 0 ? (signed / requests.length) * 100 : 0
 
   const myPending = requests.find(r =>
-    r.status === 'pending' && (
-      r.assigned_to_id === user.user_id ||
-      r.assigned_to_name?.toLowerCase() === (user.full_name||user.username||'').toLowerCase() ||
-      r.assigned_to_email === user.email
-    )
+    r.status === 'pending' && isMyRequest(r)
   )
 
   const hasPdf = !!doc.pdf_filename
@@ -364,8 +376,7 @@ export default function DocumentDetail() {
                 .sort((a,b) => (a.sign_order||0) - (b.sign_order||0))
                 .map((sr, idx) => {
                   const sm = SR_STATUS[sr.status] || SR_STATUS.pending
-                  const isMe = sr.assigned_to_id === user.user_id ||
-                    sr.assigned_to_name?.toLowerCase() === (user.full_name||user.username||'').toLowerCase()
+                  const isMe = isMyRequest(sr)
                   return (
                     <div key={sr.id} style={{ display:'flex', gap:12, paddingBottom: idx < requests.length-1 ? 20 : 0, position:'relative' }}>
                       {idx < requests.length-1 && (
@@ -421,8 +432,9 @@ export default function DocumentDetail() {
             <PdfViewer
               docId={doc.id}
               signRequests={requests}
-              currentUserId={user.user_id}
+              currentUserId={user.user_id || user.id}
               currentUserName={user.full_name || user.username}
+              currentUserEmail={user.email || ''}
               onSign={sr => setActiveSR(sr)}
             />
           </div>

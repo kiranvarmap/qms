@@ -41,7 +41,7 @@ export default function UsersAdmin() {
       await api(`/auth/users/${id}/approval`, { method:'PATCH', body: JSON.stringify({ approval_status: status }) })
       showToast(`User ${status === 'approved' ? 'approved' : 'rejected'}`)
       load()
-    } catch (err) { showToast(err?.message || 'Action failed', 'error') }
+    } catch (err) { showToast(typeof err?.message === 'string' ? err.message : 'Action failed', 'error') }
   }
 
   async function setRole(id, role) {
@@ -49,7 +49,7 @@ export default function UsersAdmin() {
       await api(`/auth/users/${id}`, { method:'PATCH', body: JSON.stringify({ role }) })
       showToast('Role updated')
       load()
-    } catch (err) { showToast(err?.message || 'Failed', 'error') }
+    } catch (err) { showToast(typeof err?.message === 'string' ? err.message : 'Failed', 'error') }
   }
 
   const filtered = users.filter(u => tab === 'all' ? true : u.approval_status === tab)

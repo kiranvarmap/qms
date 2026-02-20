@@ -291,6 +291,7 @@ function CreateDocModal({ onClose, onCreated }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [batches, setBatches] = useState([])
+  const [usersList, setUsersList] = useState([])   // all users for id lookup
   const [createdDoc, setCreatedDoc] = useState(null)  // doc after step-2 creation
   const [pdfFile, setPdfFile] = useState(null)
   const [pdfUploading, setPdfUploading] = useState(false)
@@ -300,6 +301,7 @@ function CreateDocModal({ onClose, onCreated }) {
 
   useEffect(() => {
     api('/batches').catch(() => []).then(d => setBatches(Array.isArray(d) ? d : []))
+    api('/auth/users').catch(() => []).then(d => setUsersList(Array.isArray(d) ? d : []))
   }, [])
 
   const setF = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -321,15 +323,24 @@ function CreateDocModal({ onClose, onCreated }) {
     if (signers.some(s => !s.name.trim())) { setError('All signer names are required'); return }
     setLoading(true)
     try {
-      const payload = {
-        ...form,
-        signers: signers.map((s,i) => ({
-          ...s, sign_order: i+1,
-          assigned_to_name: s.name,
-          assigned_to_role: s.role,
-          assigned_to_email: s.email
-        }))
-      }
+      // Resolve assigned_to_id for each signer by matching email or name against known users
+      const resolvedSigners = signers.map((s, i) => {
+        const email = (s.email || '').toLowerCase().trim()
+        const name  = (s.name  || '').toLowerCase().trim()
+        const match = usersList.find(u =>
+          (email && u.email?.toLowerCase() === email) ||
+          (name  && (u.full_name?.toLowerCase() === name || u.username?.toLowerCase() === name))
+        )
+        return {
+          ...s,
+          sign_order:        i + 1,
+          assigned_to_name:  s.name,
+          assigned_to_role:  s.role,
+          assigned_to_email: s.email,
+          assigned_to_id:    match?.id || null,
+        }
+      })
+      const payload = { ...form, signers: resolvedSigners }
       const doc = await api('/documents', { method:'POST', body: JSON.stringify(payload) })
       setCreatedDoc(doc)
       setStep(2)
