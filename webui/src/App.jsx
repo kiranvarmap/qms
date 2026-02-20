@@ -46,7 +46,6 @@ const NAV_MAIN = [
 ]
 
 function Shell({ user, onLogout }) {
-  const nav = useNavigate()
   const [taskCount, setTaskCount] = useState(0)
   const isAdmin = user?.role === 'admin' || user?.role === 'manager'
   const initials = (user?.full_name || user?.username || 'U')
@@ -63,7 +62,9 @@ function Shell({ user, onLogout }) {
     localStorage.removeItem('qms_token')
     localStorage.removeItem('qms_user')
     onLogout()
-    nav('/login')
+    // Don't call nav() here — onLogout() sets user=null in App,
+    // which immediately redirects to /login via the route guard.
+    // Calling nav() after unmount causes a blank screen.
   }
 
   return (
