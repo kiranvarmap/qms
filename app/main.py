@@ -86,11 +86,34 @@ async def startup_event():
     except Exception as _mig_err:
         print(f'[startup] Migration warning (non-fatal): {_mig_err}')
 
-    # --- ensure ALL tables exist via raw SQL (resilient fallback bypassing Alembic) ---
+    # --- ensure ALL tables exist via raw SQL (guaranteed, order matters for FK) ---
     try:
         from app.db import engine as _engine
         from sqlalchemy import text as _text
-        _ddl_statements = [
+        _all_ddl = [
+            """CREATE TABLE IF NOT EXISTS inspections (
+                id VARCHAR(64) PRIMARY KEY,
+                batch_id VARCHAR(128),
+                operator_id VARCHAR(128),
+                status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                defect_count INTEGER DEFAULT 0,
+                notes TEXT,
+                severity VARCHAR(32) DEFAULT 'minor',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS worker_audit (
+                id SERIAL PRIMARY KEY,
+                event_type VARCHAR(128),
+                inspection_id VARCHAR(64),
+                worker_id VARCHAR(128),
+                status VARCHAR(32),
+                message TEXT,
+                payload TEXT,
+                item TEXT,
+                processed_at TIMESTAMPTZ DEFAULT NOW(),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
             """CREATE TABLE IF NOT EXISTS products (
                 id VARCHAR(64) PRIMARY KEY,
                 sku VARCHAR(128) UNIQUE,
@@ -140,7 +163,7 @@ async def startup_event():
             )""",
             """CREATE TABLE IF NOT EXISTS inspection_defects (
                 id SERIAL PRIMARY KEY,
-                inspection_id VARCHAR(64) REFERENCES inspections(id),
+                inspection_id VARCHAR(64) REFERENCES inspections(id) ON DELETE CASCADE,
                 defect_type_id VARCHAR(64),
                 quantity INTEGER DEFAULT 1,
                 notes TEXT,
@@ -148,28 +171,35 @@ async def startup_event():
             )""",
             """CREATE TABLE IF NOT EXISTS signatures (
                 id SERIAL PRIMARY KEY,
-                inspection_id VARCHAR(64) REFERENCES inspections(id),
+                inspection_id VARCHAR(64) REFERENCES inspections(id) ON DELETE CASCADE,
                 signer_id VARCHAR(64),
                 signer_name VARCHAR(256) NOT NULL,
                 signer_role VARCHAR(64) NOT NULL,
                 ip_address VARCHAR(64),
+                notes TEXT,
                 signed_at TIMESTAMPTZ DEFAULT NOW(),
                 revoked BOOLEAN DEFAULT FALSE,
                 revoked_at TIMESTAMPTZ,
                 revoked_by VARCHAR(256)
             )""",
-            # Add columns to inspections if missing
             "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS severity VARCHAR(32) DEFAULT 'minor'",
             "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS event_type VARCHAR(128)",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS inspection_id VARCHAR(64)",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS worker_id VARCHAR(128)",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS status VARCHAR(32)",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS message TEXT",
+            "ALTER TABLE worker_audit ADD COLUMN IF NOT EXISTS payload TEXT",
+            "ALTER TABLE signatures ADD COLUMN IF NOT EXISTS notes TEXT",
         ]
         with _engine.connect() as _conn:
-            for _stmt in _ddl_statements:
+            for _stmt in _all_ddl:
                 try:
                     _conn.execute(_text(_stmt))
                 except Exception as _e:
-                    print(f'[startup] DDL warning (ok): {_e}')
+                    print(f'[startup] DDL note (ok): {str(_e)[:120]}')
             _conn.commit()
-        print('[startup] All tables ensured via raw SQL')
+        print('[startup] All tables ensured')
     except Exception as _tbl_err:
         print(f'[startup] Table creation warning: {_tbl_err}')
 

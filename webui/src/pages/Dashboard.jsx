@@ -1,119 +1,127 @@
-import { useState, useEffect } from 'react'
-import { getStats } from '../api'
+import { useEffect, useState } from 'react'
+import { api } from '../api'
 
-function StatusBadge({ s }) {
-  return <span className={`badge badge-${s}`}>{s?.replace(/_/g, ' ')}</span>
-}
+const KPI_DEFS = [
+  { key: 'total_inspections',   label: 'Total Inspections', icon: '🔍', accent: '#6366f1' },
+  { key: 'pass_count',          label: 'Passed',            icon: '✅', accent: '#22c55e' },
+  { key: 'fail_count',          label: 'Failed',            icon: '❌', accent: '#ef4444' },
+  { key: 'pending_count',       label: 'Pending',           icon: '⏳', accent: '#f59e0b' },
+  { key: 'total_defects',       label: 'Total Defects',     icon: '⚠️', accent: '#f97316' },
+  { key: 'total_products',      label: 'Products',          icon: '📦', accent: '#8b5cf6' },
+  { key: 'total_operators',     label: 'Operators',         icon: '👷', accent: '#06b6d4' },
+  { key: 'avg_defects_per_ins', label: 'Avg Defects/Insp',  icon: '📊', accent: '#ec4899' },
+]
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
+  const [recent, setRecent] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getStats().then(setStats).catch(console.error).finally(() => setLoading(false))
+    Promise.all([
+      api('/stats/summary').catch(() => ({})),
+      api('/inspections?limit=6').catch(() => [])
+    ]).then(([s, r]) => {
+      setStats(s)
+      setRecent(Array.isArray(r) ? r : [])
+      setLoading(false)
+    })
   }, [])
 
-  if (loading) return <div className="page"><span className="spinner" /></div>
-  if (!stats) return <div className="page"><p>Could not load stats.</p></div>
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh'}}>
+      <div className="spinner" />
+    </div>
+  )
 
-  const maxTrend = Math.max(...(stats.trend || []).map(d => (d.pass || 0) + (d.fail || 0)), 1)
+  const passRate = stats?.total_inspections ? Math.round((stats.pass_count / stats.total_inspections) * 100) : 0
 
   return (
-    <div className="page">
-      <div className="page-header"><h2>Dashboard</h2></div>
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">Quality operations overview</p>
+        </div>
+        <span className="badge badge-green">Live</span>
+      </div>
 
       <div className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-label">Total Inspections</div>
-          <div className="kpi-value">{stats.total_inspections}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Pass Rate</div>
-          <div className="kpi-value" style={{ color: '#16a34a' }}>{stats.pass_rate}%</div>
-          <div className="kpi-sub">{stats.pass} passed</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Fail Rate</div>
-          <div className="kpi-value" style={{ color: '#dc2626' }}>{stats.fail_rate}%</div>
-          <div className="kpi-sub">{stats.fail} failed</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Pending</div>
-          <div className="kpi-value" style={{ color: '#d97706' }}>{stats.pending}</div>
-          <div className="kpi-sub">{stats.in_review} in review</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Avg Defects</div>
-          <div className="kpi-value">{stats.avg_defects_per_inspection}</div>
-          <div className="kpi-sub">per inspection</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-        <div className="card">
-          <div className="section-title">Pass / Fail Trend</div>
-          {stats.trend?.length > 0 ? (
-            <>
-              <div className="chart-bar">
-                {stats.trend.slice(-20).map((d, i) => {
-                  const passH = Math.round(((d.pass || 0) / maxTrend) * 72)
-                  const failH = Math.round(((d.fail || 0) / maxTrend) * 72)
-                  return (
-                    <div key={i} className="bar-item" title={`${d.day}: ${d.pass} pass, ${d.fail} fail`}>
-                      <div className="bar-fail" style={{ height: failH }} />
-                      <div className="bar-pass" style={{ height: passH }} />
-                      <div className="bar-label">{d.day?.slice(5)}</div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 12 }}>
-                <span style={{ color: '#16a34a' }}>■ Pass</span>
-                <span style={{ color: '#dc2626' }}>■ Fail</span>
-              </div>
-            </>
-          ) : <div className="empty">No trend data yet</div>}
-        </div>
-
-        <div className="card">
-          <div className="section-title">Top Defect Types</div>
-          {stats.top_defects?.length > 0 ? (
-            <table>
-              <thead><tr><th>Defect</th><th>Severity</th><th>#</th></tr></thead>
-              <tbody>
-                {stats.top_defects.map((d, i) => (
-                  <tr key={i}>
-                    <td>{d.name}</td>
-                    <td><span className={`badge badge-${d.severity}`}>{d.severity}</span></td>
-                    <td><strong>{d.total}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : <div className="empty">No defects recorded yet</div>}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="section-title">Recent Activity</div>
-        {stats.recent_activity?.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>ID</th><th>Batch</th><th>Status</th><th>Defects</th><th>Created</th></tr></thead>
-              <tbody>
-                {stats.recent_activity.map(r => (
-                  <tr key={r.id}>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{r.id}</td>
-                    <td>{r.batch_id}</td>
-                    <td><StatusBadge s={r.status} /></td>
-                    <td>{r.defect_count}</td>
-                    <td style={{ color: 'var(--muted)' }}>{r.created_at?.slice(0, 16).replace('T', ' ')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {KPI_DEFS.map(k => (
+          <div className="kpi-card" key={k.key} style={{'--accent': k.accent}}>
+            <div className="kpi-icon">{k.icon}</div>
+            <div className="kpi-value">{stats?.[k.key] ?? 0}</div>
+            <div className="kpi-label">{k.label}</div>
           </div>
-        ) : <div className="empty">No inspections yet. <a href="#/inspections/new">Create one →</a></div>}
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 340px',gap:20,marginTop:24}}>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Recent Inspections</h2>
+          </div>
+          <div className="card-body" style={{padding:0}}>
+            {recent.length === 0 ? (
+              <div className="empty-state" style={{padding:'40px 0'}}>
+                <div className="empty-state-icon">🔍</div>
+                <div>No inspections yet</div>
+              </div>
+            ) : (
+              <table className="table">
+                <thead><tr>
+                  <th>Batch</th><th>Operator</th><th>Status</th><th>Defects</th><th>Date</th>
+                </tr></thead>
+                <tbody>
+                  {recent.map(ins => (
+                    <tr key={ins.id}>
+                      <td>{ins.batch_number || ins.batch_id || '—'}</td>
+                      <td>{ins.operator_name || ins.operator_id || '—'}</td>
+                      <td><span className={`badge badge-${ins.status === 'pass' ? 'green' : ins.status === 'fail' ? 'red' : 'yellow'}`}>{ins.status}</span></td>
+                      <td>{ins.defect_count ?? 0}</td>
+                      <td style={{color:'var(--text-muted)',fontSize:12}}>{ins.created_at ? new Date(ins.created_at).toLocaleDateString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Pass Rate</h2>
+          </div>
+          <div className="card-body">
+            <div style={{textAlign:'center',padding:'10px 0 20px'}}>
+              <div style={{fontSize:52,fontWeight:800,color:passRate>=80?'#22c55e':passRate>=50?'#f59e0b':'#ef4444',lineHeight:1}}>
+                {passRate}<span style={{fontSize:24}}>%</span>
+              </div>
+              <div style={{color:'var(--text-muted)',marginTop:6,fontSize:13}}>of all inspections passed</div>
+            </div>
+            <div style={{marginTop:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--text-muted)',marginBottom:6}}>
+                <span>Pass rate</span><span>{passRate}%</span>
+              </div>
+              <div className="progress"><div className="progress-bar" style={{width:`${passRate}%`,background:passRate>=80?'#22c55e':passRate>=50?'#f59e0b':'#ef4444'}} /></div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:20}}>
+              {[
+                { label:'Passed', val: stats?.pass_count ?? 0, color:'#22c55e' },
+                { label:'Failed', val: stats?.fail_count ?? 0, color:'#ef4444' },
+                { label:'Pending', val: stats?.pending_count ?? 0, color:'#f59e0b' },
+              ].map(r => (
+                <div key={r.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{width:10,height:10,borderRadius:'50%',background:r.color,display:'inline-block'}} />
+                    <span style={{fontSize:13}}>{r.label}</span>
+                  </div>
+                  <span style={{fontWeight:600,fontSize:13}}>{r.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

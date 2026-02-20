@@ -128,6 +128,7 @@ class Signature(Base):
     signer_name = Column(String(256), nullable=False)
     signer_role = Column(String(64), nullable=False)
     ip_address = Column(String(64), nullable=True)
+    notes = Column(Text, nullable=True)
     signed_at = Column(DateTime(timezone=True), server_default=func.now())
     revoked = Column(Boolean, default=False)
     revoked_at = Column(DateTime(timezone=True), nullable=True)
@@ -157,5 +158,12 @@ class User(Base):
 class WorkerAudit(Base):
     __tablename__ = 'worker_audit'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    item = Column(Text)
+    event_type = Column(String(128), nullable=True)
+    inspection_id = Column(String(64), nullable=True)
+    worker_id = Column(String(128), nullable=True)
+    status = Column(String(32), nullable=True)
+    message = Column(Text, nullable=True)
+    payload = Column(Text, nullable=True)
+    item = Column(Text, nullable=True)
     processed_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

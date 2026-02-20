@@ -1,89 +1,116 @@
-import { useState, useEffect } from 'react'
-import { listDefectTypes, createDefectType, deleteDefectType } from '../api'
+import { useEffect, useState } from 'react'
+import { api } from '../api'
 
-const SEVERITIES = ['minor', 'major', 'critical']
+const SEV_COLORS = { critical:'red', major:'orange', minor:'yellow', none:'blue' }
 
-export default function Defects({ toast }) {
-  const [types, setTypes] = useState([])
+export default function Defects() {
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', severity: 'minor', description: '' })
+  const [modal, setModal] = useState(false)
+  const [form, setForm] = useState({ name:'', code:'', description:'', severity:'minor' })
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
 
-  const load = () => {
-    setLoading(true)
-    listDefectTypes().then(d => setTypes(Array.isArray(d) ? d : d.items || [])).catch(console.error).finally(() => setLoading(false))
-  }
+  const load = () => api('/defect-types').catch(() => []).then(d => {
+    setRows(Array.isArray(d) ? d : [])
+    setLoading(false)
+  })
 
   useEffect(() => { load() }, [])
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
-  const submit = async (e) => {
-    e.preventDefault()
-    try {
-      await createDefectType(form)
-      toast('Defect type created', 'success')
-      setForm({ name: '', severity: 'minor', description: '' })
-      setShowForm(false)
-      load()
-    } catch { toast('Failed to create defect type', 'error') }
+  const showToast = (msg, type='success') => {
+    setToast({msg,type})
+    setTimeout(() => setToast(null), 3000)
   }
 
-  const del = async (id) => {
-    if (!confirm('Delete this defect type?')) return
-    try { await deleteDefectType(id); toast('Deleted', 'success'); load() }
-    catch { toast('Cannot delete — in use', 'error') }
+  const save = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await api('/defect-types', { method:'POST', body: JSON.stringify(form) })
+      if (!res?.id) throw new Error('Failed')
+      showToast('Defect type created!')
+      setModal(false)
+      setForm({ name:'', code:'', description:'', severity:'minor' })
+      load()
+    } catch (err) {
+      showToast(err?.message || 'Failed', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="page">
+    <div>
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
       <div className="page-header">
-        <h2>Defect Catalogue</h2>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
-          {showForm ? 'Cancel' : '+ Add Defect Type'}
-        </button>
+        <div>
+          <h1 className="page-title">Defect Types</h1>
+          <p className="page-sub">Classify and manage defect categories</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal(true)}>+ Add Type</button>
       </div>
 
-      {showForm && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <form onSubmit={submit}>
-            <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <div className="form-group">
-                <label>Name *</label>
-                <input required value={form.name} onChange={e => set('name', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Severity</label>
-                <select value={form.severity} onChange={e => set('severity', e.target.value)}>
-                  {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label>Description</label>
-                <input value={form.description} onChange={e => set('description', e.target.value)} />
-              </div>
+      <div className="card">
+        <div className="card-body" style={{padding:0}}>
+          {loading ? (
+            <div style={{padding:40,textAlign:'center'}}><div className="spinner" style={{margin:'0 auto'}} /></div>
+          ) : rows.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">⚠️</div>
+              <div>No defect types defined</div>
+              <button className="btn btn-primary" style={{marginTop:16}} onClick={() => setModal(true)}>Add Defect Type</button>
             </div>
-            <button type="submit" className="btn btn-primary btn-sm">Save Defect Type</button>
-          </form>
+          ) : (
+            <table className="table">
+              <thead><tr><th>#</th><th>Name</th><th>Code</th><th>Severity</th><th>Description</th><th>Created</th></tr></thead>
+              <tbody>
+                {rows.map((d, i) => (
+                  <tr key={d.id}>
+                    <td style={{color:'var(--text-muted)',fontSize:12}}>{i+1}</td>
+                    <td style={{fontWeight:500}}>{d.name}</td>
+                    <td><code style={{fontSize:12,background:'var(--bg-secondary)',padding:'2px 6px',borderRadius:4}}>{d.code}</code></td>
+                    <td><span className={`badge badge-${SEV_COLORS[d.severity] || 'blue'}`}>{d.severity || '—'}</span></td>
+                    <td style={{color:'var(--text-muted)',fontSize:13,maxWidth:260}}>{d.description || '—'}</td>
+                    <td style={{color:'var(--text-muted)',fontSize:12}}>{d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
 
-      {loading ? <span className="spinner" /> : (
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Severity</th><th>Description</th><th></th></tr></thead>
-            <tbody>
-              {types.length === 0 && <tr><td colSpan={4}><div className="empty">No defect types defined</div></td></tr>}
-              {types.map(t => (
-                <tr key={t.id}>
-                  <td><strong>{t.name}</strong></td>
-                  <td><span className={`badge badge-${t.severity}`}>{t.severity}</span></td>
-                  <td style={{ color: 'var(--muted)', fontSize: 12 }}>{t.description || '—'}</td>
-                  <td><button className="btn btn-danger btn-sm" onClick={() => del(t.id)}>Delete</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">New Defect Type</h3>
+              <button className="modal-close" onClick={() => setModal(false)}>✕</button>
+            </div>
+            <form onSubmit={save}>
+              <div className="modal-body">
+                <div className="form-group"><label>Name *</label><input required value={form.name} onChange={e => setForm(p=>({...p,name:e.target.value}))} placeholder="e.g. Surface Scratch" /></div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                  <div className="form-group"><label>Code</label><input value={form.code} onChange={e => setForm(p=>({...p,code:e.target.value}))} placeholder="auto-generated" /></div>
+                  <div className="form-group"><label>Severity</label>
+                    <select value={form.severity} onChange={e => setForm(p=>({...p,severity:e.target.value}))}>
+                      <option value="minor">Minor</option>
+                      <option value="major">Major</option>
+                      <option value="critical">Critical</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-group"><label>Description</label><textarea rows={2} value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} /></div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

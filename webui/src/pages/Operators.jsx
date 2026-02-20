@@ -1,101 +1,114 @@
-import { useState, useEffect } from 'react'
-import { listOperators, createOperator } from '../api'
+import { useEffect, useState } from 'react'
+import { api } from '../api'
 
-export default function Operators({ toast }) {
-  const [operators, setOperators] = useState([])
+export default function Operators() {
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', employee_id: '', department: '', email: '' })
+  const [modal, setModal] = useState(false)
+  const [form, setForm] = useState({ name: '', employee_id: '', department: '', role: '' })
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
 
-  const load = () => {
-    setLoading(true)
-    listOperators().then(d => setOperators(Array.isArray(d) ? d : d.items || [])).catch(console.error).finally(() => setLoading(false))
-  }
+  const load = () => api('/operators').catch(() => []).then(d => {
+    setRows(Array.isArray(d) ? d : [])
+    setLoading(false)
+  })
 
   useEffect(() => { load() }, [])
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const showToast = (msg, type='success') => {
+    setToast({msg,type})
+    setTimeout(() => setToast(null), 3000)
+  }
 
-  const submit = async (e) => {
+  const save = async (e) => {
     e.preventDefault()
+    setSaving(true)
     try {
-      await createOperator(form)
-      toast('Operator added', 'success')
-      setForm({ name: '', employee_id: '', department: '', email: '' })
-      setShowForm(false)
+      const res = await api('/operators', { method:'POST', body: JSON.stringify(form) })
+      if (!res?.id) throw new Error('Failed')
+      showToast('Operator created!')
+      setModal(false)
+      setForm({ name:'', employee_id:'', department:'', role:'' })
       load()
-    } catch { toast('Failed to create operator', 'error') }
+    } catch (err) {
+      showToast(err?.message || 'Failed to save', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
-    <div className="page">
+    <div>
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+
       <div className="page-header">
-        <h2>Operators</h2>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
-          {showForm ? 'Cancel' : '+ Add Operator'}
-        </button>
+        <div>
+          <h1 className="page-title">Operators</h1>
+          <p className="page-sub">{rows.length} registered</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal(true)}>+ Add Operator</button>
       </div>
 
-      {showForm && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <form onSubmit={submit}>
-            <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <div className="form-group">
-                <label>Name *</label>
-                <input required value={form.name} onChange={e => set('name', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Employee ID</label>
-                <input value={form.employee_id} onChange={e => set('employee_id', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Department</label>
-                <input value={form.department} onChange={e => set('department', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" value={form.email} onChange={e => set('email', e.target.value)} />
-              </div>
+      <div className="card">
+        <div className="card-body" style={{padding:0}}>
+          {loading ? (
+            <div style={{padding:40,textAlign:'center'}}><div className="spinner" style={{margin:'0 auto'}} /></div>
+          ) : rows.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">👷</div>
+              <div>No operators registered</div>
+              <button className="btn btn-primary" style={{marginTop:16}} onClick={() => setModal(true)}>Add First Operator</button>
             </div>
-            <button type="submit" className="btn btn-primary btn-sm">Save Operator</button>
-          </form>
+          ) : (
+            <table className="table">
+              <thead><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Department</th><th>Role</th><th>Joined</th></tr></thead>
+              <tbody>
+                {rows.map((op, i) => (
+                  <tr key={op.id}>
+                    <td style={{color:'var(--text-muted)',fontSize:12}}>{i+1}</td>
+                    <td>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div style={{width:32,height:32,borderRadius:'50%',background:'var(--brand)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,color:'#fff',flexShrink:0}}>
+                          {op.name?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <span style={{fontWeight:500}}>{op.name}</span>
+                      </div>
+                    </td>
+                    <td><code style={{fontSize:12,background:'var(--bg-secondary)',padding:'2px 6px',borderRadius:4}}>{op.employee_id || '—'}</code></td>
+                    <td>{op.department || '—'}</td>
+                    <td>{op.role ? <span className="badge badge-blue">{op.role}</span> : '—'}</td>
+                    <td style={{color:'var(--text-muted)',fontSize:12}}>{op.created_at ? new Date(op.created_at).toLocaleDateString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
 
-      {loading ? <span className="spinner" /> : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th><th>Employee ID</th><th>Department</th><th>Email</th>
-                <th>Inspections</th><th>Pass Rate</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {operators.length === 0 && <tr><td colSpan={7}><div className="empty">No operators registered</div></td></tr>}
-              {operators.map(o => (
-                <tr key={o.id}>
-                  <td><strong>{o.name}</strong></td>
-                  <td style={{ fontFamily: 'monospace' }}>{o.employee_id || '—'}</td>
-                  <td>{o.department || '—'}</td>
-                  <td style={{ fontSize: 12 }}>{o.email || '—'}</td>
-                  <td>{o.inspection_count ?? '—'}</td>
-                  <td>
-                    {o.pass_rate != null ? (
-                      <span style={{ color: o.pass_rate >= 80 ? '#16a34a' : o.pass_rate >= 50 ? '#d97706' : '#dc2626' }}>
-                        {o.pass_rate}%
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td>
-                    <span className={`badge ${o.active !== false ? 'badge-pass' : 'badge-fail'}`}>
-                      {o.active !== false ? 'active' : 'inactive'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {modal && (
+        <div className="modal-overlay" onClick={() => setModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">New Operator</h3>
+              <button className="modal-close" onClick={() => setModal(false)}>✕</button>
+            </div>
+            <form onSubmit={save}>
+              <div className="modal-body">
+                <div className="form-group"><label>Full Name *</label><input required value={form.name} onChange={e => setForm(p=>({...p,name:e.target.value}))} placeholder="John Smith" /></div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                  <div className="form-group"><label>Employee ID</label><input value={form.employee_id} onChange={e => setForm(p=>({...p,employee_id:e.target.value}))} placeholder="auto-generated" /></div>
+                  <div className="form-group"><label>Role</label><input value={form.role} onChange={e => setForm(p=>({...p,role:e.target.value}))} placeholder="e.g. Inspector" /></div>
+                </div>
+                <div className="form-group"><label>Department</label><input value={form.department} onChange={e => setForm(p=>({...p,department:e.target.value}))} placeholder="e.g. QA" /></div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

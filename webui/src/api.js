@@ -22,6 +22,25 @@ async function req(method, path, body) {
   return res.json();
 }
 
+// Generic fetch helper used by page components
+export async function api(path, options = {}) {
+  const token = getToken();
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
 export const login = (username, password) => req('POST', '/auth/login', { username, password });
 export const register = (data) => req('POST', '/auth/register', data);
 export const getStats = () => req('GET', '/stats/');
