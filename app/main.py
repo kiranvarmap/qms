@@ -86,26 +86,92 @@ async def startup_event():
     except Exception as _mig_err:
         print(f'[startup] Migration warning (non-fatal): {_mig_err}')
 
-    # --- ensure users table exists via raw SQL (resilient fallback) ---
+    # --- ensure ALL tables exist via raw SQL (resilient fallback bypassing Alembic) ---
     try:
         from app.db import engine as _engine
         from sqlalchemy import text as _text
+        _ddl_statements = [
+            """CREATE TABLE IF NOT EXISTS products (
+                id VARCHAR(64) PRIMARY KEY,
+                sku VARCHAR(128) UNIQUE,
+                name VARCHAR(256) NOT NULL,
+                category VARCHAR(128),
+                description TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS batches (
+                id VARCHAR(64) PRIMARY KEY,
+                product_id VARCHAR(64) REFERENCES products(id),
+                batch_number VARCHAR(128) NOT NULL UNIQUE,
+                quantity INTEGER DEFAULT 0,
+                production_date TIMESTAMPTZ,
+                expiry_date VARCHAR(32),
+                status VARCHAR(32) DEFAULT 'active',
+                notes TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS operators (
+                id VARCHAR(64) PRIMARY KEY,
+                employee_id VARCHAR(64) UNIQUE,
+                name VARCHAR(256) NOT NULL,
+                email VARCHAR(256) UNIQUE,
+                department VARCHAR(128),
+                role VARCHAR(64) NOT NULL DEFAULT 'operator',
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS defect_types (
+                id VARCHAR(64) PRIMARY KEY,
+                code VARCHAR(64) UNIQUE,
+                name VARCHAR(256) NOT NULL,
+                description TEXT,
+                severity VARCHAR(32) NOT NULL DEFAULT 'minor',
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS users (
+                id VARCHAR(64) PRIMARY KEY,
+                username VARCHAR(128) NOT NULL UNIQUE,
+                hashed_password VARCHAR(256) NOT NULL,
+                full_name VARCHAR(256),
+                role VARCHAR(64) NOT NULL DEFAULT 'operator',
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS inspection_defects (
+                id SERIAL PRIMARY KEY,
+                inspection_id VARCHAR(64) REFERENCES inspections(id),
+                defect_type_id VARCHAR(64),
+                quantity INTEGER DEFAULT 1,
+                notes TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS signatures (
+                id SERIAL PRIMARY KEY,
+                inspection_id VARCHAR(64) REFERENCES inspections(id),
+                signer_id VARCHAR(64),
+                signer_name VARCHAR(256) NOT NULL,
+                signer_role VARCHAR(64) NOT NULL,
+                ip_address VARCHAR(64),
+                signed_at TIMESTAMPTZ DEFAULT NOW(),
+                revoked BOOLEAN DEFAULT FALSE,
+                revoked_at TIMESTAMPTZ,
+                revoked_by VARCHAR(256)
+            )""",
+            # Add columns to inspections if missing
+            "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS severity VARCHAR(32) DEFAULT 'minor'",
+            "ALTER TABLE inspections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
+        ]
         with _engine.connect() as _conn:
-            _conn.execute(_text("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id VARCHAR(64) PRIMARY KEY,
-                    username VARCHAR(128) NOT NULL UNIQUE,
-                    hashed_password VARCHAR(256) NOT NULL,
-                    full_name VARCHAR(256),
-                    role VARCHAR(64) NOT NULL DEFAULT 'operator',
-                    active BOOLEAN NOT NULL DEFAULT TRUE,
-                    created_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """))
+            for _stmt in _ddl_statements:
+                try:
+                    _conn.execute(_text(_stmt))
+                except Exception as _e:
+                    print(f'[startup] DDL warning (ok): {_e}')
             _conn.commit()
-        print('[startup] users table ensured')
+        print('[startup] All tables ensured via raw SQL')
     except Exception as _tbl_err:
-        print(f'[startup] users table warning: {_tbl_err}')
+        print(f'[startup] Table creation warning: {_tbl_err}')
 
     # --- seed default admin user ---
     try:
