@@ -51,7 +51,7 @@ export default function CreateInspection() {
         if (!d.defect_type_id) continue
         await api(`/defects/inspection/${ins.id}`, {
           method:'POST',
-          body: JSON.stringify({ defect_type_id: parseInt(d.defect_type_id), quantity: parseInt(d.quantity)||1, notes: d.notes })
+          body: JSON.stringify({ defect_type_id: String(d.defect_type_id), quantity: parseInt(d.quantity)||1, notes: d.notes })
         }).catch(() => {})
       }
       showToast('Inspection created successfully!')

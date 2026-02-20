@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, HTTPException, Header, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy import select
@@ -6,9 +7,14 @@ from app.db import get_session
 from app.models.orm_models import SignoffDocument, SignRequest
 from app.api.v1.auth import decode_token
 import uuid
+import os
+import shutil
 from datetime import datetime, timezone
 
 router = APIRouter()
+
+UPLOAD_DIR = "/tmp/qms_pdfs"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _get_user(authorization: Optional[str]) -> Optional[dict]:
@@ -32,6 +38,11 @@ class SignerIn(BaseModel):
     assigned_to_role: str = "operator"
     assigned_to_email: Optional[str] = None
     sign_order: int = 1
+    placeholder_page: Optional[int] = 1
+    placeholder_x: Optional[float] = None
+    placeholder_y: Optional[float] = None
+    placeholder_w: Optional[float] = None
+    placeholder_h: Optional[float] = None
 
 
 class DocumentIn(BaseModel):
@@ -50,6 +61,11 @@ class SignerOut(BaseModel):
     assigned_to_role: str
     assigned_to_email: Optional[str]
     sign_order: int
+    placeholder_page: Optional[int]
+    placeholder_x: Optional[float]
+    placeholder_y: Optional[float]
+    placeholder_w: Optional[float]
+    placeholder_h: Optional[float]
     status: str
     signed_at: Optional[str]
     notes: Optional[str]
@@ -65,6 +81,8 @@ class DocumentOut(BaseModel):
     created_by: Optional[str]
     created_by_name: Optional[str]
     status: str
+    pdf_path: Optional[str]
+    pdf_filename: Optional[str]
     created_at: Optional[str]
     updated_at: Optional[str]
     sign_requests: List[SignerOut] = []
@@ -77,7 +95,8 @@ class SignActionIn(BaseModel):
 
 
 class RejectActionIn(BaseModel):
-    reason: str
+    reason: Optional[str] = None
+    notes: Optional[str] = None
 
 
 # ── Routes ────────────────────────────────────────────────────────────────
@@ -132,6 +151,11 @@ def create_document(req: DocumentIn, authorization: Optional[str] = Header(None)
                 assigned_to_role=s.assigned_to_role,
                 assigned_to_email=s.assigned_to_email,
                 sign_order=s.sign_order,
+                placeholder_page=s.placeholder_page or 1,
+                placeholder_x=s.placeholder_x,
+                placeholder_y=s.placeholder_y,
+                placeholder_w=s.placeholder_w,
+                placeholder_h=s.placeholder_h,
                 status='pending',
             )
             session.add(sr)
@@ -142,22 +166,38 @@ def create_document(req: DocumentIn, authorization: Optional[str] = Header(None)
         session.close()
 
 
-@router.get("/my-tasks", response_model=List[SignerOut])
+@router.get("/my-tasks")
 def my_tasks(authorization: Optional[str] = Header(None)):
-    """Returns pending sign requests assigned to the current user."""
+    """Returns all sign requests assigned to the current user (pending + completed)."""
     user = _require_auth(authorization)
     session = get_session()
     try:
         user_id = user.get('sub')
         username = user.get('username', '')
+        full_name = user.get('full_name', '')
+        email = user.get('email', '')
         q = select(SignRequest).where(
-            SignRequest.status == 'pending'
-        ).where(
             (SignRequest.assigned_to_id == user_id) |
-            (SignRequest.assigned_to_name == username)
+            (SignRequest.assigned_to_name == username) |
+            (SignRequest.assigned_to_name == full_name) |
+            (SignRequest.assigned_to_email == email)
         ).order_by(SignRequest.created_at.asc())
         rows = session.execute(q).scalars().all()
-        return [_sr_out(r) for r in rows]
+        result = []
+        for r in rows:
+            sr = _sr_out(r)
+            # attach document info
+            doc = session.get(SignoffDocument, r.document_id)
+            sr_dict = sr.dict()
+            if doc:
+                sr_dict['document'] = {
+                    'id': doc.id, 'title': doc.title,
+                    'batch_number': doc.batch_number,
+                    'status': doc.status,
+                    'created_at': doc.created_at.isoformat() if doc.created_at else None,
+                }
+            result.append(sr_dict)
+        return result
     finally:
         session.close()
 
@@ -243,12 +283,81 @@ def reject_sign(document_id: str, request_id: str, req: RejectActionIn,
         if not sr or sr.document_id != document_id:
             raise HTTPException(404, "Sign request not found")
         sr.status = 'rejected'
-        sr.rejection_reason = req.reason
+        sr.rejection_reason = req.reason or req.notes or 'Rejected'
         sr.signed_at = datetime.now(timezone.utc)
         doc = session.get(SignoffDocument, document_id)
         doc.status = 'rejected'
         session.commit()
         return {"message": "Signing rejected", "sign_request": _sr_out(sr)}
+    finally:
+        session.close()
+
+
+@router.post("/{document_id}/upload-pdf")
+async def upload_pdf(
+    document_id: str,
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None),
+):
+    """Upload a PDF for a sign-off document."""
+    _require_auth(authorization)
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(400, "Only PDF files are accepted")
+    session = get_session()
+    try:
+        doc = session.get(SignoffDocument, document_id)
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        # Save file
+        safe_name = f"{document_id}.pdf"
+        dest = os.path.join(UPLOAD_DIR, safe_name)
+        with open(dest, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        doc.pdf_path = dest
+        doc.pdf_filename = file.filename
+        session.commit()
+        return {"message": "PDF uploaded", "pdf_filename": file.filename}
+    finally:
+        session.close()
+
+
+@router.get("/{document_id}/pdf")
+def serve_pdf(document_id: str, authorization: Optional[str] = Header(None)):
+    """Serve the PDF file for a document."""
+    _require_auth(authorization)
+    session = get_session()
+    try:
+        doc = session.get(SignoffDocument, document_id)
+        if not doc or not doc.pdf_path:
+            raise HTTPException(404, "PDF not found")
+        if not os.path.exists(doc.pdf_path):
+            raise HTTPException(404, "PDF file missing from server")
+        return FileResponse(doc.pdf_path, media_type="application/pdf",
+                            filename=doc.pdf_filename or f"{document_id}.pdf")
+    finally:
+        session.close()
+
+
+@router.patch("/{document_id}/sign-requests/{request_id}/placeholder")
+def update_placeholder(
+    document_id: str, request_id: str,
+    req: SignerIn,
+    authorization: Optional[str] = Header(None),
+):
+    """Update the PDF placeholder position for a sign request."""
+    _require_auth(authorization)
+    session = get_session()
+    try:
+        sr = session.get(SignRequest, request_id)
+        if not sr or sr.document_id != document_id:
+            raise HTTPException(404, "Sign request not found")
+        sr.placeholder_page = req.placeholder_page or sr.placeholder_page
+        sr.placeholder_x = req.placeholder_x if req.placeholder_x is not None else sr.placeholder_x
+        sr.placeholder_y = req.placeholder_y if req.placeholder_y is not None else sr.placeholder_y
+        sr.placeholder_w = req.placeholder_w if req.placeholder_w is not None else sr.placeholder_w
+        sr.placeholder_h = req.placeholder_h if req.placeholder_h is not None else sr.placeholder_h
+        session.commit()
+        return _sr_out(sr)
     finally:
         session.close()
 
@@ -276,7 +385,13 @@ def _sr_out(r: SignRequest) -> SignerOut:
         assigned_to_name=r.assigned_to_name,
         assigned_to_role=r.assigned_to_role,
         assigned_to_email=r.assigned_to_email,
-        sign_order=r.sign_order, status=r.status,
+        sign_order=r.sign_order,
+        placeholder_page=r.placeholder_page,
+        placeholder_x=r.placeholder_x,
+        placeholder_y=r.placeholder_y,
+        placeholder_w=r.placeholder_w,
+        placeholder_h=r.placeholder_h,
+        status=r.status,
         signed_at=r.signed_at.isoformat() if r.signed_at else None,
         notes=r.notes,
         rejection_reason=r.rejection_reason,
@@ -291,6 +406,8 @@ def _doc_out(r: SignoffDocument) -> DocumentOut:
         batch_id=r.batch_id, batch_number=r.batch_number,
         created_by=r.created_by, created_by_name=r.created_by_name,
         status=r.status,
+        pdf_path=r.pdf_path,
+        pdf_filename=r.pdf_filename,
         created_at=r.created_at.isoformat() if r.created_at else None,
         updated_at=r.updated_at.isoformat() if r.updated_at else None,
         sign_requests=srs,

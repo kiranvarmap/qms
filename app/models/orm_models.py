@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, String, Integer, Text, DateTime, Boolean, ForeignKey
+    Column, String, Integer, Text, DateTime, Boolean, ForeignKey, Float
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -171,6 +171,9 @@ class SignoffDocument(Base):
     created_by_name = Column(String(256), nullable=True)
     # overall status: draft | in_progress | complete | rejected
     status = Column(String(32), nullable=False, default='draft')
+    # PDF file storage
+    pdf_path = Column(String(512), nullable=True)      # server-side path
+    pdf_filename = Column(String(256), nullable=True)  # original filename
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -191,6 +194,12 @@ class SignRequest(Base):
     assigned_to_email = Column(String(256), nullable=True)
     # order in which they must sign
     sign_order = Column(Integer, default=1)
+    # PDF placeholder position (pixels from top-left of page, percentage-based)
+    placeholder_page = Column(Integer, nullable=True, default=1)
+    placeholder_x = Column(Float, nullable=True)   # % from left
+    placeholder_y = Column(Float, nullable=True)   # % from top
+    placeholder_w = Column(Float, nullable=True)   # % width
+    placeholder_h = Column(Float, nullable=True)   # % height
     # status: pending | signed | rejected | skipped
     status = Column(String(32), nullable=False, default='pending')
     signed_at = Column(DateTime(timezone=True), nullable=True)
