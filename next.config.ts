@@ -24,7 +24,7 @@ const securityHeaders = [
       "frame-src 'self' blob:",
       "frame-ancestors 'self'",
       "base-uri 'self'",
-      "form-action 'self' https://*.auth0.com",
+      "form-action 'self'",
     ].join("; "),
   },
 ];

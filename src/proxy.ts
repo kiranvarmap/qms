@@ -23,7 +23,7 @@ export async function proxy(req: NextRequest) {
     req.headers.get("x-real-ip") ||
     "unknown";
 
-  // Don't rate-limit OAuth callbacks — they come from the provider, not the user
+  // Don't rate-limit auth callbacks
   if (pathname.startsWith("/api/auth") && !pathname.startsWith("/api/auth/callback")) {
     const r = rateLimiters.auth(ip);
     if (!r.allowed)

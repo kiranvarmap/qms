@@ -5,9 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 
 function handleSignOut() {
-  signOut({ redirect: false }).then(() => {
-    window.location.href = "/api/auth/logout";
-  });
+  signOut({ callbackUrl: "/auth/signin" });
 }
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
