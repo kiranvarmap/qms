@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { count } from "drizzle-orm";
+import { getToken } from "next-auth/jwt";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth0Domain   = process.env.AUTH0_DOMAIN        || process.env.AUTH_AUTH0_DOMAIN;
   const auth0ClientId = process.env.AUTH0_CLIENT_ID     || process.env.AUTH_AUTH0_ID;
   const auth0Secret   = process.env.AUTH0_CLIENT_SECRET || process.env.AUTH_AUTH0_SECRET;
@@ -87,6 +88,18 @@ export async function GET() {
       checks.tokenEndpointReachable = false;
       checks.tokenEndpointError = (e as Error).message;
     }
+  }
+
+  // Test JWT token from cookies
+  const cookieNames = Array.from(req.cookies.getAll()).map(c => c.name);
+  checks.cookieNames = cookieNames;
+  checks.hasSessionCookie = cookieNames.some(n => n.includes("session-token"));
+
+  try {
+    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    checks.jwtToken = token ? { id: token.id, email: token.email, role: token.role, exp: token.exp } : null;
+  } catch (e) {
+    checks.jwtTokenError = (e as Error).message;
   }
 
   return NextResponse.json(checks, { headers: { "Cache-Control": "no-store" } });
