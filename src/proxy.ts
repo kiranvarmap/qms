@@ -23,7 +23,8 @@ export async function proxy(req: NextRequest) {
     req.headers.get("x-real-ip") ||
     "unknown";
 
-  if (pathname.startsWith("/api/auth")) {
+  // Don't rate-limit OAuth callbacks — they come from the provider, not the user
+  if (pathname.startsWith("/api/auth") && !pathname.startsWith("/api/auth/callback")) {
     const r = rateLimiters.auth(ip);
     if (!r.allowed)
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });

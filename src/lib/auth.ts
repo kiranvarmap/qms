@@ -124,6 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
       if (user) {
+        console.log("NEXTAUTH_JWT_USER", JSON.stringify({ userId: user.id, email: user.email, provider: account?.provider }));
         token.id   = user.id!;
         token.role = ((user as Record<string, unknown>).role as string) ?? "user";
       }
@@ -156,6 +157,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
 
     async signIn({ user, account }) {
+      console.log("NEXTAUTH_SIGNIN_CB", JSON.stringify({ email: user.email, provider: account?.provider }));
       const oauthProviders = ["google", "github", "auth0", "resend"];
       if (account?.provider && oauthProviders.includes(account.provider)) {
         if (!user.email) return false;

@@ -48,8 +48,8 @@ function check(key: string, limit: number, windowMs: number): RateLimitResult {
 export const rateLimiters = {
   /** General API — 120 req / 60 s */
   api:    (key: string) => check(`api:${key}`,    120, 60_000),
-  /** Auth endpoints — 10 req / 60 s (brute-force protection) */
-  auth:   (key: string) => check(`auth:${key}`,    10, 60_000),
+  /** Auth endpoints — 30 req / 60 s (brute-force protection) */
+  auth:   (key: string) => check(`auth:${key}`,    30, 60_000),
   /** File uploads — 30 req / 60 s */
   upload: (key: string) => check(`upload:${key}`,  30, 60_000),
   /** Public form submissions — 20 req / 60 s per IP */
