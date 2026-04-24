@@ -53,7 +53,9 @@ export async function proxy(req: NextRequest) {
   // ── Auth check ─────────────────────────────────────────────────────
   let token = null;
   try {
-    token = await getToken({ req, secret: process.env.AUTH_SECRET });
+    // On Vercel, internal URL is http:// but cookies are __Secure-*, so force secureCookie
+    const isProduction = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+    token = await getToken({ req, secret: process.env.AUTH_SECRET, secureCookie: isProduction });
   } catch {
     // AUTH_SECRET missing — redirect to signin
   }
