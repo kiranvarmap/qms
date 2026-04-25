@@ -26,6 +26,7 @@ import {
   Trash2,
   PenLine,
   Camera,
+  Download,
 } from "lucide-react";
 import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef } from "@/lib/types";
 import { shouldShowQuestion, shouldAutoFlag } from "@/lib/conditional-logic";
@@ -201,19 +202,37 @@ export default function InspectionPage() {
           </div>
         </div>
         {!isCompleted && (
-          <button
-            onClick={submitInspection}
-            disabled={submitting}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Submit
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/inspections/${id}/pdf`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              PDF
+            </a>
+            <button
+              onClick={submitInspection}
+              disabled={submitting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Submit
+            </button>
+          </div>
         )}
         {isCompleted && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg border border-green-200">
-            <CheckCircle2 className="h-4 w-4" />
-            Completed
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg border border-green-200">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed
+            </div>
+            <a
+              href={`/api/inspections/${id}/pdf`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
+            >
+              <Download className="h-4 w-4" />
+              Export PDF
+            </a>
           </div>
         )}
       </div>
