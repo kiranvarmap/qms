@@ -38,7 +38,7 @@ import {
   X,
   ClipboardList,
 } from "lucide-react";
-import type { InspectionTemplate, TemplateQuestion, TemplateSection, QuestionType, ConditionalRule } from "@/lib/types";
+import type { InspectionTemplate, TemplateQuestion, TemplateSection, QuestionType, ConditionalRule, PdfTemplate } from "@/lib/types";
 
 const QUESTION_TYPES: { value: QuestionType; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: "yes_no_na", label: "Yes / No / N/A", icon: <CheckSquare className="h-4 w-4" />, desc: "Pass/fail with N/A option" },
@@ -79,6 +79,14 @@ export default function TemplateBuilderPage() {
   const [titleValue, setTitleValue] = useState("");
   const [descValue, setDescValue] = useState("");
   const [showTypeModal, setShowTypeModal] = useState<string | null>(null);
+
+  // PDF template chooser state
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
+  const [selectedPdfTemplateId, setSelectedPdfTemplateId] = useState<string | null>(null);
+  const [loadingPdfTemplates, setLoadingPdfTemplates] = useState(false);
+  const [creatingPdfTemplate, setCreatingPdfTemplate] = useState(false);
+  const [newPdfTemplateName, setNewPdfTemplateName] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/inspection-templates/${id}`);
@@ -127,13 +135,68 @@ export default function TemplateBuilderPage() {
 
   const togglePublish = async () => {
     if (!template) return;
-    const next = !template.isPublished;
-    setTemplate({ ...template, isPublished: next });
+    if (template.isPublished) {
+      // Unpublish immediately
+      setTemplate({ ...template, isPublished: false });
+      await fetch(`/api/inspection-templates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublished: false }),
+      });
+    } else {
+      // Show publish modal with PDF template chooser
+      setLoadingPdfTemplates(true);
+      setShowPublishModal(true);
+      try {
+        const res = await fetch("/api/pdf-templates");
+        if (res.ok) {
+          const templates: PdfTemplate[] = await res.json();
+          setPdfTemplates(templates);
+          // Pre-select current template's pdfTemplateId, or the default one
+          const current = template.pdfTemplateId;
+          if (current && templates.some((t) => t.id === current)) {
+            setSelectedPdfTemplateId(current);
+          } else {
+            const def = templates.find((t) => t.isDefault);
+            setSelectedPdfTemplateId(def?.id ?? null);
+          }
+        }
+      } finally {
+        setLoadingPdfTemplates(false);
+      }
+    }
+  };
+
+  const confirmPublish = async () => {
+    if (!template) return;
+    setTemplate({ ...template, isPublished: true, pdfTemplateId: selectedPdfTemplateId });
+    setShowPublishModal(false);
     await fetch(`/api/inspection-templates/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isPublished: next }),
+      body: JSON.stringify({ isPublished: true, pdfTemplateId: selectedPdfTemplateId }),
     });
+  };
+
+  const createPdfTemplate = async () => {
+    const name = newPdfTemplateName.trim();
+    if (!name) return;
+    setCreatingPdfTemplate(true);
+    try {
+      const res = await fetch("/api/pdf-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        const created: PdfTemplate = await res.json();
+        setPdfTemplates((prev) => [...prev, created]);
+        setSelectedPdfTemplateId(created.id);
+        setNewPdfTemplateName("");
+      }
+    } finally {
+      setCreatingPdfTemplate(false);
+    }
   };
 
   const toggleScoring = async () => {
@@ -767,6 +830,125 @@ export default function TemplateBuilderPage() {
           )}
         </div>
       </div>
+
+      {/* Publish + Choose PDF Template Modal */}
+      {showPublishModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Publish Template</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Choose a PDF template for exports</p>
+              </div>
+              <button onClick={() => setShowPublishModal(false)} className="p-1.5 rounded-md hover:bg-gray-100">
+                <X className="h-4 w-4 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4 max-h-80 overflow-y-auto">
+              {loadingPdfTemplates ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Default (no template) option */}
+                  <label
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                      selectedPdfTemplateId === null
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="pdfTemplate"
+                      checked={selectedPdfTemplateId === null}
+                      onChange={() => setSelectedPdfTemplateId(null)}
+                      className="accent-blue-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">Default Template</p>
+                      <p className="text-xs text-gray-500">Standard inspection report layout</p>
+                    </div>
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-medium">BUILT-IN</span>
+                  </label>
+
+                  {pdfTemplates.map((pt) => (
+                    <label
+                      key={pt.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                        selectedPdfTemplateId === pt.id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="pdfTemplate"
+                        checked={selectedPdfTemplateId === pt.id}
+                        onChange={() => setSelectedPdfTemplateId(pt.id)}
+                        className="accent-blue-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{pt.name}</p>
+                        {pt.description && <p className="text-xs text-gray-500 truncate">{pt.description}</p>}
+                      </div>
+                      {pt.isDefault && (
+                        <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">DEFAULT</span>
+                      )}
+                    </label>
+                  ))}
+
+                  {/* Create new template inline */}
+                  <div className="pt-2 border-t border-gray-100 mt-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Create New PDF Template</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={newPdfTemplateName}
+                        onChange={(e) => setNewPdfTemplateName(e.target.value)}
+                        placeholder="Template name…"
+                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-blue-400"
+                        onKeyDown={(e) => e.key === "Enter" && createPdfTemplate()}
+                      />
+                      <button
+                        onClick={createPdfTemplate}
+                        disabled={!newPdfTemplateName.trim() || creatingPdfTemplate}
+                        className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                      >
+                        {creatingPdfTemplate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                    <Link
+                      href="/dashboard/inspections/pdf-templates"
+                      className="text-xs text-blue-600 hover:text-blue-700 mt-2 inline-block"
+                    >
+                      Manage PDF Templates →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-3 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
+              <button
+                onClick={() => setShowPublishModal(false)}
+                className="px-4 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPublish}
+                className="px-4 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Publish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

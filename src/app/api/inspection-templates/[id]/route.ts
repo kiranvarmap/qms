@@ -65,6 +65,7 @@ export async function PATCH(
   if (body.workspaceId !== undefined) update.workspaceId = body.workspaceId || null;
   if (body.isNcr !== undefined) update.isNcr = body.isNcr;
   if (body.ncrDocNumberFormat !== undefined) update.ncrDocNumberFormat = body.ncrDocNumberFormat || null;
+  if (body.pdfTemplateId !== undefined) update.pdfTemplateId = body.pdfTemplateId || null;
 
   await db.update(inspectionTemplates).set(update).where(eq(inspectionTemplates.id, id));
 

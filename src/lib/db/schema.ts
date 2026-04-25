@@ -297,6 +297,8 @@ export const inspectionTemplates = pgTable("inspection_templates", {
   // NCR template support
   isNcr: boolean("is_ncr").default(false).notNull(),
   ncrDocNumberFormat: varchar("ncr_doc_number_format", { length: 100 }), // e.g. "NCR-{SEQ}"
+  // PDF template for export
+  pdfTemplateId: uuid("pdf_template_id"),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -475,6 +477,22 @@ export const templateSopLinks = pgTable("template_sop_links", {
     .notNull()
     .references(() => sops.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ── PDF Templates (reusable export layouts) ───────────────────────
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false).notNull(),
+  // Full layout configuration stored as JSON
+  config: jsonb("config").default("{}").notNull(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 // ════════════════════════════════════════════════════════════════════

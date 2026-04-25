@@ -165,6 +165,7 @@ export interface InspectionTemplate {
   createdAt: string;
   updatedAt: string;
   sections: TemplateSection[];
+  pdfTemplateId: string | null;
   boardName?: string | null;
   _count?: { inspections: number };
 }
@@ -255,6 +256,98 @@ export interface InspectionAuditEvent {
   ipAddress: string | null;
   createdAt: string;
 }
+
+// ════════════════════════════════════════════════════════════════════
+// PDF TEMPLATE MODULE
+// ════════════════════════════════════════════════════════════════════
+
+export interface PdfTemplateConfig {
+  pageSize: "letter" | "a4";
+  orientation: "portrait" | "landscape";
+  margins: { top: number; right: number; bottom: number; left: number };
+  colors: {
+    primary: string;   // hex e.g. "#264D99"
+    accent: string;
+    headerBg: string;
+    headerText: string;
+  };
+  header: {
+    showTitle: boolean;
+    showStatus: boolean;
+    showDate: boolean;
+    showScore: boolean;
+    showSite: boolean;
+    showConductor: boolean;
+    showNcr: boolean;
+    companyName: string;
+  };
+  sections: {
+    showSectionNumbers: boolean;
+    showQuestionNumbers: boolean;
+  };
+  content: {
+    showFlags: boolean;
+    showNotes: boolean;
+    showActions: boolean;
+    showSignatures: boolean;
+    showEmptyQuestions: boolean;
+  };
+  footer: {
+    showPageNumbers: boolean;
+    showConfidential: boolean;
+    customText: string;
+  };
+}
+
+export interface PdfTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  isDefault: boolean;
+  config: PdfTemplateConfig;
+  workspaceId: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const DEFAULT_PDF_CONFIG: PdfTemplateConfig = {
+  pageSize: "letter",
+  orientation: "portrait",
+  margins: { top: 50, right: 50, bottom: 50, left: 50 },
+  colors: {
+    primary: "#264D99",
+    accent: "#1A8C33",
+    headerBg: "#264D99",
+    headerText: "#FFFFFF",
+  },
+  header: {
+    showTitle: true,
+    showStatus: true,
+    showDate: true,
+    showScore: true,
+    showSite: true,
+    showConductor: true,
+    showNcr: true,
+    companyName: "",
+  },
+  sections: {
+    showSectionNumbers: true,
+    showQuestionNumbers: true,
+  },
+  content: {
+    showFlags: true,
+    showNotes: true,
+    showActions: true,
+    showSignatures: true,
+    showEmptyQuestions: false,
+  },
+  footer: {
+    showPageNumbers: true,
+    showConfidential: true,
+    customText: "",
+  },
+};
 
 // ════════════════════════════════════════════════════════════════════
 // EMPLOYEE MANAGEMENT MODULE

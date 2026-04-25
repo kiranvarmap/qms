@@ -27,8 +27,10 @@ import {
   PenLine,
   Camera,
   Download,
+  Settings2,
+  GripVertical,
 } from "lucide-react";
-import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef } from "@/lib/types";
+import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef, QuestionType } from "@/lib/types";
 import { shouldShowQuestion, shouldAutoFlag } from "@/lib/conditional-logic";
 
 type FullInspection = Inspection & {
@@ -54,6 +56,9 @@ export default function InspectionPage() {
   const [responses, setResponses] = useState<Record<string, InspectionResponse>>({});
   // how many instances each section has (sectionId → count); default 1
   const [sectionRepeatCounts, setSectionRepeatCounts] = useState<Record<string, number>>({});
+  // editing-mode: lets user add/edit/delete sections & questions on this inspection's snapshot
+  const [editMode, setEditMode] = useState(false);
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +134,99 @@ export default function InspectionPage() {
     // TODO: could also DELETE responses from DB for that repeatIndex
   }, []);
 
+  // ── Snapshot editing helpers (inspection-level template customization) ──
+  const persistSnapshot = useCallback(async (newSections: TemplateSection[]) => {
+    if (!inspection) return;
+    setSavingSnapshot(true);
+    const updatedSnapshot = { ...inspection.templateSnapshot, sections: newSections };
+    setInspection((prev) => prev ? { ...prev, templateSnapshot: updatedSnapshot } : prev);
+    await fetch(`/api/inspections/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templateSnapshot: updatedSnapshot }),
+    });
+    setSavingSnapshot(false);
+  }, [inspection, id]);
+
+  const addSection = useCallback(() => {
+    if (!inspection) return;
+    const sections = inspection.templateSnapshot?.sections ?? [];
+    const newSec: TemplateSection = {
+      id: crypto.randomUUID(),
+      templateId: inspection.templateId ?? "",
+      title: `New Section ${sections.length + 1}`,
+      position: sections.length,
+      pageNumber: 1,
+      isRepeatable: false,
+      maxRepetitions: null,
+      requiresSignoff: false,
+      signoffRoles: null,
+      questions: [],
+    };
+    persistSnapshot([...sections, newSec]);
+    setActiveSectionIdx(sections.length);
+  }, [inspection, persistSnapshot, setActiveSectionIdx]);
+
+  const updateSectionTitle = useCallback((sectionId: string, title: string) => {
+    if (!inspection) return;
+    const sections = (inspection.templateSnapshot?.sections ?? []).map((s) =>
+      s.id === sectionId ? { ...s, title } : s
+    );
+    persistSnapshot(sections);
+  }, [inspection, persistSnapshot]);
+
+  const deleteSection = useCallback((sectionId: string) => {
+    if (!inspection) return;
+    const sections = (inspection.templateSnapshot?.sections ?? []).filter((s) => s.id !== sectionId);
+    persistSnapshot(sections);
+    setActiveSectionIdx((idx) => Math.min(idx, Math.max(0, sections.length - 1)));
+  }, [inspection, persistSnapshot, setActiveSectionIdx]);
+
+  const addQuestion = useCallback((sectionId: string) => {
+    if (!inspection) return;
+    const sections = (inspection.templateSnapshot?.sections ?? []).map((s) => {
+      if (s.id !== sectionId) return s;
+      const newQ: TemplateQuestion = {
+        id: crypto.randomUUID(),
+        sectionId,
+        title: "",
+        description: null,
+        type: "yes_no_na",
+        required: false,
+        scoring: false,
+        weight: 1,
+        options: [],
+        position: s.questions.length,
+        conditionalRules: null,
+        flagRules: null,
+        linkedQuestionId: null,
+      };
+      return { ...s, questions: [...s.questions, newQ] };
+    });
+    persistSnapshot(sections);
+  }, [inspection, persistSnapshot]);
+
+  const updateQuestion = useCallback((sectionId: string, questionId: string, updates: Partial<TemplateQuestion>) => {
+    if (!inspection) return;
+    const sections = (inspection.templateSnapshot?.sections ?? []).map((s) => {
+      if (s.id !== sectionId) return s;
+      return {
+        ...s,
+        questions: s.questions.map((q) => q.id === questionId ? { ...q, ...updates } : q),
+      };
+    });
+    persistSnapshot(sections);
+  }, [inspection, persistSnapshot]);
+
+  const deleteQuestion = useCallback((sectionId: string, questionId: string) => {
+    if (!inspection) return;
+    const sections = (inspection.templateSnapshot?.sections ?? []).map((s) => {
+      if (s.id !== sectionId) return s;
+      return { ...s, questions: s.questions.filter((q) => q.id !== questionId) };
+    });
+    persistSnapshot(sections);
+  }, [inspection, persistSnapshot]);
+
   const submitInspection = async () => {
     if (!inspection) return;
 
@@ -203,6 +301,19 @@ export default function InspectionPage() {
         </div>
         {!isCompleted && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setEditMode((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors",
+                editMode
+                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                  : "text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100"
+              )}
+            >
+              <Settings2 className="h-4 w-4" />
+              {editMode ? "Done Editing" : "Customize"}
+              {savingSnapshot && <Loader2 className="h-3 w-3 animate-spin" />}
+            </button>
             <a
               href={`/api/inspections/${id}/pdf`}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
