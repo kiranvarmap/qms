@@ -72,7 +72,12 @@ npm run build
 
 Required env (see `.env.example`): `POSTGRES_URL`, `NEXTAUTH_SECRET`/`AUTH_*`,
 Supabase storage keys, and **`CRON_SECRET`** (guards `/api/events/process`).
-`vercel.json` schedules the outbox sweep every 5 minutes.
+
+`vercel.json` schedules the outbox sweep **once daily** (`0 0 * * *`) — the
+Hobby-plan-safe maximum. The inline dispatcher already drains the outbox on the
+request path in real time, so the cron is only a durable backstop for retries.
+On a **Pro/Enterprise** plan, tighten it (e.g. `*/5 * * * *`) for faster retry
+of any event that failed inline.
 
 ## Not in this slice (later phases of the plan)
 360°/admin UI surfaces, the standalone worker service + Redis queue, OIDC/SSO,
