@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploads (user-generated content)
+public/uploads/
+
+# large vendor files
+public/pdf.worker.min.mjs
