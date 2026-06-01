@@ -122,6 +122,13 @@ export interface FlagRules {
   autoFlag: boolean;
 }
 
+// Instruction attachment stored on a question
+export interface QuestionInstruction {
+  text: string;           // written instructions (supports markdown-like text)
+  mediaUrl: string;       // URL to image or video
+  mediaType: "image" | "video" | "";  // type of media
+}
+
 export interface TemplateQuestion {
   id: string;
   sectionId: string;
@@ -136,6 +143,7 @@ export interface TemplateQuestion {
   conditionalRules: ConditionalRule[] | null;
   flagRules: FlagRules | null;
   linkedQuestionId: string | null;
+  instructions: QuestionInstruction | null;
 }
 
 export interface TemplateSection {
@@ -258,45 +266,204 @@ export interface InspectionAuditEvent {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// PDF TEMPLATE MODULE
+// PDF TEMPLATE MODULE — Block-based document builder
 // ════════════════════════════════════════════════════════════════════
+
+// ── Block types ───────────────────────────────────────────────────
+export type PdfBlockType =
+  | "header"
+  | "info_fields"
+  | "text"
+  | "questions"
+  | "actions"
+  | "signatures"
+  | "spacer"
+  | "divider"
+  | "page_break"
+  | "footer";
+
+export type FontFamily = "helvetica" | "times" | "courier";
+export type TextAlign = "left" | "center" | "right";
+
+export interface PdfBlockBase {
+  id: string;
+  type: PdfBlockType;
+}
+
+export interface HeaderBlock extends PdfBlockBase {
+  type: "header";
+  titleSource: "template_name" | "custom";
+  customTitle: string;
+  showStatusBadge: boolean;
+  bgColor: string;
+  textColor: string;
+  fontSize: number;
+  fontFamily: FontFamily;
+  alignment: TextAlign;
+  companyName: string;
+  companyNameColor: string;
+  companyNameSize: number;
+  logoUrl: string;
+  logoPosition: "left" | "center" | "right";
+  logoMaxHeight: number;
+}
+
+export interface InfoFieldsBlock extends PdfBlockBase {
+  type: "info_fields";
+  fields: {
+    key: "site" | "conductor" | "started" | "completed" | "ncr" | "score";
+    label: string;
+    enabled: boolean;
+  }[];
+  layout: "vertical" | "two_column";
+  labelColor: string;
+  valueColor: string;
+  fontSize: number;
+  fontFamily: FontFamily;
+}
+
+export interface TextBlock extends PdfBlockBase {
+  type: "text";
+  content: string;
+  fontSize: number;
+  fontFamily: FontFamily;
+  color: string;
+  bold: boolean;
+  italic: boolean;
+  alignment: TextAlign;
+  bgColor: string;
+}
+
+export interface QuestionTypeStyle {
+  label: string;
+  questionColor: string;
+  questionFontSize: number;
+  answerColor: string;
+  answerFontSize: number;
+  bgColor: string;
+}
+
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  yes_no_na: "Yes / No / N/A",
+  text: "Text",
+  long_text: "Long Text",
+  number: "Number",
+  checkbox: "Checkbox",
+  date: "Date",
+  photo: "Photo",
+  dropdown: "Dropdown",
+  multiple_choice: "Multiple Choice",
+  multiple_selection: "Multiple Selection",
+  rating: "Rating",
+  signature: "Signature",
+  table: "Table",
+  document_number: "Document Number",
+  site_name: "Site Name",
+  asset_name: "Asset Name",
+  company_name: "Company Name",
+};
+
+export function buildDefaultQuestionTypeStyles(): Record<QuestionType, QuestionTypeStyle> {
+  const types = Object.keys(QUESTION_TYPE_LABELS) as QuestionType[];
+  const styles = {} as Record<QuestionType, QuestionTypeStyle>;
+  for (const t of types) {
+    styles[t] = {
+      label: QUESTION_TYPE_LABELS[t],
+      questionColor: "#000000",
+      questionFontSize: 9,
+      answerColor: "#666666",
+      answerFontSize: 9,
+      bgColor: "",
+    };
+  }
+  return styles;
+}
+
+export interface QuestionsBlock extends PdfBlockBase {
+  type: "questions";
+  showSectionHeaders: boolean;
+  showSectionNumbers: boolean;
+  showQuestionNumbers: boolean;
+  showFlags: boolean;
+  showNotes: boolean;
+  showEmptyQuestions: boolean;
+  sectionHeaderBg: string;
+  sectionHeaderColor: string;
+  sectionFontSize: number;
+  questionFontSize: number;
+  questionColor: string;
+  answerFontSize: number;
+  answerColor: string;
+  fontFamily: FontFamily;
+  flagColor: string;
+  noteColor: string;
+  dividerColor: string;
+  dividerThickness: number;
+  questionTypeStyles: Record<QuestionType, QuestionTypeStyle>;
+}
+
+export interface ActionsBlock extends PdfBlockBase {
+  type: "actions";
+  headerText: string;
+  headerBg: string;
+  headerColor: string;
+  fontSize: number;
+  fontFamily: FontFamily;
+}
+
+export interface SignaturesBlock extends PdfBlockBase {
+  type: "signatures";
+  headerText: string;
+  headerBg: string;
+  headerColor: string;
+  fontSize: number;
+}
+
+export interface SpacerBlock extends PdfBlockBase {
+  type: "spacer";
+  height: number;
+}
+
+export interface DividerBlock extends PdfBlockBase {
+  type: "divider";
+  color: string;
+  thickness: number;
+}
+
+export interface PageBreakBlock extends PdfBlockBase {
+  type: "page_break";
+}
+
+export interface FooterBlock extends PdfBlockBase {
+  type: "footer";
+  showPageNumbers: boolean;
+  showTitle: boolean;
+  leftText: string;
+  rightText: string;
+  fontSize: number;
+  color: string;
+  logoUrl: string;
+  logoPosition: "left" | "center" | "right";
+  logoMaxHeight: number;
+}
+
+export type PdfBlock =
+  | HeaderBlock
+  | InfoFieldsBlock
+  | TextBlock
+  | QuestionsBlock
+  | ActionsBlock
+  | SignaturesBlock
+  | SpacerBlock
+  | DividerBlock
+  | PageBreakBlock
+  | FooterBlock;
 
 export interface PdfTemplateConfig {
   pageSize: "letter" | "a4";
   orientation: "portrait" | "landscape";
   margins: { top: number; right: number; bottom: number; left: number };
-  colors: {
-    primary: string;   // hex e.g. "#264D99"
-    accent: string;
-    headerBg: string;
-    headerText: string;
-  };
-  header: {
-    showTitle: boolean;
-    showStatus: boolean;
-    showDate: boolean;
-    showScore: boolean;
-    showSite: boolean;
-    showConductor: boolean;
-    showNcr: boolean;
-    companyName: string;
-  };
-  sections: {
-    showSectionNumbers: boolean;
-    showQuestionNumbers: boolean;
-  };
-  content: {
-    showFlags: boolean;
-    showNotes: boolean;
-    showActions: boolean;
-    showSignatures: boolean;
-    showEmptyQuestions: boolean;
-  };
-  footer: {
-    showPageNumbers: boolean;
-    showConfidential: boolean;
-    customText: string;
-  };
+  blocks: PdfBlock[];
 }
 
 export interface PdfTemplate {
@@ -311,42 +478,103 @@ export interface PdfTemplate {
   updatedAt: string;
 }
 
+export const DEFAULT_PDF_BLOCKS: PdfBlock[] = [
+  {
+    id: "hdr",
+    type: "header",
+    titleSource: "template_name",
+    customTitle: "",
+    showStatusBadge: true,
+    bgColor: "#264D99",
+    textColor: "#FFFFFF",
+    fontSize: 14,
+    fontFamily: "helvetica",
+    alignment: "left",
+    companyName: "",
+    companyNameColor: "#666666",
+    companyNameSize: 10,
+    logoUrl: "",
+    logoPosition: "left",
+    logoMaxHeight: 40,
+  },
+  {
+    id: "info",
+    type: "info_fields",
+    fields: [
+      { key: "site", label: "Site", enabled: true },
+      { key: "conductor", label: "Conducted By", enabled: true },
+      { key: "started", label: "Started", enabled: true },
+      { key: "completed", label: "Completed", enabled: true },
+      { key: "ncr", label: "NCR Number", enabled: true },
+      { key: "score", label: "Score", enabled: true },
+    ],
+    layout: "two_column",
+    labelColor: "#666666",
+    valueColor: "#000000",
+    fontSize: 9,
+    fontFamily: "helvetica",
+  },
+  { id: "d1", type: "divider", color: "#DDDDDD", thickness: 0.5 },
+  {
+    id: "qst",
+    type: "questions",
+    showSectionHeaders: true,
+    showSectionNumbers: true,
+    showQuestionNumbers: true,
+    showFlags: true,
+    showNotes: true,
+    showEmptyQuestions: false,
+    sectionHeaderBg: "#EDEDF3",
+    sectionHeaderColor: "#264D99",
+    sectionFontSize: 10,
+    questionFontSize: 9,
+    questionColor: "#000000",
+    answerFontSize: 9,
+    answerColor: "#666666",
+    fontFamily: "helvetica",
+    flagColor: "#BF2626",
+    noteColor: "#666666",
+    dividerColor: "#CCCCCC",
+    dividerThickness: 1,
+    questionTypeStyles: buildDefaultQuestionTypeStyles(),
+  },
+  {
+    id: "act",
+    type: "actions",
+    headerText: "CORRECTIVE ACTIONS",
+    headerBg: "#FFF2E5",
+    headerColor: "#BF2626",
+    fontSize: 9,
+    fontFamily: "helvetica",
+  },
+  {
+    id: "sig",
+    type: "signatures",
+    headerText: "SIGNATURES",
+    headerBg: "#EDF5ED",
+    headerColor: "#278C33",
+    fontSize: 9,
+  },
+  {
+    id: "ftr",
+    type: "footer",
+    showPageNumbers: true,
+    showTitle: true,
+    leftText: "",
+    rightText: "Private & confidential",
+    fontSize: 8,
+    color: "#666666",
+    logoUrl: "",
+    logoPosition: "left",
+    logoMaxHeight: 20,
+  },
+];
+
 export const DEFAULT_PDF_CONFIG: PdfTemplateConfig = {
   pageSize: "letter",
   orientation: "portrait",
   margins: { top: 50, right: 50, bottom: 50, left: 50 },
-  colors: {
-    primary: "#264D99",
-    accent: "#1A8C33",
-    headerBg: "#264D99",
-    headerText: "#FFFFFF",
-  },
-  header: {
-    showTitle: true,
-    showStatus: true,
-    showDate: true,
-    showScore: true,
-    showSite: true,
-    showConductor: true,
-    showNcr: true,
-    companyName: "",
-  },
-  sections: {
-    showSectionNumbers: true,
-    showQuestionNumbers: true,
-  },
-  content: {
-    showFlags: true,
-    showNotes: true,
-    showActions: true,
-    showSignatures: true,
-    showEmptyQuestions: false,
-  },
-  footer: {
-    showPageNumbers: true,
-    showConfidential: true,
-    customText: "",
-  },
+  blocks: DEFAULT_PDF_BLOCKS,
 };
 
 // ════════════════════════════════════════════════════════════════════

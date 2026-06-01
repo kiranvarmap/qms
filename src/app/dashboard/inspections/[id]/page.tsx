@@ -29,8 +29,11 @@ import {
   Download,
   Settings2,
   GripVertical,
+  FileText,
+  Pencil,
+  ChevronDown,
 } from "lucide-react";
-import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef, QuestionType } from "@/lib/types";
+import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef, QuestionType, PdfTemplate } from "@/lib/types";
 import { shouldShowQuestion, shouldAutoFlag } from "@/lib/conditional-logic";
 
 type FullInspection = Inspection & {
@@ -200,6 +203,7 @@ export default function InspectionPage() {
         conditionalRules: null,
         flagRules: null,
         linkedQuestionId: null,
+        instructions: null,
       };
       return { ...s, questions: [...s.questions, newQ] };
     });
@@ -337,13 +341,7 @@ export default function InspectionPage() {
               <CheckCircle2 className="h-4 w-4" />
               Completed
             </div>
-            <a
-              href={`/api/inspections/${id}/pdf`}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-              Export PDF
-            </a>
+            <PdfExportButton inspectionId={id} />
           </div>
         )}
       </div>
@@ -729,6 +727,8 @@ function QuestionCard({
   };
 
   const isFlagged = !!response?.flagged;
+  const hasInstructions = !!(q.instructions?.text || q.instructions?.mediaUrl);
+  const [showInstr, setShowInstr] = useState(false);
 
   return (
     <div className={cn(
@@ -742,6 +742,15 @@ function QuestionCard({
           {q.description && <p className="text-xs text-gray-400 mt-0.5">{q.description}</p>}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
+          {hasInstructions && (
+            <button
+              onClick={() => setShowInstr(!showInstr)}
+              className={cn("p-1.5 rounded-md transition-colors", showInstr ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-blue-400")}
+              title="View instructions"
+            >
+              <FileText className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             onClick={() => onSave(q.id, sectionId, { flagged: !isFlagged }, repeatIndex)}
             className={cn("p-1.5 rounded-md transition-colors", isFlagged ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-400")}
@@ -765,6 +774,39 @@ function QuestionCard({
           </button>
         </div>
       </div>
+
+      {/* Instructions panel */}
+      {showInstr && hasInstructions && (
+        <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+            <FileText className="h-3.5 w-3.5" />
+            Instructions
+          </div>
+          {q.instructions?.text && (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{q.instructions.text}</p>
+          )}
+          {q.instructions?.mediaUrl && q.instructions.mediaType === "image" && (
+            <div className="rounded-lg overflow-hidden border border-blue-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={q.instructions.mediaUrl} alt="Instruction" className="max-h-60 mx-auto" />
+            </div>
+          )}
+          {q.instructions?.mediaUrl && q.instructions.mediaType === "video" && (
+            q.instructions.mediaUrl.includes("youtube.com") || q.instructions.mediaUrl.includes("youtu.be") ? (
+              <div className="aspect-video rounded-lg overflow-hidden border border-blue-100">
+                <iframe
+                  src={q.instructions.mediaUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title="Instruction video"
+                />
+              </div>
+            ) : (
+              <video src={q.instructions.mediaUrl} controls className="max-h-60 rounded-lg border border-blue-100 mx-auto" />
+            )
+          )}
+        </div>
+      )}
 
       {/* Response widget */}
       <ResponseWidget question={q} sectionId={sectionId} repeatIndex={repeatIndex} response={response} onSave={onSave} />
@@ -1032,20 +1074,7 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
   }
 
   if (q.type === "signature") {
-    return (
-      <div className="space-y-1">
-        <input
-          type="text"
-          value={localText}
-          onChange={(e) => saveText(e.target.value)}
-          placeholder="Type full name as signature…"
-          className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 font-serif italic"
-        />
-        {localText && (
-          <p className="text-xs text-gray-400 pl-1">Signed as: <span className="font-serif italic text-gray-600">{localText}</span></p>
-        )}
-      </div>
-    );
+    return <SignatureWidget value={val} onSave={save} />;
   }
 
   // Auto-populated types — read-only info display
@@ -1064,7 +1093,246 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
     );
   }
 
+  // Table question
+  if (q.type === "table") {
+    return <TableWidget question={q} value={val} onSave={save} />;
+  }
+
   return <p className="text-xs text-gray-400">Unsupported question type: {q.type}</p>;
+}
+
+// ── Signature Widget (canvas-based with timestamp) ──────────────────
+function SignatureWidget({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const padRef = useRef<import("signature_pad").default | null>(null);
+  const [signed, setSigned] = useState(false);
+
+  // Parse stored value: { signature: base64, signedAt: iso, name?: string }
+  const parsed = useMemo(() => {
+    if (!value) return null;
+    try {
+      const obj = JSON.parse(value);
+      if (obj && obj.signature) return obj as { signature: string; signedAt: string; name?: string };
+    } catch {
+      // Legacy plain-text value — treat as name
+      if (value.trim()) return { signature: "", signedAt: "", name: value };
+    }
+    return null;
+  }, [value]);
+
+  useEffect(() => {
+    if (parsed?.signature) return; // Don't init pad if already signed
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    import("signature_pad").then(({ default: SignaturePad }) => {
+      const pad = new SignaturePad(canvas, {
+        backgroundColor: "rgb(255,255,255)",
+        penColor: "#1e293b",
+      });
+      padRef.current = pad;
+      const resize = () => {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d")?.scale(ratio, ratio);
+        pad.clear();
+      };
+      resize();
+      pad.addEventListener("endStroke", () => setSigned(!pad.isEmpty()));
+    });
+    return () => { padRef.current?.off(); };
+  }, [parsed?.signature]);
+
+  const handleClear = () => {
+    padRef.current?.clear();
+    setSigned(false);
+  };
+
+  const handleAccept = () => {
+    const pad = padRef.current;
+    if (!pad || pad.isEmpty()) return;
+    const data = pad.toDataURL("image/png");
+    const payload = JSON.stringify({
+      signature: data,
+      signedAt: new Date().toISOString(),
+    });
+    onSave(payload);
+  };
+
+  const handleReset = () => {
+    onSave("");
+    setSigned(false);
+  };
+
+  // Show completed signature
+  if (parsed?.signature) {
+    return (
+      <div className="space-y-2">
+        <div className="border border-green-200 rounded-lg p-3 bg-green-50/30">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={parsed.signature} alt="Signature" className="max-h-24 mx-auto" />
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-500">
+            Signed on{" "}
+            <span className="font-medium text-gray-700">
+              {new Date(parsed.signedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+            </span>
+          </p>
+          <button
+            onClick={handleReset}
+            className="text-xs text-red-500 hover:text-red-700 hover:underline"
+          >
+            Clear & re-sign
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show legacy text-only signature
+  if (parsed?.name && !parsed.signature) {
+    return (
+      <div className="space-y-2">
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
+          <p className="font-serif italic text-lg text-gray-700">{parsed.name}</p>
+          <p className="text-xs text-gray-400 mt-1">(Legacy text signature)</p>
+        </div>
+        <button onClick={handleReset} className="text-xs text-red-500 hover:text-red-700 hover:underline">
+          Clear & draw new signature
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-white relative">
+        <canvas
+          ref={canvasRef}
+          className="w-full"
+          style={{ height: 120, touchAction: "none" }}
+        />
+        {!signed && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-sm text-gray-300">Sign here</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={handleClear}
+          className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          Clear
+        </button>
+        <button
+          onClick={handleAccept}
+          disabled={!signed}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 transition-colors"
+        >
+          <Check className="h-3 w-3" />
+          Accept Signature
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Table Widget (editable grid) ─────────────────────────────────────
+function TableWidget({ question: q, value, onSave }: { question: TemplateQuestion; value: string; onSave: (v: string) => void }) {
+  // Columns stored in options: {id, text: columnName, score: 0=text,1=number,2=date}
+  const columns = useMemo(() => {
+    const opts = q.options ?? [];
+    return opts.map((o) => ({
+      id: o.id,
+      name: o.text || "Column",
+      type: o.score === 1 ? "number" : o.score === 2 ? "date" : "text",
+    }));
+  }, [q.options]);
+
+  // Rows stored as JSON array of objects [{colId: value, ...}, ...]
+  const [rows, setRows] = useState<Record<string, string>[]>(() => {
+    try {
+      const parsed = JSON.parse(value || "[]");
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : [{}];
+    } catch {
+      return [{}];
+    }
+  });
+
+  const saveRows = useCallback((newRows: Record<string, string>[]) => {
+    setRows(newRows);
+    onSave(JSON.stringify(newRows));
+  }, [onSave]);
+
+  const updateCell = (rowIdx: number, colId: string, cellValue: string) => {
+    const next = rows.map((r, i) => i === rowIdx ? { ...r, [colId]: cellValue } : r);
+    saveRows(next);
+  };
+
+  const addRow = () => saveRows([...rows, {}]);
+  const removeRow = (rowIdx: number) => {
+    if (rows.length <= 1) return;
+    saveRows(rows.filter((_, i) => i !== rowIdx));
+  };
+
+  if (columns.length === 0) {
+    return <p className="text-xs text-gray-400 italic">No table columns defined in template.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {columns.map((col) => (
+                <th key={col.id} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                  {col.name}
+                </th>
+              ))}
+              <th className="w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50">
+                {columns.map((col) => (
+                  <td key={col.id} className="px-2 py-1">
+                    <input
+                      type={col.type === "number" ? "number" : col.type === "date" ? "date" : "text"}
+                      value={row[col.id] ?? ""}
+                      onChange={(e) => updateCell(ri, col.id, e.target.value)}
+                      className="w-full text-sm border border-transparent hover:border-gray-200 focus:border-blue-400 rounded px-1.5 py-1 outline-none bg-transparent"
+                      placeholder="—"
+                    />
+                  </td>
+                ))}
+                <td className="px-1 py-1">
+                  {rows.length > 1 && (
+                    <button
+                      onClick={() => removeRow(ri)}
+                      className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button
+        onClick={addRow}
+        className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 transition-colors"
+      >
+        <Plus className="h-3 w-3" />
+        Add row
+      </button>
+    </div>
+  );
 }
 
 // ── Report view ─────────────────────────────────────────────────────
@@ -1220,6 +1488,27 @@ function ResponseBadge({ type, value }: { type: string; value: string }) {
       </div>
     );
   }
+  if (type === "signature") {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed?.signature) {
+        return (
+          <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={parsed.signature} alt="Signature" className="h-8 border border-gray-200 rounded" />
+            <span className="text-[10px] text-gray-400">{new Date(parsed.signedAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}</span>
+          </div>
+        );
+      }
+    } catch { /* legacy text */ }
+    return <span className="text-xs text-gray-700 font-serif italic">{value}</span>;
+  }
+  if (type === "table") {
+    try {
+      const rows = JSON.parse(value);
+      if (Array.isArray(rows)) return <span className="text-xs text-gray-500">{rows.length} row{rows.length !== 1 ? "s" : ""}</span>;
+    } catch { /* ignore */ }
+  }
   return <span className="text-xs text-gray-700 max-w-[160px] truncate">{value}</span>;
 }
 
@@ -1305,5 +1594,104 @@ function AddActionModal({ inspectionId, questionId, onClose, onAdded }: {
         </div>
       </div>
     </>
+  );
+}
+
+// ── PDF Export with template selector ──────────────────────────────
+function PdfExportButton({ inspectionId }: { inspectionId: string }) {
+  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (loaded) return;
+    fetch("/api/pdf-templates")
+      .then(async (r) => {
+        if (r.ok) {
+          const rows: PdfTemplate[] = await r.json();
+          setPdfTemplates(rows);
+          const def = rows.find((t) => t.isDefault);
+          if (def) setSelectedId(def.id);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [loaded]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const href = selectedId
+    ? `/api/inspections/${inspectionId}/pdf?templateId=${selectedId}`
+    : `/api/inspections/${inspectionId}/pdf`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex items-center">
+        <a
+          href={href}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-l-lg border border-blue-200 hover:bg-blue-100 transition-colors"
+        >
+          <Download className="h-4 w-4" />
+          Export PDF
+        </a>
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center px-1.5 py-1.5 text-sm text-blue-700 bg-blue-50 rounded-r-lg border border-l-0 border-blue-200 hover:bg-blue-100 transition-colors"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-100">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">PDF Template</p>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            <button
+              onClick={() => { setSelectedId(""); setOpen(false); }}
+              className={cn(
+                "w-full text-left px-3 py-2 text-sm transition-colors",
+                !selectedId ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700 hover:bg-gray-50"
+              )}
+            >
+              Default
+            </button>
+            {pdfTemplates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setSelectedId(t.id); setOpen(false); }}
+                className={cn(
+                  "w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2",
+                  selectedId === t.id ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <FileText className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                <span className="truncate">{t.name}</span>
+                {t.isDefault && <span className="text-[9px] bg-green-100 text-green-700 px-1 py-0.5 rounded-full font-bold ml-auto flex-shrink-0">DEFAULT</span>}
+              </button>
+            ))}
+          </div>
+          <div className="px-3 py-2 border-t border-gray-100">
+            <Link
+              href="/dashboard/inspections/pdf-templates"
+              target="_blank"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+            >
+              <Pencil className="h-3 w-3" />
+              Edit PDF Templates
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

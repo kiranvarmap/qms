@@ -347,6 +347,8 @@ export const templateQuestions = pgTable("template_questions", {
   flagRules: jsonb("flag_rules"),
   // Link this question's answer to another question in the same template
   linkedQuestionId: uuid("linked_question_id"),
+  // Rich instructions (text, image, video) for the inspector
+  instructions: jsonb("instructions"),
 });
 
 export const inspections = pgTable("inspections", {

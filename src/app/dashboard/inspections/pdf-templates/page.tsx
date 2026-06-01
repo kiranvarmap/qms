@@ -1,506 +1,1187 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Loader2,
-  FileText,
-  Check,
-  X,
-  Pencil,
-  Star,
-  Eye,
+  ArrowLeft, Plus, Trash2, Loader2, FileText, Check, X,
+  ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon,
+  Type, Columns, AlignLeft, BarChart3, ShieldCheck, PenLine,
+  Minus, Copy, GripVertical, Save,
+  Bold, Italic,
+  LayoutTemplate, Upload, Palette, Settings2, Link2,
 } from "lucide-react";
-import type { PdfTemplate, PdfTemplateConfig } from "@/lib/types";
-import { DEFAULT_PDF_CONFIG } from "@/lib/types";
+import type {
+  PdfTemplate, PdfTemplateConfig, PdfBlock, PdfBlockType,
+  HeaderBlock, InfoFieldsBlock, TextBlock, QuestionsBlock,
+  ActionsBlock, SignaturesBlock, SpacerBlock, DividerBlock, FooterBlock,
+  FontFamily, QuestionType, QuestionTypeStyle,
+  InspectionTemplate, TemplateSection,
+} from "@/lib/types";
+import { DEFAULT_PDF_CONFIG, DEFAULT_PDF_BLOCKS, QUESTION_TYPE_LABELS, buildDefaultQuestionTypeStyles } from "@/lib/types";
 
+// ── Block palette definitions ─────────────────────────────────────
+const BLOCK_PALETTE: { type: PdfBlockType; label: string; icon: React.ReactNode }[] = [
+  { type: "header", label: "Header", icon: <Type className="h-3.5 w-3.5" /> },
+  { type: "info_fields", label: "Info Fields", icon: <Columns className="h-3.5 w-3.5" /> },
+  { type: "text", label: "Text", icon: <AlignLeft className="h-3.5 w-3.5" /> },
+  { type: "questions", label: "Questions", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+  { type: "actions", label: "Actions", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+  { type: "signatures", label: "Signatures", icon: <PenLine className="h-3.5 w-3.5" /> },
+  { type: "divider", label: "Divider", icon: <Minus className="h-3.5 w-3.5" /> },
+  { type: "spacer", label: "Spacer", icon: <GripVertical className="h-3.5 w-3.5" /> },
+  { type: "page_break", label: "Page Break", icon: <FileText className="h-3.5 w-3.5" /> },
+  { type: "footer", label: "Footer", icon: <AlignLeft className="h-3.5 w-3.5" /> },
+];
+
+function makeBlock(type: PdfBlockType): PdfBlock {
+  const id = `b_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  switch (type) {
+    case "header":
+      return { id, type, titleSource: "template_name", customTitle: "", showStatusBadge: true, bgColor: "#264D99", textColor: "#FFFFFF", fontSize: 14, fontFamily: "helvetica", alignment: "left", companyName: "", companyNameColor: "#666666", companyNameSize: 10, logoUrl: "", logoPosition: "left" as const, logoMaxHeight: 40 };
+    case "info_fields":
+      return { id, type, fields: [{ key: "site", label: "Site", enabled: true }, { key: "conductor", label: "Conducted By", enabled: true }, { key: "started", label: "Started", enabled: true }, { key: "completed", label: "Completed", enabled: true }, { key: "ncr", label: "NCR Number", enabled: true }, { key: "score", label: "Score", enabled: true }], layout: "two_column", labelColor: "#666666", valueColor: "#000000", fontSize: 9, fontFamily: "helvetica" };
+    case "text":
+      return { id, type, content: "", fontSize: 10, fontFamily: "helvetica", color: "#000000", bold: false, italic: false, alignment: "left", bgColor: "" };
+    case "questions":
+      return { id, type, showSectionHeaders: true, showSectionNumbers: true, showQuestionNumbers: true, showFlags: true, showNotes: true, showEmptyQuestions: false, sectionHeaderBg: "#EDEDF3", sectionHeaderColor: "#264D99", sectionFontSize: 10, questionFontSize: 9, questionColor: "#000000", answerFontSize: 9, answerColor: "#666666", fontFamily: "helvetica", flagColor: "#BF2626", noteColor: "#666666", dividerColor: "#CCCCCC", dividerThickness: 1, questionTypeStyles: buildDefaultQuestionTypeStyles() };
+    case "actions":
+      return { id, type, headerText: "CORRECTIVE ACTIONS", headerBg: "#FFF2E5", headerColor: "#BF2626", fontSize: 9, fontFamily: "helvetica" };
+    case "signatures":
+      return { id, type, headerText: "SIGNATURES", headerBg: "#EDF5ED", headerColor: "#278C33", fontSize: 9 };
+    case "spacer":
+      return { id, type, height: 20 };
+    case "divider":
+      return { id, type, color: "#DDDDDD", thickness: 0.5 };
+    case "page_break":
+      return { id, type };
+    case "footer":
+      return { id, type, showPageNumbers: true, showTitle: true, leftText: "", rightText: "Private & confidential", fontSize: 8, color: "#666666", logoUrl: "", logoPosition: "left" as const, logoMaxHeight: 20 };
+  }
+}
+
+const ff = (f: string) => f === "courier" ? "monospace" : f === "times" ? "serif" : "sans-serif";
+
+// ── Logo upload helper ─────────────────────────────────────────────
+async function uploadLogo(file: File): Promise<string | null> {
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function LogoUpload({ url, onUpload, onRemove, maxHeight = 40 }: { url: string; onUpload: (url: string) => void; onRemove: () => void; maxHeight?: number }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const result = await uploadLogo(file);
+    if (result) onUpload(result);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {url ? (
+        <div className="flex items-center gap-2">
+          <img src={url} alt="Logo" className="object-contain rounded border border-gray-200" style={{ maxHeight }} />
+          <button onClick={onRemove} className="text-[10px] text-red-500 hover:underline">Remove</button>
+        </div>
+      ) : (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1 px-2 py-1 text-[11px] border border-dashed border-gray-300 rounded hover:border-blue-400 hover:text-blue-500 transition-colors"
+        >
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {uploading ? "Uploading…" : "Upload Logo"}
+        </button>
+      )}
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={handleFile} className="hidden" />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
 export default function PdfTemplatesPage() {
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editConfig, setEditConfig] = useState<PdfTemplateConfig>(DEFAULT_PDF_CONFIG);
-  const [editName, setEditName] = useState("");
-  const [editDesc, setEditDesc] = useState("");
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [config, setConfig] = useState<PdfTemplateConfig>(DEFAULT_PDF_CONFIG);
+  const [templateName, setTemplateName] = useState("Untitled Template");
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showTemplateList, setShowTemplateList] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const templateListRef = useRef<HTMLDivElement>(null);
+  const currentIdRef = useRef<string | null>(null);
+  const configRef = useRef<PdfTemplateConfig>(DEFAULT_PDF_CONFIG);
+  const nameRef = useRef("Untitled Template");
 
-  const loadTemplates = useCallback(async () => {
-    setLoading(true);
-    const res = await fetch("/api/pdf-templates");
-    if (res.ok) setTemplates(await res.json());
-    setLoading(false);
+  // keep refs in sync
+  useEffect(() => { currentIdRef.current = currentId; }, [currentId]);
+  useEffect(() => { configRef.current = config; }, [config]);
+  useEffect(() => { nameRef.current = templateName; }, [templateName]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (paletteRef.current && !paletteRef.current.contains(e.target as Node)) setShowPalette(false);
+      if (templateListRef.current && !templateListRef.current.contains(e.target as Node)) setShowTemplateList(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  const openTemplate = useCallback((t: PdfTemplate) => {
+    setCurrentId(t.id);
+    setTemplateName(t.name);
+    const cfg = (t.config as PdfTemplateConfig) ?? DEFAULT_PDF_CONFIG;
+    if (!cfg.blocks || !cfg.blocks.length) cfg.blocks = [...DEFAULT_PDF_BLOCKS];
+    setConfig({ ...cfg });
+    setActiveBlockId(null);
+    setShowTemplateList(false);
+  }, []);
 
-  const createTemplate = async () => {
-    const name = newName.trim();
-    if (!name) return;
-    setCreating(true);
+  // Load templates and auto-open the first one or create a new one
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/pdf-templates");
+        if (!res.ok) throw new Error();
+        const rows: PdfTemplate[] = await res.json();
+        if (cancelled) return;
+        setTemplates(rows);
+        if (rows.length > 0) {
+          openTemplate(rows[0]);
+        } else {
+          const createRes = await fetch("/api/pdf-templates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Default Template", config: DEFAULT_PDF_CONFIG }),
+          });
+          if (createRes.ok) {
+            const created: PdfTemplate = await createRes.json();
+            if (cancelled) return;
+            setTemplates([created]);
+            openTemplate(created);
+          }
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [openTemplate]);
+
+  const createNewTemplate = async () => {
     const res = await fetch("/api/pdf-templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, config: DEFAULT_PDF_CONFIG }),
+      body: JSON.stringify({ name: "Untitled Template", config: DEFAULT_PDF_CONFIG }),
     });
     if (res.ok) {
       const created: PdfTemplate = await res.json();
       setTemplates((prev) => [...prev, created]);
-      setNewName("");
-      setShowNew(false);
-      // Open editor for the new template
-      startEditing(created);
+      openTemplate(created);
     }
-    setCreating(false);
   };
 
-  const startEditing = (t: PdfTemplate) => {
-    setEditingId(t.id);
-    setEditName(t.name);
-    setEditDesc(t.description || "");
-    setEditConfig(t.config ?? DEFAULT_PDF_CONFIG);
-  };
+  // Auto-save with debounce
+  const scheduleSave = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      const id = currentIdRef.current;
+      if (!id) return;
+      setSaving(true);
+      try {
+        const res = await fetch(`/api/pdf-templates/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: nameRef.current, config: configRef.current }),
+        });
+        if (res.ok) {
+          const updated: PdfTemplate = await res.json();
+          setTemplates((prev) => prev.map((t) => t.id === updated.id ? updated : t));
+          setSaved(true);
+          setTimeout(() => setSaved(false), 1500);
+        }
+      } catch { /* ignore */ }
+      setSaving(false);
+    }, 1200);
+  }, []);
 
-  const saveTemplate = async () => {
-    if (!editingId) return;
+  const manualSave = async () => {
+    if (!currentId) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaving(true);
-    const res = await fetch(`/api/pdf-templates/${editingId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName, description: editDesc, config: editConfig }),
-    });
-    if (res.ok) {
-      const updated: PdfTemplate = await res.json();
-      setTemplates((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      setEditingId(null);
-    }
+    try {
+      const res = await fetch(`/api/pdf-templates/${currentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: templateName, config }),
+      });
+      if (res.ok) {
+        const updated: PdfTemplate = await res.json();
+        setTemplates((prev) => prev.map((t) => t.id === updated.id ? updated : t));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      }
+    } catch { /* ignore */ }
     setSaving(false);
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm("Delete this PDF template?")) return;
+    if (!confirm("Delete this template?")) return;
     await fetch(`/api/pdf-templates/${id}`, { method: "DELETE" });
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    if (editingId === id) setEditingId(null);
-  };
-
-  const setAsDefault = async (id: string) => {
-    const res = await fetch(`/api/pdf-templates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isDefault: true }),
-    });
-    if (res.ok) {
-      setTemplates((prev) =>
-        prev.map((t) => ({ ...t, isDefault: t.id === id }))
-      );
+    const remaining = templates.filter((t) => t.id !== id);
+    setTemplates(remaining);
+    if (currentId === id) {
+      if (remaining.length > 0) openTemplate(remaining[0]);
+      else { setCurrentId(null); setConfig(DEFAULT_PDF_CONFIG); }
     }
   };
 
-  const editing = editingId ? templates.find((t) => t.id === editingId) : null;
+  // Block operations
+  const blocks = config.blocks ?? [];
+  const setBlocks = useCallback((nb: PdfBlock[]) => {
+    setConfig((prev) => ({ ...prev, blocks: nb }));
+    scheduleSave();
+  }, [scheduleSave]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+  const addBlock = (type: PdfBlockType) => {
+    const nb = makeBlock(type);
+    setBlocks([...blocks, nb]);
+    setActiveBlockId(nb.id);
+    setShowPalette(false);
+  };
+
+  const removeBlock = (id: string) => {
+    setBlocks(blocks.filter((b) => b.id !== id));
+    if (activeBlockId === id) setActiveBlockId(null);
+  };
+
+  const moveBlock = (id: string, dir: "up" | "down") => {
+    const idx = blocks.findIndex((b) => b.id === id);
+    if (idx < 0) return;
+    const swap = dir === "up" ? idx - 1 : idx + 1;
+    if (swap < 0 || swap >= blocks.length) return;
+    const arr = [...blocks];
+    [arr[idx], arr[swap]] = [arr[swap], arr[idx]];
+    setBlocks(arr);
+  };
+
+  const duplicateBlock = (id: string) => {
+    const b = blocks.find((x) => x.id === id);
+    if (!b) return;
+    const nb = { ...JSON.parse(JSON.stringify(b)), id: `b_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` };
+    const idx = blocks.findIndex((x) => x.id === id);
+    const arr = [...blocks];
+    arr.splice(idx + 1, 0, nb);
+    setBlocks(arr);
+    setActiveBlockId(nb.id);
+  };
+
+  const updateBlock = useCallback((id: string, patch: Partial<PdfBlock>) => {
+    setConfig((prev) => ({
+      ...prev,
+      blocks: (prev.blocks ?? []).map((b) => b.id === id ? { ...b, ...patch } as PdfBlock : b),
+    }));
+    scheduleSave();
+  }, [scheduleSave]);
+
+  const activeBlock = blocks.find((b) => b.id === activeBlockId) ?? null;
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-full bg-gray-100">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <p className="text-sm text-gray-500">Loading editor…</p>
       </div>
-    );
-  }
+    </div>
+  );
 
+  // ═══════════════════════════════════════════════════════════════════
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4">
-        <Link href="/dashboard/inspections" className="p-1.5 rounded-md hover:bg-gray-100 transition-colors">
+    <div className="flex flex-col h-full bg-gray-200" onClick={() => { setActiveBlockId(null); setShowPalette(false); }}>
+      {/* ── Top Toolbar ───────────────────────────────────────────── */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-300 px-4 py-2 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+        <Link href="/dashboard/inspections" className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
           <ArrowLeft className="h-4 w-4 text-gray-500" />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-lg font-semibold text-gray-900">PDF Template Library</h1>
-          <p className="text-xs text-gray-500">Create and manage PDF export layouts for inspection reports</p>
+
+        {/* Template selector */}
+        <div className="relative" ref={templateListRef}>
+          <button
+            onClick={() => setShowTemplateList(!showTemplateList)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5 text-gray-400" />
+            <span className="text-sm font-medium text-gray-800 max-w-[180px] truncate">{templateName}</span>
+            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400" />
+          </button>
+          {showTemplateList && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl border border-gray-200 shadow-2xl z-50 overflow-hidden">
+              <div className="p-2 border-b border-gray-100">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2">Templates</p>
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {templates.map((t) => (
+                  <div
+                    key={t.id}
+                    className={cn("group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors", currentId === t.id ? "bg-blue-50 text-blue-700" : "hover:bg-gray-50")}
+                  >
+                    <div className="flex-1 truncate" onClick={() => openTemplate(t)}>
+                      <FileText className="h-3.5 w-3.5 inline mr-1.5" />
+                      <span className="text-sm">{t.name}</span>
+                    </div>
+                    {t.isDefault && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">DEFAULT</span>}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
+                      className="p-0.5 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                    ><Trash2 className="h-3 w-3 text-red-400" /></button>
+                  </div>
+                ))}
+              </div>
+              <div className="p-2 border-t border-gray-100">
+                <button onClick={createNewTemplate} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  <Plus className="h-3.5 w-3.5" /> New Template
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+
+        <div className="h-5 w-px bg-gray-200" />
+
+        {/* Page settings inline */}
+        <select
+          value={config.pageSize}
+          onChange={(e) => { setConfig((prev) => ({ ...prev, pageSize: e.target.value as "letter" | "a4" })); scheduleSave(); }}
+          className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 outline-none hover:bg-gray-100"
         >
-          <Plus className="h-4 w-4" /> New Template
+          <option value="letter">Letter</option><option value="a4">A4</option>
+        </select>
+        <select
+          value={config.orientation}
+          onChange={(e) => { setConfig((prev) => ({ ...prev, orientation: e.target.value as "portrait" | "landscape" })); scheduleSave(); }}
+          className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 outline-none hover:bg-gray-100"
+        >
+          <option value="portrait">Portrait</option><option value="landscape">Landscape</option>
+        </select>
+
+        <div className="flex-1" />
+
+        {/* Save indicator */}
+        {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>}
+        {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><Check className="h-3 w-3" /> Saved</span>}
+
+        <button onClick={manualSave} disabled={saving} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          <Save className="h-3.5 w-3.5" /> Save
         </button>
       </div>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left: Template list */}
-        <div className="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-              Templates ({templates.length})
-            </span>
+      {/* ── Document Canvas ───────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto p-8">
+        <div
+          className="mx-auto bg-white rounded shadow-xl relative"
+          style={{
+            width: config.orientation === "portrait" ? 620 : 800,
+            minHeight: config.orientation === "portrait" ? 877 : 620,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Template name — editable at top of page */}
+          <div className="px-8 pt-6 pb-2">
+            <input
+              value={templateName}
+              onChange={(e) => { setTemplateName(e.target.value); scheduleSave(); }}
+              className="w-full text-xs text-gray-400 uppercase tracking-widest bg-transparent outline-none border-b border-transparent hover:border-gray-200 focus:border-blue-300 pb-1 transition-colors"
+              placeholder="Template name…"
+            />
           </div>
 
-          {templates.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <FileText className="h-10 w-10 mb-2 text-gray-300" />
-              <p className="text-sm">No PDF templates yet</p>
-              <p className="text-xs mt-1">Create one to customize exports</p>
-            </div>
-          )}
+          {/* Blocks rendered as document content */}
+          <div className="px-2 pb-4">
+            {blocks.map((block, idx) => (
+              <div key={block.id} className="relative group" onClick={(e) => { e.stopPropagation(); setActiveBlockId(block.id); }}>
+                {/* Block content */}
+                <div className={cn(
+                  "transition-all rounded-sm mx-1",
+                  activeBlockId === block.id
+                    ? "ring-2 ring-blue-400 shadow-sm"
+                    : "hover:ring-1 hover:ring-gray-300"
+                )}>
+                  <LiveBlock
+                    block={block}
+                    isActive={activeBlockId === block.id}
+                    onChange={(patch) => updateBlock(block.id, patch)}
+                  />
+                </div>
 
-          {templates.map((t) => (
-            <div
-              key={t.id}
-              className={cn(
-                "px-4 py-3 border-b border-gray-50 cursor-pointer transition-colors",
-                editingId === t.id ? "bg-blue-50" : "hover:bg-gray-50"
-              )}
-              onClick={() => startEditing(t)}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm font-medium text-gray-900 flex-1 truncate">{t.name}</span>
-                {t.isDefault && (
-                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">DEFAULT</span>
+                {/* Floating action bar — shows on hover or active */}
+                <div className={cn(
+                  "absolute -left-10 top-0 flex flex-col gap-0.5 transition-opacity",
+                  activeBlockId === block.id ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+                )}>
+                  <button onClick={(e) => { e.stopPropagation(); moveBlock(block.id, "up"); }} disabled={idx === 0}
+                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-gray-50 disabled:opacity-20">
+                    <ChevronUp className="h-3 w-3 text-gray-500" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); moveBlock(block.id, "down"); }} disabled={idx === blocks.length - 1}
+                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-gray-50 disabled:opacity-20">
+                    <ChevronDown className="h-3 w-3 text-gray-500" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); duplicateBlock(block.id); }}
+                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-gray-50">
+                    <Copy className="h-3 w-3 text-gray-500" />
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}
+                    className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-red-50">
+                    <Trash2 className="h-3 w-3 text-red-400" />
+                  </button>
+                </div>
+
+                {/* Inline settings — appears below the block when active */}
+                {activeBlockId === block.id && (
+                  <div className="mx-1 mt-1 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{block.type.replace(/_/g, " ")} Settings</span>
+                      <button onClick={() => setActiveBlockId(null)} className="p-0.5 rounded hover:bg-gray-200"><X className="h-3 w-3 text-gray-400" /></button>
+                    </div>
+                    <InlineSettings block={block} onChange={(patch) => updateBlock(block.id, patch)} />
+                  </div>
                 )}
               </div>
-              {t.description && (
-                <p className="text-xs text-gray-500 mt-1 truncate pl-6">{t.description}</p>
+            ))}
+
+            {/* Add block button — inside the page */}
+            <div className="mx-6 mt-4 mb-6 relative" ref={paletteRef} onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setShowPalette(!showPalette)}
+                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-400 font-medium hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" /> Add block
+              </button>
+              {showPalette && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-[420px] bg-white border border-gray-200 rounded-xl shadow-2xl p-3 grid grid-cols-2 gap-1 z-50">
+                  <p className="col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1">Insert Block</p>
+                  {BLOCK_PALETTE.map((bt) => (
+                    <button
+                      key={bt.type}
+                      onClick={() => addBlock(bt.type)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-left rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      <span className="text-gray-400">{bt.icon}</span>
+                      <span className="text-xs font-medium text-gray-700">{bt.label}</span>
+                    </button>
+                  ))}
+                </div>
               )}
+            </div>
+          </div>
+
+          {/* Page footer preview at bottom of page */}
+          {blocks.find((b) => b.type === "footer") && (
+            <div className="absolute bottom-0 left-0 right-0 px-8 py-3 border-t border-gray-100">
+              {(() => {
+                const ftr = blocks.find((b) => b.type === "footer") as FooterBlock | undefined;
+                if (!ftr) return null;
+                return (
+                  <div className="flex justify-between" style={{ fontSize: ftr.fontSize + 2, color: ftr.color }}>
+                    <span>{ftr.showTitle ? "Document Title" : ""} {ftr.leftText}</span>
+                    <span>{ftr.rightText} {ftr.showPageNumbers ? "— 1 / 3" : ""}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// QuestionsCanvasEditor — each question type is a separate editable card
+// ════════════════════════════════════════════════════════════════════
+const SAMPLE_ANSWERS: Record<string, string> = {
+  yes_no_na: "Yes", text: "Sample text answer", long_text: "This is a longer text answer with more detail...",
+  number: "42", checkbox: "[x] Yes", date: "Apr 25, 2026", photo: "[Photo attached]",
+  dropdown: "Option A", multiple_choice: "Option B", multiple_selection: "Option A, Option C",
+  rating: "**** o (4/5)", signature: "[Signature captured]", table: "[Table data]",
+  document_number: "DOC-2026-001", site_name: "Main Facility", asset_name: "Crane #5", company_name: "Acme Corp",
+};
+
+// Question types that need full-width (answer below, not side-by-side)
+const FULL_WIDTH_TYPES = new Set<string>(["signature", "table", "long_text"]);
+
+function QuestionsCanvasEditor({ b, isActive, onChange }: { b: QuestionsBlock; isActive: boolean; onChange: (p: Partial<QuestionsBlock>) => void }) {
+  const [editingType, setEditingType] = useState<QuestionType | null>(null);
+  const [editingSection, setEditingSection] = useState(false);
+  const [inspTemplates, setInspTemplates] = useState<InspectionTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  const typeStyles = b.questionTypeStyles ?? buildDefaultQuestionTypeStyles();
+
+  const updateTypeStyle = (qt: QuestionType, patch: Partial<QuestionTypeStyle>) => {
+    onChange({ questionTypeStyles: { ...typeStyles, [qt]: { ...typeStyles[qt], ...patch } } } as Partial<QuestionsBlock>);
+  };
+
+  // Load inspection templates the first time the block is active
+  useEffect(() => {
+    if (!isActive || inspTemplates.length > 0) return;
+    setLoadingTemplates(true);
+    fetch("/api/inspection-templates")
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: InspectionTemplate[]) => setInspTemplates(data))
+      .catch(() => {})
+      .finally(() => setLoadingTemplates(false));
+  }, [isActive, inspTemplates.length]);
+
+  const selectedTemplate = inspTemplates.find((t) => t.id === selectedTemplateId);
+  const sections: TemplateSection[] = selectedTemplate?.sections ?? [];
+
+  // Determine which question types exist in the selected template (or all if none selected)
+  const usedTypes: QuestionType[] = selectedTemplate
+    ? [...new Set(sections.flatMap((s) => s.questions.map((q) => q.type as QuestionType)))]
+    : (Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]);
+
+  return (
+    <div className="px-4 py-3 space-y-0" onClick={(e) => e.stopPropagation()}>
+      {/* ── Inspection Template Selector ─────────────────────────── */}
+      {isActive && (
+        <div className="flex items-center gap-2 mb-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
+          <Link2 className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider flex-shrink-0">Preview with:</span>
+          <select
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+            className="flex-1 text-[11px] bg-white border border-blue-200 rounded px-2 py-1 outline-none"
+          >
+            <option value="">All Question Types (Default)</option>
+            {inspTemplates.map((t) => (
+              <option key={t.id} value={t.id}>{t.title} ({t.sections?.length || 0} sections)</option>
+            ))}
+          </select>
+          {loadingTemplates && <Loader2 className="h-3 w-3 animate-spin text-blue-400" />}
+        </div>
+      )}
+
+      {/* ── Section Header (editable on canvas) ─────────────────── */}
+      {b.showSectionHeaders && (
+        <div className="mb-2">
+          {(selectedTemplate ? sections : [{ id: "sample", title: "Section Title", questions: [], position: 0, templateId: "", pageNumber: 1, isRepeatable: false, maxRepetitions: null, requiresSignoff: false, signoffRoles: null }]).map((sec, si) => (
+            <div key={sec.id} className="mb-3">
+              <div
+                onClick={(e) => { e.stopPropagation(); setEditingSection(!editingSection); setEditingType(null); }}
+                className={cn(
+                  "rounded-lg px-4 py-2 font-bold uppercase tracking-wide cursor-pointer transition-all",
+                  editingSection ? "ring-2 ring-blue-400" : "hover:ring-1 hover:ring-gray-300"
+                )}
+                style={{ backgroundColor: b.sectionHeaderBg, color: b.sectionHeaderColor, fontSize: b.sectionFontSize + 1, fontFamily: ff(b.fontFamily) }}
+              >
+                {b.showSectionNumbers ? `${si + 1}. ` : ""}{sec.title}
+              </div>
+              {/* Section style editor — inline on canvas */}
+              {editingSection && si === 0 && (
+                <div className="mt-1 p-2.5 bg-white rounded-lg border border-blue-200 shadow-md space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Section Header Style</span>
+                    <button onClick={() => setEditingSection(false)} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-400" /></button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-gray-500">BG:</span><Clr value={b.sectionHeaderBg} onChange={(v) => onChange({ sectionHeaderBg: v })} />
+                    <span className="text-[10px] text-gray-500">Text:</span><Clr value={b.sectionHeaderColor} onChange={(v) => onChange({ sectionHeaderColor: v })} />
+                    <span className="text-[10px] text-gray-500">Size:</span><SizeBtn value={b.sectionFontSize} onChange={(v) => onChange({ sectionFontSize: v })} />
+                  </div>
+                </div>
+              )}
+
+              {/* Questions for this section */}
+              <div className="mt-1 space-y-0">
+                {selectedTemplate ? (
+                  // Real questions from inspection template
+                  sec.questions
+                    .sort((a, b) => a.position - b.position)
+                    .map((q, qi) => {
+                      const qt = q.type as QuestionType;
+                      return (
+                        <QuestionTypeCard
+                          key={q.id}
+                          questionType={qt}
+                          questionTitle={q.title}
+                          questionNum={b.showQuestionNumbers ? `${si + 1}.${qi + 1}` : ""}
+                          block={b}
+                          typeStyles={typeStyles}
+                          isEditing={editingType === qt}
+                          onEdit={() => { setEditingType(editingType === qt ? null : qt); setEditingSection(false); }}
+                          onUpdateStyle={(patch) => updateTypeStyle(qt, patch)}
+                        />
+                      );
+                    })
+                ) : (
+                  // All question types as separate cards
+                  (Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((qt, qi) => (
+                    <QuestionTypeCard
+                      key={qt}
+                      questionType={qt}
+                      questionTitle={QUESTION_TYPE_LABELS[qt]}
+                      questionNum={b.showQuestionNumbers ? `${si + 1}.${qi + 1}` : ""}
+                      block={b}
+                      typeStyles={typeStyles}
+                      isEditing={editingType === qt}
+                      onEdit={() => { setEditingType(editingType === qt ? null : qt); setEditingSection(false); }}
+                      onUpdateStyle={(patch) => updateTypeStyle(qt, patch)}
+                    />
+                  ))
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      )}
 
-          {/* Create new inline */}
-          {showNew && (
-            <div className="px-4 py-3 border-b border-gray-100 bg-yellow-50">
-              <div className="flex gap-2">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Template name…"
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-blue-400"
-                  onKeyDown={(e) => e.key === "Enter" && createTemplate()}
-                  autoFocus
+      {/* If section headers are off, just show type cards directly */}
+      {!b.showSectionHeaders && (
+        <div className="space-y-0">
+          {selectedTemplate ? (
+            sections.flatMap((sec) => sec.questions).sort((a, b) => a.position - b.position).map((q, qi) => {
+              const qt = q.type as QuestionType;
+              return (
+                <QuestionTypeCard
+                  key={q.id}
+                  questionType={qt}
+                  questionTitle={q.title}
+                  questionNum={b.showQuestionNumbers ? `${qi + 1}` : ""}
+                  block={b}
+                  typeStyles={typeStyles}
+                  isEditing={editingType === qt}
+                  onEdit={() => { setEditingType(editingType === qt ? null : qt); setEditingSection(false); }}
+                  onUpdateStyle={(patch) => updateTypeStyle(qt, patch)}
                 />
-                <button
-                  onClick={createTemplate}
-                  disabled={!newName.trim() || creating}
-                  className="p-1.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                </button>
-                <button onClick={() => { setShowNew(false); setNewName(""); }} className="p-1.5 hover:bg-gray-100 rounded-lg">
-                  <X className="h-4 w-4 text-gray-400" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Editor panel */}
-        <div className="flex-1 overflow-y-auto">
-          {!editing ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <FileText className="h-12 w-12 mb-3 text-gray-300" />
-              <p className="text-sm font-medium">Select a template to edit</p>
-              <p className="text-xs mt-1">Or create a new one</p>
-            </div>
+              );
+            })
           ) : (
-            <div className="max-w-2xl mx-auto p-6 space-y-6">
-              {/* Name & Description */}
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</label>
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</label>
-                  <input
-                    value={editDesc}
-                    onChange={(e) => setEditDesc(e.target.value)}
-                    className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400"
-                    placeholder="Optional description…"
-                  />
-                </div>
-              </div>
-
-              {/* Page Settings */}
-              <ConfigSection title="Page Settings">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500">Page Size</label>
-                    <select
-                      value={editConfig.pageSize}
-                      onChange={(e) => setEditConfig({ ...editConfig, pageSize: e.target.value as "letter" | "a4" })}
-                      className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none"
-                    >
-                      <option value="letter">Letter (8.5 × 11)</option>
-                      <option value="a4">A4 (210 × 297mm)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500">Orientation</label>
-                    <select
-                      value={editConfig.orientation}
-                      onChange={(e) => setEditConfig({ ...editConfig, orientation: e.target.value as "portrait" | "landscape" })}
-                      className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none"
-                    >
-                      <option value="portrait">Portrait</option>
-                      <option value="landscape">Landscape</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <label className="text-xs text-gray-500">Margins (pt)</label>
-                  <div className="grid grid-cols-4 gap-2 mt-1">
-                    {(["top", "right", "bottom", "left"] as const).map((side) => (
-                      <div key={side}>
-                        <span className="text-[10px] text-gray-400 capitalize">{side}</span>
-                        <input
-                          type="number"
-                          min={10}
-                          max={100}
-                          value={editConfig.margins[side]}
-                          onChange={(e) => setEditConfig({
-                            ...editConfig,
-                            margins: { ...editConfig.margins, [side]: parseInt(e.target.value) || 50 },
-                          })}
-                          className="w-full text-sm border border-gray-200 rounded px-2 py-1 outline-none focus:border-blue-400 text-center"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </ConfigSection>
-
-              {/* Colors */}
-              <ConfigSection title="Colors">
-                <div className="grid grid-cols-2 gap-4">
-                  {(
-                    [
-                      { key: "primary", label: "Primary" },
-                      { key: "accent", label: "Accent" },
-                      { key: "headerBg", label: "Header Background" },
-                      { key: "headerText", label: "Header Text" },
-                    ] as const
-                  ).map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={editConfig.colors[key]}
-                        onChange={(e) => setEditConfig({
-                          ...editConfig,
-                          colors: { ...editConfig.colors, [key]: e.target.value },
-                        })}
-                        className="w-8 h-8 rounded border border-gray-200 cursor-pointer"
-                      />
-                      <div>
-                        <span className="text-xs text-gray-600">{label}</span>
-                        <span className="text-[10px] text-gray-400 ml-1">{editConfig.colors[key]}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ConfigSection>
-
-              {/* Header Settings */}
-              <ConfigSection title="Header">
-                <div>
-                  <label className="text-xs text-gray-500">Company Name</label>
-                  <input
-                    value={editConfig.header.companyName}
-                    onChange={(e) => setEditConfig({
-                      ...editConfig,
-                      header: { ...editConfig.header, companyName: e.target.value },
-                    })}
-                    className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-blue-400"
-                    placeholder="Your company name (optional)"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  {(
-                    [
-                      { key: "showTitle", label: "Show Title" },
-                      { key: "showStatus", label: "Show Status Badge" },
-                      { key: "showDate", label: "Show Dates" },
-                      { key: "showScore", label: "Show Score" },
-                      { key: "showSite", label: "Show Site" },
-                      { key: "showConductor", label: "Show Conductor" },
-                      { key: "showNcr", label: "Show NCR Number" },
-                    ] as const
-                  ).map(({ key, label }) => (
-                    <ToggleRow
-                      key={key}
-                      label={label}
-                      checked={editConfig.header[key]}
-                      onChange={(v) => setEditConfig({
-                        ...editConfig,
-                        header: { ...editConfig.header, [key]: v },
-                      })}
-                    />
-                  ))}
-                </div>
-              </ConfigSection>
-
-              {/* Section Settings */}
-              <ConfigSection title="Sections">
-                <div className="grid grid-cols-2 gap-3">
-                  <ToggleRow
-                    label="Show Section Numbers"
-                    checked={editConfig.sections.showSectionNumbers}
-                    onChange={(v) => setEditConfig({
-                      ...editConfig,
-                      sections: { ...editConfig.sections, showSectionNumbers: v },
-                    })}
-                  />
-                  <ToggleRow
-                    label="Show Question Numbers"
-                    checked={editConfig.sections.showQuestionNumbers}
-                    onChange={(v) => setEditConfig({
-                      ...editConfig,
-                      sections: { ...editConfig.sections, showQuestionNumbers: v },
-                    })}
-                  />
-                </div>
-              </ConfigSection>
-
-              {/* Content Settings */}
-              <ConfigSection title="Content">
-                <div className="grid grid-cols-2 gap-3">
-                  {(
-                    [
-                      { key: "showFlags", label: "Show Flags" },
-                      { key: "showNotes", label: "Show Notes" },
-                      { key: "showActions", label: "Show Corrective Actions" },
-                      { key: "showSignatures", label: "Show Signatures" },
-                      { key: "showEmptyQuestions", label: "Show Unanswered Questions" },
-                    ] as const
-                  ).map(({ key, label }) => (
-                    <ToggleRow
-                      key={key}
-                      label={label}
-                      checked={editConfig.content[key]}
-                      onChange={(v) => setEditConfig({
-                        ...editConfig,
-                        content: { ...editConfig.content, [key]: v },
-                      })}
-                    />
-                  ))}
-                </div>
-              </ConfigSection>
-
-              {/* Footer Settings */}
-              <ConfigSection title="Footer">
-                <div className="grid grid-cols-2 gap-3">
-                  <ToggleRow
-                    label="Show Page Numbers"
-                    checked={editConfig.footer.showPageNumbers}
-                    onChange={(v) => setEditConfig({
-                      ...editConfig,
-                      footer: { ...editConfig.footer, showPageNumbers: v },
-                    })}
-                  />
-                  <ToggleRow
-                    label="Show Confidential Notice"
-                    checked={editConfig.footer.showConfidential}
-                    onChange={(v) => setEditConfig({
-                      ...editConfig,
-                      footer: { ...editConfig.footer, showConfidential: v },
-                    })}
-                  />
-                </div>
-                <div className="mt-3">
-                  <label className="text-xs text-gray-500">Custom Footer Text</label>
-                  <input
-                    value={editConfig.footer.customText}
-                    onChange={(e) => setEditConfig({
-                      ...editConfig,
-                      footer: { ...editConfig.footer, customText: e.target.value },
-                    })}
-                    className="w-full mt-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:border-blue-400"
-                    placeholder="Optional footer text…"
-                  />
-                </div>
-              </ConfigSection>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={saveTemplate}
-                  disabled={saving}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Save Changes
-                </button>
-                {!editing.isDefault && (
-                  <button
-                    onClick={() => setAsDefault(editing.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <Star className="h-4 w-4" />
-                    Set as Default
-                  </button>
-                )}
-                <button
-                  onClick={() => setEditingId(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <div className="flex-1" />
-                <button
-                  onClick={() => deleteTemplate(editing.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </div>
+            (Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((qt, qi) => (
+              <QuestionTypeCard
+                key={qt}
+                questionType={qt}
+                questionTitle={QUESTION_TYPE_LABELS[qt]}
+                questionNum={b.showQuestionNumbers ? `${qi + 1}` : ""}
+                block={b}
+                typeStyles={typeStyles}
+                isEditing={editingType === qt}
+                onEdit={() => { setEditingType(editingType === qt ? null : qt); setEditingSection(false); }}
+                onUpdateStyle={(patch) => updateTypeStyle(qt, patch)}
+              />
+            ))
           )}
         </div>
-      </div>
+      )}
+
+      {b.showFlags && (
+        <>
+          <div className="mx-4 border-t border-gray-200" />
+          <p className="px-4 pt-2 font-bold text-xs" style={{ color: b.flagColor }}>! FLAGGED</p>
+        </>
+      )}
+      {b.showNotes && <p className="px-4 italic text-xs" style={{ color: b.noteColor }}>Note: Needs recertification by May</p>}
+
+      {/* Used types summary */}
+      {selectedTemplate && isActive && (
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <p className="text-[10px] text-gray-400">
+            Types used in this template: {usedTypes.map((t) => QUESTION_TYPE_LABELS[t]).join(", ")}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Reusable sub-components ─────────────────────────────────────────
+// ── Individual Question Type Card ──────────────────────────────────
+function QuestionTypeCard({
+  questionType: qt, questionTitle, questionNum, block: b, typeStyles, isEditing, onEdit, onUpdateStyle,
+}: {
+  questionType: QuestionType;
+  questionTitle: string;
+  questionNum: string;
+  block: QuestionsBlock;
+  typeStyles: Record<QuestionType, QuestionTypeStyle>;
+  isEditing: boolean;
+  onEdit: () => void;
+  onUpdateStyle: (patch: Partial<QuestionTypeStyle>) => void;
+}) {
+  const ts = typeStyles[qt];
+  const qColor = ts?.questionColor || b.questionColor;
+  const aColor = ts?.answerColor || b.answerColor;
+  const qSize = ts?.questionFontSize || b.questionFontSize;
+  const aSize = ts?.answerFontSize || b.answerFontSize;
+  const bgc = ts?.bgColor || "";
 
-function ConfigSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">{title}</h3>
-      </div>
-      <div className="px-4 py-3">{children}</div>
-    </div>
-  );
-}
+  const isFullWidth = FULL_WIDTH_TYPES.has(qt);
+  const answer = SAMPLE_ANSWERS[qt] || "N/A";
 
-function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <button
-        type="button"
-        onClick={() => onChange(!checked)}
+    <div className="relative">
+      <div
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
         className={cn(
-          "relative w-8 h-[18px] rounded-full transition-colors duration-200",
-          checked ? "bg-blue-600" : "bg-gray-300"
+          "border border-transparent px-4 py-2.5 cursor-pointer transition-all",
+          isEditing ? "border-blue-400 ring-2 ring-blue-200 shadow-sm rounded-lg" : "hover:border-gray-200 hover:bg-gray-50/50"
         )}
       >
-        <span
-          className={cn(
-            "absolute top-[2px] left-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform duration-200",
-            checked && "translate-x-[14px]"
+        {isFullWidth ? (
+          <div>
+            <p className="font-semibold" style={{ color: qColor, fontSize: qSize + 2, fontFamily: ff(b.fontFamily) }}>
+              {questionNum ? `${questionNum}. ` : ""}{questionTitle}
+            </p>
+            <p className="pl-2 mt-1" style={{ color: aColor, fontSize: aSize + 2, fontFamily: ff(b.fontFamily) }}>
+              {answer}
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-semibold flex-1" style={{ color: qColor, fontSize: qSize + 2, fontFamily: ff(b.fontFamily) }}>
+              {questionNum ? `${questionNum}. ` : ""}{questionTitle}
+            </p>
+            {bgc && bgc !== "#ffffff" && bgc !== "#FFFFFF" && bgc !== "" ? (
+              <span
+                className="px-3 py-1 rounded text-white text-right flex-shrink-0"
+                style={{ backgroundColor: bgc, fontSize: aSize + 2, fontFamily: ff(b.fontFamily) }}
+              >
+                {answer}
+              </span>
+            ) : (
+              <p className="text-right flex-shrink-0" style={{ color: aColor, fontSize: aSize + 2, fontFamily: ff(b.fontFamily) }}>
+                {answer}
+              </p>
+            )}
+          </div>
+        )}
+        {isEditing && (
+          <div className="flex items-center gap-2 mt-1">
+            <Palette className="h-3 w-3 text-blue-400 flex-shrink-0" />
+            <span className="text-[9px] text-blue-400">Click to edit style</span>
+          </div>
+        )}
+      </div>
+      {/* Row border — uses block divider settings */}
+      <div className="mx-4" style={{ borderBottomWidth: Math.max(b.dividerThickness ?? 0.5, 1), borderBottomStyle: "solid", borderBottomColor: b.dividerColor ?? "#DDDDDD" }} />
+
+      {/* ── Inline Style Editor (shows when this card is clicked) ── */}
+      {isEditing && (
+        <div className="mx-1 mb-1 p-3 bg-white rounded-lg border border-blue-200 shadow-lg space-y-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">
+              <Settings2 className="h-3 w-3 inline mr-1" />
+              {QUESTION_TYPE_LABELS[qt]} Style
+            </span>
+            <button onClick={onEdit} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-400" /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <p className="text-[9px] font-bold uppercase text-gray-400">Question</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">Color:</span>
+                <Clr value={ts?.questionColor ?? b.questionColor} onChange={(v) => onUpdateStyle({ questionColor: v })} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">Size:</span>
+                <SizeBtn value={ts?.questionFontSize ?? b.questionFontSize} onChange={(v) => onUpdateStyle({ questionFontSize: v })} />
+                <span className="text-[9px] text-gray-400">pt</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[9px] font-bold uppercase text-gray-400">Answer</p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">Color:</span>
+                <Clr value={ts?.answerColor ?? b.answerColor} onChange={(v) => onUpdateStyle({ answerColor: v })} />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500">Size:</span>
+                <SizeBtn value={ts?.answerFontSize ?? b.answerFontSize} onChange={(v) => onUpdateStyle({ answerFontSize: v })} />
+                <span className="text-[9px] text-gray-400">pt</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <span className="text-[10px] text-gray-500">Background:</span>
+            <Clr value={ts?.bgColor || "#ffffff"} onChange={(v) => onUpdateStyle({ bgColor: v })} />
+            {ts?.bgColor && ts.bgColor !== "" && (
+              <button onClick={() => onUpdateStyle({ bgColor: "" })} className="text-[9px] text-red-400 hover:text-red-600">Clear</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// LiveBlock — renders edit-in-place block content on the document
+// ════════════════════════════════════════════════════════════════════
+function LiveBlock({ block: b, isActive, onChange }: { block: PdfBlock; isActive: boolean; onChange: (p: Partial<PdfBlock>) => void }) {
+  switch (b.type) {
+    case "header":
+      return (
+        <div className="px-6 py-4">
+          {/* Logo display */}
+          {b.logoUrl && (
+            <div className="mb-2" style={{ textAlign: b.logoPosition }}>
+              <img src={b.logoUrl} alt="Logo" className="inline-block object-contain" style={{ maxHeight: b.logoMaxHeight }} />
+            </div>
           )}
-        />
+          {(b.companyName || isActive) && (
+            <input
+              value={b.companyName}
+              onChange={(e) => onChange({ companyName: e.target.value } as Partial<HeaderBlock>)}
+              placeholder="Company name…"
+              className="w-full bg-transparent outline-none mb-2 placeholder-gray-300"
+              style={{ color: b.companyNameColor, fontSize: b.companyNameSize + 2, fontWeight: 600, fontFamily: ff(b.fontFamily) }}
+            />
+          )}
+          <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ backgroundColor: b.bgColor }}>
+            {b.titleSource === "custom" ? (
+              <input
+                value={b.customTitle}
+                onChange={(e) => onChange({ customTitle: e.target.value } as Partial<HeaderBlock>)}
+                placeholder="Enter title…"
+                className="flex-1 bg-transparent outline-none font-bold placeholder-white/50"
+                style={{ color: b.textColor, fontSize: Math.min(b.fontSize + 2, 22), fontFamily: ff(b.fontFamily), textAlign: b.alignment }}
+              />
+            ) : (
+              <span className="flex-1 font-bold" style={{ color: b.textColor, fontSize: Math.min(b.fontSize + 2, 22), fontFamily: ff(b.fontFamily), textAlign: b.alignment }}>
+                {"{{ Inspection Title }}"}
+              </span>
+            )}
+            {b.showStatusBadge && <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded-md font-bold flex-shrink-0">COMPLETED</span>}
+          </div>
+        </div>
+      );
+
+    case "info_fields": {
+      const active = b.fields.filter((f) => f.enabled);
+      return (
+        <div className={cn("px-6 py-3 gap-x-6 gap-y-1.5", b.layout === "two_column" ? "grid grid-cols-2" : "flex flex-col gap-1.5")}>
+          {active.map((f) => (
+            <div key={f.key} className="flex gap-1.5 items-baseline" style={{ fontSize: b.fontSize + 2, fontFamily: ff(b.fontFamily) }}>
+              <span className="font-semibold" style={{ color: b.labelColor }}>{f.label}:</span>
+              <span style={{ color: b.valueColor }}>Sample value</span>
+            </div>
+          ))}
+          {active.length === 0 && <span className="text-xs text-gray-300 italic">No fields enabled — click to configure</span>}
+        </div>
+      );
+    }
+
+    case "text":
+      return (
+        <div className="px-6 py-2" style={{ backgroundColor: b.bgColor || undefined }}>
+          <textarea
+            value={b.content}
+            onChange={(e) => onChange({ content: e.target.value } as Partial<TextBlock>)}
+            placeholder="Click to type text…"
+            rows={Math.max(2, (b.content?.split("\n").length ?? 0) + 1)}
+            className="w-full bg-transparent outline-none resize-none placeholder-gray-300"
+            style={{
+              fontSize: b.fontSize + 2, color: b.color, fontWeight: b.bold ? 700 : 400,
+              fontStyle: b.italic ? "italic" : "normal", fontFamily: ff(b.fontFamily),
+              textAlign: b.alignment as React.CSSProperties["textAlign"],
+            }}
+          />
+        </div>
+      );
+
+    case "questions": {
+      return <QuestionsCanvasEditor b={b} isActive={isActive} onChange={onChange as (p: Partial<QuestionsBlock>) => void} />;
+    }
+
+    case "actions":
+      return (
+        <div className="px-6 py-3">
+          <div className="rounded-md px-3 py-1.5 font-bold uppercase tracking-wide" style={{ backgroundColor: b.headerBg, color: b.headerColor, fontSize: b.fontSize + 1, fontFamily: ff(b.fontFamily) }}>
+            {b.headerText}
+          </div>
+          <div className="pl-3 mt-1.5 space-y-1 text-xs text-gray-500">
+            <p>• Replace damaged guardrail — <span className="text-red-500 font-medium">High</span></p>
+            <p>• Schedule fire drill — <span className="text-yellow-600 font-medium">Medium</span></p>
+          </div>
+        </div>
+      );
+
+    case "signatures":
+      return (
+        <div className="px-6 py-3">
+          <div className="rounded-md px-3 py-1.5 font-bold uppercase tracking-wide" style={{ backgroundColor: b.headerBg, color: b.headerColor, fontSize: b.fontSize + 1 }}>
+            {b.headerText}
+          </div>
+          <div className="flex gap-8 mt-2 pl-3">
+            <div className="text-xs text-gray-500">
+              <div className="w-20 h-8 border-b border-gray-300 mb-1" />
+              <p className="font-medium text-gray-700">John Smith</p>
+              <p>Inspector — Apr 25, 2026</p>
+            </div>
+            <div className="text-xs text-gray-500">
+              <div className="w-20 h-8 border-b border-gray-300 mb-1" />
+              <p className="font-medium text-gray-700">Jane Doe</p>
+              <p>Supervisor — Apr 25, 2026</p>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "spacer":
+      return (
+        <div className="flex items-center justify-center text-gray-300 transition-all" style={{ height: Math.min(b.height, 80) }}>
+          <span className="text-[10px] border border-dashed border-gray-200 px-2 py-0.5 rounded">↕ Spacer {b.height}pt</span>
+        </div>
+      );
+
+    case "divider":
+      return <div className="px-6 py-3"><hr style={{ borderColor: b.color, borderWidth: b.thickness }} /></div>;
+
+    case "page_break":
+      return (
+        <div className="flex items-center gap-3 py-3 px-6">
+          <span className="flex-1 border-t-2 border-dashed border-gray-300" />
+          <span className="text-[10px] font-bold tracking-widest text-gray-400 bg-gray-50 px-3 py-1 rounded-full">PAGE BREAK</span>
+          <span className="flex-1 border-t-2 border-dashed border-gray-300" />
+        </div>
+      );
+
+    case "footer":
+      return (
+        <div className="px-6 py-2 border-t border-gray-100">
+          {b.logoUrl && (
+            <div className="mb-1" style={{ textAlign: b.logoPosition }}>
+              <img src={b.logoUrl} alt="Footer Logo" className="inline-block object-contain" style={{ maxHeight: b.logoMaxHeight || 20 }} />
+            </div>
+          )}
+          <div className="flex items-center justify-between" style={{ fontSize: b.fontSize + 2, color: b.color }}>
+            <span>{b.showTitle ? "{{ Title }}" : ""} {b.leftText}</span>
+            <span>{b.rightText} {b.showPageNumbers ? "— 1/3" : ""}</span>
+          </div>
+        </div>
+      );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// InlineSettings — compact settings that appear below active block
+// ════════════════════════════════════════════════════════════════════
+function InlineSettings({ block, onChange }: { block: PdfBlock; onChange: (p: Partial<PdfBlock>) => void }) {
+  switch (block.type) {
+    case "header": return <HeaderInline b={block} o={onChange} />;
+    case "info_fields": return <InfoFieldsInline b={block} o={onChange} />;
+    case "text": return <TextInline b={block} o={onChange} />;
+    case "questions": return <QuestionsInline b={block} o={onChange} />;
+    case "actions": return <ActionsInline b={block} o={onChange} />;
+    case "signatures": return <SigInline b={block} o={onChange} />;
+    case "spacer": return <div className="flex items-center gap-2"><label className="text-xs text-gray-500">Height:</label><input type="range" min={5} max={120} value={block.height} onChange={(e) => onChange({ height: parseInt(e.target.value) } as Partial<SpacerBlock>)} className="flex-1" /><span className="text-xs text-gray-500 w-8">{block.height}pt</span></div>;
+    case "divider": return <div className="flex items-center gap-3"><Clr value={block.color} onChange={(v) => onChange({ color: v } as Partial<DividerBlock>)} /><label className="text-xs text-gray-500">Thickness:</label><input type="range" min={0.5} max={3} step={0.25} value={block.thickness} onChange={(e) => onChange({ thickness: parseFloat(e.target.value) } as Partial<DividerBlock>)} className="w-20" /></div>;
+    case "page_break": return <p className="text-xs text-gray-400 italic">Forces a new page in the PDF. No settings.</p>;
+    case "footer": return <FooterInline b={block} o={onChange} />;
+  }
+}
+
+// ── Micro-components ──────────────────────────────────────────────
+function Clr({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="w-5 h-5 rounded border border-gray-200 cursor-pointer p-0" />
+      <input value={value} onChange={(e) => onChange(e.target.value)} className="w-16 text-[10px] border border-gray-200 rounded px-1 py-0.5 outline-none font-mono" />
+    </div>
+  );
+}
+
+function Tog({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-1.5 cursor-pointer">
+      <button type="button" onClick={() => onChange(!checked)} className={cn("relative w-6 h-3.5 rounded-full transition-colors", checked ? "bg-blue-500" : "bg-gray-300")}>
+        <span className={cn("absolute top-[2px] left-[2px] w-2.5 h-2.5 rounded-full bg-white shadow transition-transform", checked && "translate-x-2.5")} />
       </button>
-      <span className="text-xs text-gray-700">{label}</span>
+      <span className="text-[11px] text-gray-600">{label}</span>
     </label>
+  );
+}
+
+function FontBtn({ value, onChange }: { value: FontFamily; onChange: (v: FontFamily) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value as FontFamily)} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+      <option value="helvetica">Helvetica</option><option value="times">Times</option><option value="courier">Courier</option>
+    </select>
+  );
+}
+
+function SizeBtn({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return <input type="number" min={6} max={30} value={value} onChange={(e) => onChange(parseInt(e.target.value) || 10)} className="w-10 text-[11px] text-center border border-gray-200 rounded px-1 py-0.5 outline-none" />;
+}
+
+// ── Inline settings per block type ────────────────────────────────
+function HeaderInline({ b, o }: { b: HeaderBlock; o: (p: Partial<HeaderBlock>) => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] text-gray-400">Logo:</span>
+        <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={40} />
+        {b.logoUrl && (
+          <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+            <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+          </select>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={b.titleSource} onChange={(e) => o({ titleSource: e.target.value as "template_name" | "custom" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-1 outline-none">
+          <option value="template_name">Auto title</option><option value="custom">Custom title</option>
+        </select>
+        <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
+        <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+        <select value={b.alignment} onChange={(e) => o({ alignment: e.target.value as HeaderBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+          <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+        </select>
+        <Tog checked={b.showStatusBadge} onChange={(v) => o({ showStatusBadge: v })} label="Badge" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.bgColor} onChange={(v) => o({ bgColor: v })} />
+        <span className="text-[10px] text-gray-400">Text:</span><Clr value={b.textColor} onChange={(v) => o({ textColor: v })} />
+        <span className="text-[10px] text-gray-400">Company:</span><Clr value={b.companyNameColor} onChange={(v) => o({ companyNameColor: v })} />
+      </div>
+    </div>
+  );
+}
+
+function InfoFieldsInline({ b, o }: { b: InfoFieldsBlock; o: (p: Partial<InfoFieldsBlock>) => void }) {
+  const toggle = (key: string) => o({ fields: b.fields.map((f) => f.key === key ? { ...f, enabled: !f.enabled } : f) });
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {b.fields.map((f) => (
+          <label key={f.key} className="flex items-center gap-1 cursor-pointer">
+            <input type="checkbox" checked={f.enabled} onChange={() => toggle(f.key)} className="w-3 h-3 rounded" />
+            <span className="text-[11px] text-gray-600">{f.label}</span>
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={b.layout} onChange={(e) => o({ layout: e.target.value as "vertical" | "two_column" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+          <option value="two_column">Two columns</option><option value="vertical">Single column</option>
+        </select>
+        <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
+        <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+        <span className="text-[10px] text-gray-400">Label:</span><Clr value={b.labelColor} onChange={(v) => o({ labelColor: v })} />
+        <span className="text-[10px] text-gray-400">Value:</span><Clr value={b.valueColor} onChange={(v) => o({ valueColor: v })} />
+      </div>
+    </div>
+  );
+}
+
+function TextInline({ b, o }: { b: TextBlock; o: (p: Partial<TextBlock>) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
+      <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+      <Clr value={b.color} onChange={(v) => o({ color: v })} />
+      <button onClick={() => o({ bold: !b.bold })} className={cn("p-1 rounded border", b.bold ? "bg-blue-100 border-blue-300" : "border-gray-200 hover:bg-gray-100")}>
+        <Bold className="h-3 w-3" />
+      </button>
+      <button onClick={() => o({ italic: !b.italic })} className={cn("p-1 rounded border", b.italic ? "bg-blue-100 border-blue-300" : "border-gray-200 hover:bg-gray-100")}>
+        <Italic className="h-3 w-3" />
+      </button>
+      <select value={b.alignment} onChange={(e) => o({ alignment: e.target.value as TextBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+        <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+      </select>
+    </div>
+  );
+}
+
+function QuestionsInline({ b, o }: { b: QuestionsBlock; o: (p: Partial<QuestionsBlock>) => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        <Tog checked={b.showSectionHeaders} onChange={(v) => o({ showSectionHeaders: v })} label="Sections" />
+        <Tog checked={b.showSectionNumbers} onChange={(v) => o({ showSectionNumbers: v })} label="Section #" />
+        <Tog checked={b.showQuestionNumbers} onChange={(v) => o({ showQuestionNumbers: v })} label="Question #" />
+        <Tog checked={b.showFlags} onChange={(v) => o({ showFlags: v })} label="Flags" />
+        <Tog checked={b.showNotes} onChange={(v) => o({ showNotes: v })} label="Notes" />
+        <Tog checked={b.showEmptyQuestions} onChange={(v) => o({ showEmptyQuestions: v })} label="Empty Q's" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
+        <span className="text-[10px] text-gray-400">Flag:</span><Clr value={b.flagColor} onChange={(v) => o({ flagColor: v })} />
+        <span className="text-[10px] text-gray-400">Note:</span><Clr value={b.noteColor} onChange={(v) => o({ noteColor: v })} />
+      </div>
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100">
+        <span className="text-[10px] text-gray-400">Row Divider:</span>
+        <Clr value={b.dividerColor ?? "#DDDDDD"} onChange={(v) => o({ dividerColor: v })} />
+        <span className="text-[10px] text-gray-400">Width:</span>
+        <input type="range" min={0.25} max={3} step={0.25} value={b.dividerThickness ?? 0.5} onChange={(e) => o({ dividerThickness: parseFloat(e.target.value) })} className="w-16" />
+        <span className="text-[9px] text-gray-400">{b.dividerThickness ?? 0.5}pt</span>
+      </div>
+      <p className="text-[10px] text-gray-400 italic">Click any question type card or section header on the canvas above to customize individually.</p>
+    </div>
+  );
+}
+
+function ActionsInline({ b, o }: { b: ActionsBlock; o: (p: Partial<ActionsBlock>) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input value={b.headerText} onChange={(e) => o({ headerText: e.target.value })} className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-40" />
+      <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
+      <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+      <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
+      <span className="text-[10px] text-gray-400">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
+    </div>
+  );
+}
+
+function SigInline({ b, o }: { b: SignaturesBlock; o: (p: Partial<SignaturesBlock>) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input value={b.headerText} onChange={(e) => o({ headerText: e.target.value })} className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-40" />
+      <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+      <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
+      <span className="text-[10px] text-gray-400">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
+    </div>
+  );
+}
+
+function FooterInline({ b, o }: { b: FooterBlock; o: (p: Partial<FooterBlock>) => void }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] text-gray-400">Logo:</span>
+        <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={20} />
+        {b.logoUrl && (
+          <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+            <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+          </select>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Tog checked={b.showPageNumbers} onChange={(v) => o({ showPageNumbers: v })} label="Page #" />
+        <Tog checked={b.showTitle} onChange={(v) => o({ showTitle: v })} label="Title" />
+        <input value={b.leftText} onChange={(e) => o({ leftText: e.target.value })} placeholder="Left text…" className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-28" />
+        <input value={b.rightText} onChange={(e) => o({ rightText: e.target.value })} placeholder="Right text…" className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-28" />
+        <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
+        <Clr value={b.color} onChange={(v) => o({ color: v })} />
+      </div>
+    </div>
   );
 }

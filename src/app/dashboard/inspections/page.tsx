@@ -183,13 +183,6 @@ export default function InspectionsPage() {
             <h1 className="text-xl font-bold text-gray-900">Inspections</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/inspections/pdf-templates"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <LayoutTemplate className="h-4 w-4" />
-              PDF Templates
-            </Link>
             {tab === "templates" ? (
               <button
                 onClick={() => setShowNewTemplateModal(true)}

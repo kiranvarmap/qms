@@ -17,8 +17,9 @@ const securityHeaders = [
       // Next.js requires unsafe-eval in dev for HMR; tighten in prod if no inline scripts
       "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
-      // Allow S3, CDN, and OAuth provider avatars
-      "img-src 'self' data: blob: https://*.amazonaws.com https://*.googleusercontent.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
+      // Allow any HTTPS images/videos (users can paste external instruction media URLs)
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
       "font-src 'self'",
       "connect-src 'self' https:",
       "frame-src 'self' blob:",
@@ -34,7 +35,9 @@ const nextConfig: NextConfig = {
 
   images: {
     remotePatterns: [
-      // AWS S3 (direct)
+      // Supabase Storage
+      { protocol: "https", hostname: "**.supabase.co" },
+      // AWS S3 (legacy)
       { protocol: "https", hostname: "**.amazonaws.com" },
       // Google OAuth avatars
       { protocol: "https", hostname: "lh3.googleusercontent.com" },

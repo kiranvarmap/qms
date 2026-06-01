@@ -27,6 +27,7 @@ export async function PATCH(
   if (body.conditionalRules !== undefined) update.conditionalRules = body.conditionalRules;
   if (body.flagRules !== undefined) update.flagRules = body.flagRules;
   if (body.linkedQuestionId !== undefined) update.linkedQuestionId = body.linkedQuestionId;
+  if (body.instructions !== undefined) update.instructions = body.instructions;
 
   const [updated] = await db
     .update(templateQuestions)

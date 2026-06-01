@@ -1,32 +1,35 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import path from "path";
 import { logger } from "@/lib/logger";
 
-// ── Client ────────────────────────────────────────────────────────────
-const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId:     process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+// ── Supabase Client (service-role for server-side storage ops) ────────
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const BUCKET = "uploads";
 
-const BUCKET  = process.env.AWS_S3_BUCKET!;
-const CDN_URL = process.env.AWS_S3_CDN_URL?.replace(/\/$/, ""); // optional CloudFront URL
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-function publicUrl(key: string): string {
-  return CDN_URL
-    ? `${CDN_URL}/${key}`
-    : `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+function publicUrl(filePath: string): string {
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+// ── Ensure bucket exists ──────────────────────────────────────────────
+let bucketReady = false;
+
+async function ensureBucket(): Promise<void> {
+  if (bucketReady) return;
+  const { error } = await supabase.storage.createBucket(BUCKET, {
+    public: true,
+    fileSizeLimit: 20 * 1024 * 1024, // 20 MB
+  });
+  // Bucket already exists is fine
+  if (error && !error.message.includes("already exists")) {
+    logger.error("Failed to create storage bucket", { error: error.message });
+    throw error;
+  }
+  bucketReady = true;
 }
 
 // ── Upload ────────────────────────────────────────────────────────────
@@ -38,8 +41,7 @@ export interface UploadResult {
 }
 
 /**
- * Upload a buffer to S3 and return the public URL + key.
- * Uses multipart upload via @aws-sdk/lib-storage for reliability on large files.
+ * Upload a buffer to Supabase Storage and return the public URL + key.
  */
 export async function uploadToS3(
   file: Buffer | Uint8Array,
@@ -47,65 +49,64 @@ export async function uploadToS3(
   contentType: string,
   folder = "uploads"
 ): Promise<UploadResult> {
+  await ensureBucket();
+
   const ext = path.extname(originalName).toLowerCase();
   const key = `${folder}/${randomUUID()}${ext}`;
 
-  const upload = new Upload({
-    client: s3,
-    params: {
-      Bucket:               BUCKET,
-      Key:                  key,
-      Body:                 file,
-      ContentType:          contentType,
-      ServerSideEncryption: "AES256",
-      // Objects are private by default — use presigned URLs or CloudFront for access
-    },
-  });
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(key, file, {
+      contentType,
+      upsert: false,
+    });
 
-  await upload.done();
+  if (error) {
+    logger.error("Supabase Storage upload failed", { error: error.message, key });
+    throw new Error(`Upload failed: ${error.message}`);
+  }
 
-  logger.info("File uploaded to S3", { key, size: file.byteLength, contentType });
+  const url = publicUrl(key);
+  logger.info("File uploaded to Supabase Storage", { key, size: file.byteLength, contentType });
 
-  return { key, url: publicUrl(key), size: file.byteLength, contentType };
+  return { key, url, size: file.byteLength, contentType };
 }
 
 // ── Delete ────────────────────────────────────────────────────────────
-export async function deleteFromS3(key: string): Promise<void> {
-  await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
-  logger.info("File deleted from S3", { key });
-}
-
-// ── Presigned URL (for private objects) ───────────────────────────────
-export async function getPresignedDownloadUrl(
-  key: string,
-  expiresIn = 3600
-): Promise<string> {
-  return getSignedUrl(
-    s3,
-    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-    { expiresIn }
-  );
-}
-
-// ── Head (check existence) ────────────────────────────────────────────
-export async function objectExists(key: string): Promise<boolean> {
-  try {
-    await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
-    return true;
-  } catch {
-    return false;
+export async function deleteFromStorage(key: string): Promise<void> {
+  const { error } = await supabase.storage.from(BUCKET).remove([key]);
+  if (error) {
+    logger.error("Supabase Storage delete failed", { error: error.message, key });
+    throw error;
   }
+  logger.info("File deleted from Supabase Storage", { key });
+}
+
+// ── Check existence ──────────────────────────────────────────────────
+export async function objectExists(filePath: string): Promise<boolean> {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .list(path.dirname(filePath), {
+      search: path.basename(filePath),
+      limit: 1,
+    });
+  if (error) return false;
+  return (data?.length ?? 0) > 0;
 }
 
 /**
- * Extract the S3 key from a stored URL or return the raw value if it's already a key.
- * Handles both CDN URLs and direct S3 URLs.
+ * Extract the storage key from a stored URL or return the raw value if it's already a key.
  */
 export function urlToKey(urlOrKey: string): string {
   if (urlOrKey.startsWith("http")) {
     try {
       const { pathname } = new URL(urlOrKey);
-      // Remove leading slash
+      // Supabase public URLs: /storage/v1/object/public/uploads/<key>
+      const marker = `/object/public/${BUCKET}/`;
+      const idx = pathname.indexOf(marker);
+      if (idx !== -1) {
+        return pathname.slice(idx + marker.length);
+      }
       return pathname.replace(/^\//, "");
     } catch {
       return urlOrKey;

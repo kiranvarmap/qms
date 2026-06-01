@@ -37,6 +37,7 @@ import {
   ListChecks,
   X,
   ClipboardList,
+  Upload,
 } from "lucide-react";
 import type { InspectionTemplate, TemplateQuestion, TemplateSection, QuestionType, ConditionalRule, PdfTemplate } from "@/lib/types";
 
@@ -983,6 +984,12 @@ function QuestionEditor({
   const [descVal, setDescVal] = useState(question.description || "");
   const [showDesc, setShowDesc] = useState(!!question.description);
   const [showConditions, setShowConditions] = useState(!!question.conditionalRules?.length);
+  const [showInstructions, setShowInstructions] = useState(!!(question.instructions?.text || question.instructions?.mediaUrl));
+  const [instrText, setInstrText] = useState(question.instructions?.text || "");
+  const [instrMediaUrl, setInstrMediaUrl] = useState(question.instructions?.mediaUrl || "");
+  const [instrMediaType, setInstrMediaType] = useState<"image" | "video" | "">(question.instructions?.mediaType || "");
+  const [instrUploading, setInstrUploading] = useState(false);
+  const instrFileRef = useRef<HTMLInputElement>(null);
 
   // Always keep a ref to the latest onUpdate so debounced callbacks never go stale
   const onUpdateRef = useRef(onUpdate);
@@ -991,6 +998,13 @@ function QuestionEditor({
   // Debounced savers — created once, always call the latest onUpdate via ref
   const saveTitle = useRef(debounce((v: string) => onUpdateRef.current({ title: v }), 500));
   const saveDesc = useRef(debounce((v: string) => onUpdateRef.current({ description: v || null }), 500));
+  const saveInstructions = useRef(debounce((text: string, mediaUrl: string, mediaType: "image" | "video" | "") => {
+    if (!text && !mediaUrl) {
+      onUpdateRef.current({ instructions: null });
+    } else {
+      onUpdateRef.current({ instructions: { text, mediaUrl, mediaType } });
+    }
+  }, 500));
 
   const typeInfo = QUESTION_TYPES.find((t) => t.value === question.type);
   const hasOptions = ["dropdown", "multiple_choice", "multiple_selection"].includes(question.type);
@@ -1120,6 +1134,14 @@ function QuestionEditor({
           </button>
 
           <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className={cn("p-1 rounded transition-colors", showInstructions || question.instructions?.text || question.instructions?.mediaUrl ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-400")}
+            title="Instructions / Information"
+          >
+            <FileText className="h-3.5 w-3.5" />
+          </button>
+
+          <button
             onClick={() => setShowConditions(!showConditions)}
             className={cn("p-1 rounded transition-colors", showConditions || question.conditionalRules?.length ? "bg-purple-100 text-purple-600" : "hover:bg-gray-100 text-gray-400")}
             title="Conditional logic"
@@ -1168,6 +1190,110 @@ function QuestionEditor({
           />
         )}
       </div>
+
+      {/* Instructions / Information panel */}
+      {showInstructions && (
+        <div className="px-4 pb-3 border-t border-gray-100 pt-3">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-500">Instructions / Information</span>
+          </div>
+          <div className="space-y-2.5">
+            <div>
+              <label className="block text-[10px] font-medium text-gray-500 mb-1">Written Instructions</label>
+              <textarea
+                value={instrText}
+                onChange={(e) => {
+                  setInstrText(e.target.value);
+                  saveInstructions.current(e.target.value, instrMediaUrl, instrMediaType);
+                }}
+                rows={3}
+                className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 resize-y bg-white"
+                placeholder="Add instructions, safety notes, procedures…"
+              />
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium text-gray-500 mb-1">Image / Video URL</label>
+                <div className="flex gap-1.5">
+                  <input
+                    value={instrMediaUrl}
+                    onChange={(e) => {
+                      setInstrMediaUrl(e.target.value);
+                      // Auto-detect media type
+                      const url = e.target.value.toLowerCase();
+                      let type: "image" | "video" | "" = "";
+                      if (url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i)) type = "image";
+                      else if (url.match(/\.(mp4|webm|ogg)(\?|$)/i) || url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com")) type = "video";
+                      setInstrMediaType(type);
+                      saveInstructions.current(instrText, e.target.value, type);
+                    }}
+                    className="flex-1 text-xs text-gray-700 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 bg-white"
+                    placeholder="Paste URL or upload a file →"
+                  />
+                  <button
+                    type="button"
+                    disabled={instrUploading}
+                    onClick={() => instrFileRef.current?.click()}
+                    className="flex items-center gap-1 px-2.5 py-2 text-[11px] font-medium border border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:text-blue-500 transition-colors whitespace-nowrap disabled:opacity-50"
+                  >
+                    {instrUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                    {instrUploading ? "Uploading…" : "Upload"}
+                  </button>
+                  <input
+                    ref={instrFileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,video/mp4,video/webm"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setInstrUploading(true);
+                      try {
+                        const fd = new FormData();
+                        fd.append("file", file);
+                        const res = await fetch("/api/upload", { method: "POST", body: fd });
+                        if (res.ok) {
+                          const data = await res.json();
+                          const url = data.url as string;
+                          setInstrMediaUrl(url);
+                          const type: "image" | "video" | "" = file.type.startsWith("video/") ? "video" : file.type.startsWith("image/") ? "image" : "";
+                          setInstrMediaType(type);
+                          saveInstructions.current(instrText, url, type);
+                        }
+                      } catch { /* ignore */ }
+                      setInstrUploading(false);
+                      if (instrFileRef.current) instrFileRef.current.value = "";
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="w-24">
+                <label className="block text-[10px] font-medium text-gray-500 mb-1">Type</label>
+                <select
+                  value={instrMediaType}
+                  onChange={(e) => {
+                    const mt = e.target.value as "image" | "video" | "";
+                    setInstrMediaType(mt);
+                    saveInstructions.current(instrText, instrMediaUrl, mt);
+                  }}
+                  className="w-full text-xs border border-gray-200 rounded-lg px-2 py-2 outline-none focus:border-blue-400 bg-white"
+                >
+                  <option value="">Auto</option>
+                  <option value="image">Image</option>
+                  <option value="video">Video</option>
+                </select>
+              </div>
+            </div>
+            {instrMediaUrl && instrMediaType === "image" && (
+              <div className="rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={instrMediaUrl} alt="Instruction" className="max-h-32 mx-auto rounded" onError={(e) => (e.currentTarget.style.display = "none")} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Options editor for dropdown/multiple_choice/multiple_selection */}
       {hasOptions && (

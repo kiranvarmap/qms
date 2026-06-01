@@ -13,6 +13,11 @@ function makeSection(questions: Partial<{
     templateId: "tmpl-1",
     title: "General",
     position: 0,
+    pageNumber: 1,
+    isRepeatable: false,
+    maxRepetitions: null,
+    requiresSignoff: false,
+    signoffRoles: null,
     questions: questions.map((q, i) => ({
       id: q.id ?? `q-${i}`,
       sectionId: "sec-1",
@@ -24,6 +29,10 @@ function makeSection(questions: Partial<{
       weight: q.weight ?? 1,
       options: [],
       position: i,
+      conditionalRules: null,
+      flagRules: null,
+      linkedQuestionId: null,
+      instructions: null,
     })),
   };
 }
@@ -172,12 +181,12 @@ describe("calculateScore", () => {
   describe("multiple sections", () => {
     test("calculates across multiple sections", () => {
       const sec1: TemplateSection = {
-        id: "sec-1", templateId: "t1", title: "S1", position: 0,
-        questions: [{ id: "q1", sectionId: "sec-1", title: "Q1", description: null, type: "yes_no_na", required: false, scoring: true, weight: 1, options: [], position: 0 }],
+        id: "sec-1", templateId: "t1", title: "S1", position: 0, pageNumber: 1, isRepeatable: false, maxRepetitions: null, requiresSignoff: false, signoffRoles: null,
+        questions: [{ id: "q1", sectionId: "sec-1", title: "Q1", description: null, type: "yes_no_na", required: false, scoring: true, weight: 1, options: [], position: 0, conditionalRules: null, flagRules: null, linkedQuestionId: null, instructions: null }],
       };
       const sec2: TemplateSection = {
-        id: "sec-2", templateId: "t1", title: "S2", position: 1,
-        questions: [{ id: "q2", sectionId: "sec-2", title: "Q2", description: null, type: "yes_no_na", required: false, scoring: true, weight: 1, options: [], position: 0 }],
+        id: "sec-2", templateId: "t1", title: "S2", position: 1, pageNumber: 1, isRepeatable: false, maxRepetitions: null, requiresSignoff: false, signoffRoles: null,
+        questions: [{ id: "q2", sectionId: "sec-2", title: "Q2", description: null, type: "yes_no_na", required: false, scoring: true, weight: 1, options: [], position: 0, conditionalRules: null, flagRules: null, linkedQuestionId: null, instructions: null }],
       };
       // q1=yes, q2=no → 50%
       expect(calculateScore([sec1, sec2], [resp("q1", "yes"), resp("q2", "no")])).toBe(50);

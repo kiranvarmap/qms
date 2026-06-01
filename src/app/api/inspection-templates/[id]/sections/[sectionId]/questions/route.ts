@@ -27,6 +27,7 @@ export async function POST(
       options: body.options ?? [],
       conditionalRules: body.conditionalRules ?? null,
       flagRules: body.flagRules ?? null,
+      instructions: body.instructions ?? null,
     })
     .returning();
 
