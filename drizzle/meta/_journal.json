@@ -8,6 +8,13 @@
       "when": 1774235132651,
       "tag": "0000_previous_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780313928931,
+      "tag": "0001_narrow_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

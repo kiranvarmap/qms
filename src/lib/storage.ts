@@ -1,17 +1,30 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import path from "path";
 import { logger } from "@/lib/logger";
 
 // ── Supabase Client (service-role for server-side storage ops) ────────
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const BUCKET = "uploads";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Lazily construct the client on first use. Building the client at module load
+// throws when env vars are absent (e.g. during `next build` page-data
+// collection with no secrets), so we defer it to request time where env exists.
+let _supabase: SupabaseClient | null = null;
+function supabaseClient(): SupabaseClient {
+  if (_supabase) return _supabase;
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Supabase storage is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    );
+  }
+  _supabase = createClient(url, key);
+  return _supabase;
+}
 
 function publicUrl(filePath: string): string {
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+  const { data } = supabaseClient().storage.from(BUCKET).getPublicUrl(filePath);
   return data.publicUrl;
 }
 
@@ -20,7 +33,7 @@ let bucketReady = false;
 
 async function ensureBucket(): Promise<void> {
   if (bucketReady) return;
-  const { error } = await supabase.storage.createBucket(BUCKET, {
+  const { error } = await supabaseClient().storage.createBucket(BUCKET, {
     public: true,
     fileSizeLimit: 20 * 1024 * 1024, // 20 MB
   });
@@ -54,7 +67,7 @@ export async function uploadToS3(
   const ext = path.extname(originalName).toLowerCase();
   const key = `${folder}/${randomUUID()}${ext}`;
 
-  const { error } = await supabase.storage
+  const { error } = await supabaseClient().storage
     .from(BUCKET)
     .upload(key, file, {
       contentType,
@@ -74,7 +87,7 @@ export async function uploadToS3(
 
 // ── Delete ────────────────────────────────────────────────────────────
 export async function deleteFromStorage(key: string): Promise<void> {
-  const { error } = await supabase.storage.from(BUCKET).remove([key]);
+  const { error } = await supabaseClient().storage.from(BUCKET).remove([key]);
   if (error) {
     logger.error("Supabase Storage delete failed", { error: error.message, key });
     throw error;
@@ -84,7 +97,7 @@ export async function deleteFromStorage(key: string): Promise<void> {
 
 // ── Check existence ──────────────────────────────────────────────────
 export async function objectExists(filePath: string): Promise<boolean> {
-  const { data, error } = await supabase.storage
+  const { data, error } = await supabaseClient().storage
     .from(BUCKET)
     .list(path.dirname(filePath), {
       search: path.basename(filePath),

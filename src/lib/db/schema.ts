@@ -10,6 +10,7 @@ import {
   integer,
   jsonb,
   real,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 
@@ -18,6 +19,17 @@ export const userRoleEnum = pgEnum("user_role", [
   "admin",
   "manager",
   "user",
+  // Shop-floor identity: clocks in via badge + PIN, no web login (Plan D.3)
+  "worker",
+]);
+
+// Scope-ladder level used by the configurable linking engine (Plan B.4.1)
+export const linkLevelEnum = pgEnum("link_level", [
+  "none",
+  "workspace",
+  "board",
+  "group",
+  "item",
 ]);
 
 export const userStatusEnum = pgEnum("user_status", [
@@ -36,8 +48,9 @@ export const users = pgTable("users", {
   image: text("image"),
   role: userRoleEnum("role").default("user").notNull(),
   status: userStatusEnum("status").default("pending").notNull(),
-  // Link to employee record (set when user is connected to an employee)
-  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  // Link to employee record (set when user is connected to an employee).
+  // `AnyPgColumn` annotation breaks the users↔employees circular type cycle.
+  employeeId: uuid("employee_id").references((): AnyPgColumn => employees.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -237,8 +250,13 @@ export const items = pgTable("items", {
   groupId: uuid("group_id")
     .notNull()
     .references(() => groups.id, { onDelete: "cascade" }),
+  // Denormalized tenant id (Plan D.4.3) — lets cross-module/tenant queries
+  // filter without a board join. Backfilled from boards.workspaceId.
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 500 }).notNull(),
   position: real("position").default(0).notNull(),
+  // Soft-archive (Plan D.6) — replaces the "[Archived] " name-prefix hack.
+  archivedAt: timestamp("archived_at", { mode: "date" }),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -362,11 +380,23 @@ export const inspections = pgTable("inspections", {
   site: varchar("site", { length: 255 }),
   // Workspace scope (optional — links inspection to a workspace for filtering)
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+  // ── Resolved scope ladder (Plan B.4 / D.5b) ──────────────────────
+  // The "primary placement" of this inspection on the work hierarchy.
+  // workspaceId above is the tenant; these drill deeper. The deepest
+  // non-null column equals linkLevel. Powers the 360° item view + roll-ups.
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  // Stored report artifact (generated PDF) surfaced in the item Documents tab.
+  reportFilePath: text("report_file_path"),
   conductedBy: uuid("conducted_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  // in_progress | pending_review | completed
+  // in_progress | pending_review | completed | remediated
   status: varchar("status", { length: 20 }).default("in_progress").notNull(),
+  // NCR lifecycle (Plan E.2 Compliance Loop): null | raised | dispositioned | closed
+  ncrStatus: varchar("ncr_status", { length: 20 }),
   score: real("score"), // 0–100
   // NCR number (per-item auto-inc): e.g. "NCR-001"
   ncrNumber: varchar("ncr_number", { length: 50 }),
@@ -401,6 +431,11 @@ export const inspectionActions = pgTable("inspection_actions", {
   status: varchar("status", { length: 20 }).default("open").notNull(), // open | in_progress | resolved
   assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
   dueDate: timestamp("due_date", { mode: "date" }),
+  // ── Quality Loop (Plan D.4.1 / E.2 Workflow 1) ───────────────────
+  // A corrective action IS a task. These let it spawn / sync with a board item.
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }), // target board for auto-creation
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),    // the board task it spawned
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
@@ -510,6 +545,16 @@ export const employeeStatusEnum = pgEnum("employee_status", [
 // Master employee records
 export const employees = pgTable("employees", {
   id: uuid("id").defaultRandom().primaryKey(),
+  // ── Identity unification (Plan D.3) ──────────────────────────────
+  // One human = one users row; employees is a 1:1 profile extension.
+  // Interim approach: enforce the FK, keep users canonical for reporting.
+  // `AnyPgColumn` annotation breaks the users↔employees circular type cycle
+  // (users.employeeId references employees, employees.userId references users).
+  userId: uuid("user_id")
+    .references((): AnyPgColumn => users.id, { onDelete: "cascade" })
+    .unique(),
+  // Tenant boundary (Plan D.2.1) — was entirely absent on this module.
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
   employeeId: varchar("employee_id", { length: 50 }).notNull().unique(), // Badge / HR code
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
@@ -528,6 +573,8 @@ export const employees = pgTable("employees", {
 // Physical work areas / workshops / stations
 export const workshops = pgTable("workshops", {
   id: uuid("id").defaultRandom().primaryKey(),
+  // Tenant boundary (Plan D.2.1)
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   location: varchar("location", { length: 255 }),
   description: text("description"),
@@ -538,6 +585,8 @@ export const workshops = pgTable("workshops", {
 // Projects for employee time-tracking (separate from PM boards)
 export const empProjects = pgTable("emp_projects", {
   id: uuid("id").defaultRandom().primaryKey(),
+  // Tenant boundary (Plan D.2.1)
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   workshopId: uuid("workshop_id").references(() => workshops.id, {
@@ -601,6 +650,11 @@ export const signDocuments = pgTable("sign_documents", {
   }),
   // Workspace scope (optional — links document to a workspace for access control)
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "set null" }),
+  // ── Resolved scope ladder (Plan B.4 / D.5b) — link a doc to a task/inspection ──
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
   dueDate: timestamp("due_date", { mode: "date" }),
   pageCount: integer("page_count").default(1).notNull(),
   completedAt: timestamp("completed_at", { mode: "date" }),
@@ -667,6 +721,9 @@ export const timeLogs = pgTable("time_logs", {
   employeeId: uuid("employee_id")
     .notNull()
     .references(() => employees.id, { onDelete: "cascade" }),
+  // Tenant boundary (Plan D.2.1)
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  // Labor structure (workshop → project → task), selectable in parallel (Plan B.4.3)
   workshopId: uuid("workshop_id").references(() => workshops.id, {
     onDelete: "set null",
   }),
@@ -676,6 +733,11 @@ export const timeLogs = pgTable("time_logs", {
   taskId: uuid("task_id").references(() => empTasks.id, {
     onDelete: "set null",
   }),
+  // ── Resolved scope ladder (Plan B.4 / D.5b) — labor rolls up to work ──
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
   checkInAt: timestamp("check_in_at", { mode: "date" }).notNull(),
   checkInPhoto: text("check_in_photo"),
   checkOutAt: timestamp("check_out_at", { mode: "date" }),
@@ -922,3 +984,135 @@ export const formFields = pgTable("form_fields", {
   position: real("position").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+// ════════════════════════════════════════════════════════════════════
+// EVENT BACKBONE — transactional outbox (Plan C.3 / D.5)
+// Producers write a domain row AND an outbox row in the SAME transaction.
+// A worker/cron dispatches pending rows to consumers (automations,
+// notifications, corrective-action creation, roll-ups). Guarantees no
+// lost events and no dual-write inconsistency.
+// ════════════════════════════════════════════════════════════════════
+
+export const eventStatusEnum = pgEnum("event_status", [
+  "pending",
+  "processing",
+  "done",
+  "dead",
+]);
+
+export const eventOutbox = pgTable("event_outbox", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  // 'item.status_changed' | 'inspection.submitted' | 'inspection.flagged'
+  // | 'ncr.raised' | 'form.submitted' | 'timelog.checked_in' | 'timelog.checked_out'
+  // | 'signdoc.completed' | ...
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  aggregateType: varchar("aggregate_type", { length: 50 }), // 'item' | 'inspection' | ...
+  aggregateId: uuid("aggregate_id"),
+  payload: jsonb("payload").default("{}").notNull(),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  occurredAt: timestamp("occurred_at", { mode: "date" }).defaultNow().notNull(),
+  processedAt: timestamp("processed_at", { mode: "date" }), // null = pending
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("last_error"),
+  status: eventStatusEnum("status").default("pending").notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// GENERIC ENTITY LINKS (Plan D.4.2)
+// One table for the long tail of loose associations (sign-doc ↔ inspection,
+// sign-doc ↔ item, inspection "remediates" item, …) so we don't spawn a new
+// join table per pair. Strong, hot links keep their dedicated tables.
+// ════════════════════════════════════════════════════════════════════
+
+export const entityLinks = pgTable(
+  "entity_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceType: varchar("source_type", { length: 40 }).notNull(), // 'inspection' | 'sign_document' | 'time_log' | 'item' | ...
+    sourceId: uuid("source_id").notNull(),
+    targetType: varchar("target_type", { length: 40 }).notNull(),
+    targetId: uuid("target_id").notNull(),
+    relation: varchar("relation", { length: 40 }).notNull(), // 'evidence_for' | 'remediates' | 'belongs_to' | ...
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sourceType, t.sourceId, t.targetType, t.targetId, t.relation] }),
+  ]
+);
+
+// ════════════════════════════════════════════════════════════════════
+// CONFIGURABLE LINKING & SCOPE GOVERNANCE (Plan B.4 / D.5b)
+// Admin rules, per workspace × module, for the scope ladder. The shared
+// linker component + server enforcement both read this.
+// ════════════════════════════════════════════════════════════════════
+
+export const linkModeEnum = pgEnum("link_mode", ["disabled", "optional", "required"]);
+
+export const linkPolicies = pgTable(
+  "link_policies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    module: varchar("module", { length: 30 }).notNull(), // 'inspection' | 'time_clock' | 'sign' | 'form'
+    mode: linkModeEnum("mode").default("optional").notNull(),
+    allowGeneral: boolean("allow_general").default(true).notNull(), // may link to nothing?
+    minLevel: linkLevelEnum("min_level").default("none").notNull(),
+    maxLevel: linkLevelEnum("max_level").default("item").notNull(),
+    // Per-rung selection rules (dial #3), e.g.:
+    // [{ "level":"board","selection":"free" },
+    //  { "level":"group","selection":"predefined","options":["grp_a"] },
+    //  { "level":"item","selection":"free" }]
+    rungRules: jsonb("rung_rules").default("[]").notNull(),
+    defaultTarget: jsonb("default_target"), // pre-selected / locked value
+    isActive: boolean("is_active").default(true).notNull(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.workspaceId, t.module] })]
+);
+
+// ════════════════════════════════════════════════════════════════════
+// ACTIVITY FEED — unified read model / timeline backbone (Plan B.5.4)
+// One denormalized row per meaningful action, carrying full ancestry, so
+// the task timeline, board feed and workspace feed are each ONE indexed
+// read. Populated by the event dispatcher (eventually consistent).
+// ════════════════════════════════════════════════════════════════════
+
+export const activityFeed = pgTable("activity_feed", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  refType: varchar("ref_type", { length: 30 }).notNull(), // 'time_log' | 'inspection' | 'sign_document' | 'comment' | 'item'
+  refId: uuid("ref_id"),
+  action: varchar("action", { length: 50 }).notNull(), // 'clocked_in' | 'inspection_submitted' | 'document_signed' | ...
+  summary: text("summary"), // human-readable timeline line
+  occurredAt: timestamp("occurred_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// NOTIFICATION PREFERENCES (Plan D.5.2)
+// Per-user fan-out choice (in-app / email / none) per event type. The
+// unified Notifications consumer respects these.
+// ════════════════════════════════════════════════════════════════════
+
+export const notificationPreferences = pgTable(
+  "notification_preferences",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventType: varchar("event_type", { length: 100 }).notNull(), // '*' = default for all
+    inApp: boolean("in_app").default(true).notNull(),
+    email: boolean("email").default(true).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.eventType] })]
+);
