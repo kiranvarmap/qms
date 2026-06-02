@@ -48,7 +48,10 @@ echo "▶ Ensuring database '$PGDB' exists..."
 az postgres flexible-server db create -g "$RG" -s "$PG" -d "$PGDB" -o none 2>/dev/null || true
 
 PGHOST="$PG.postgres.database.azure.com"
-PG_URL="postgresql://$PGADMIN:$PGPASS@$PGHOST:5432/$PGDB?sslmode=require"
+# No sslmode= in the URL: `pg` treats sslmode=require as verify-full and would
+# reject Azure's cert chain. SSL is still enforced via the ssl option (app
+# db/index.ts + drizzle.config use rejectUnauthorized:false).
+PG_URL="postgresql://$PGADMIN:$PGPASS@$PGHOST:5432/$PGDB"
 
 echo "▶ Fetching Blob Storage connection string..."
 STOR_CONN="$(az storage account show-connection-string -g "$RG" -n "$STOR" --query connectionString -o tsv)"
