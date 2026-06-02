@@ -23,12 +23,6 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# ── Production deps only (smaller runtime) ───────────────────────────
-FROM base AS proddeps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
 # ── Runtime ──────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
@@ -39,7 +33,10 @@ ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-COPY --from=proddeps /app/node_modules ./node_modules
+# Ship full node_modules: `next start` loads next.config.ts at runtime and
+# needs `typescript` to transpile it (a devDependency). Bigger image, but
+# avoids runtime auto-install (which fails as non-root).
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
