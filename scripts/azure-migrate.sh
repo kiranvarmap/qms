@@ -48,10 +48,12 @@ echo "▶ Ensuring database '$PGDB' exists..."
 az postgres flexible-server db create -g "$RG" -s "$PG" -d "$PGDB" -o none 2>/dev/null || true
 
 PGHOST="$PG.postgres.database.azure.com"
-# No sslmode= in the URL: `pg` treats sslmode=require as verify-full and would
-# reject Azure's cert chain. SSL is still enforced via the ssl option (app
-# db/index.ts + drizzle.config use rejectUnauthorized:false).
-PG_URL="postgresql://$PGADMIN:$PGPASS@$PGHOST:5432/$PGDB"
+# sslmode=no-verify → encrypted connection WITHOUT cert-chain verification.
+# `require`/`verify-full` make `pg` reject Azure's chain (self-signed-in-chain);
+# omitting sslmode entirely makes drizzle-kit connect unencrypted (Azure rejects).
+# no-verify is the right middle ground. The app (db/index.ts) strips sslmode and
+# applies rejectUnauthorized:false itself, so this URL works for both.
+PG_URL="postgresql://$PGADMIN:$PGPASS@$PGHOST:5432/$PGDB?sslmode=no-verify"
 
 echo "▶ Fetching Blob Storage connection string..."
 STOR_CONN="$(az storage account show-connection-string -g "$RG" -n "$STOR" --query connectionString -o tsv)"
