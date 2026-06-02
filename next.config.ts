@@ -31,6 +31,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Emit a self-contained server bundle (.next/standalone) for container deploys
+  // (Azure Container Apps). Keeps the runtime image small and dependency-free.
+  output: "standalone",
+
   turbopack: {},
 
   images: {
