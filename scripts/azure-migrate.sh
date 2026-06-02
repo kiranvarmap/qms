@@ -15,7 +15,7 @@
 set -euo pipefail
 
 RG="qms-integrated-rg"
-LOC="eastus"
+LOC="${AZURE_LOC:-eastus}"          # PG region; override if a region is restricted
 APP="qms-integrated"
 PG="qms-integrated-pg8e0ca2f"        # globally-unique server name
 PGADMIN="qmsadmin"

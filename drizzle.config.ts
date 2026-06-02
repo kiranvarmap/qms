@@ -11,7 +11,9 @@ export default {
   dialect:     "postgresql",
   dbCredentials: {
     url: process.env.POSTGRES_URL!,
-    // Supabase requires SSL — set POSTGRES_SSL=false only for local non-Supabase dev
-    ssl: process.env.POSTGRES_SSL !== "false",
+    // SSL on by default (Supabase/Azure require it). rejectUnauthorized:false to
+    // match the app runtime (db/index.ts) — managed Postgres presents cert chains
+    // not in the local CA bundle. Set POSTGRES_SSL=false for local non-SSL dev.
+    ssl: process.env.POSTGRES_SSL === "false" ? false : { rejectUnauthorized: false },
   },
 } satisfies Config;
