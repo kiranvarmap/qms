@@ -7,6 +7,7 @@ import {
   pgEnum,
   boolean,
   primaryKey,
+  unique,
   integer,
   jsonb,
   real,
@@ -1039,7 +1040,14 @@ export const entityLinks = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.sourceType, t.sourceId, t.targetType, t.targetId, t.relation] }),
+    // Surrogate `id` is the PK; this composite is a uniqueness guard (Plan D.4.2).
+    unique("entity_links_uq").on(
+      t.sourceType,
+      t.sourceId,
+      t.targetType,
+      t.targetId,
+      t.relation
+    ),
   ]
 );
 
@@ -1073,7 +1081,8 @@ export const linkPolicies = pgTable(
     updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.workspaceId, t.module] })]
+  // Surrogate `id` is the PK; one policy per workspace × module (Plan D.5b).
+  (t) => [unique("link_policies_ws_module_uq").on(t.workspaceId, t.module)]
 );
 
 // ════════════════════════════════════════════════════════════════════

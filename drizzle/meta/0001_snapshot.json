@@ -1,5 +1,5 @@
 {
-  "id": "dcb9479f-f40e-4139-976a-49738e332bd8",
+  "id": "fbb81193-1e7b-4373-ba01-9b7c1c6ba94f",
   "prevId": "30226a6b-8341-4725-88d9-11796639cbda",
   "version": "7",
   "dialect": "postgresql",
@@ -1552,9 +1552,11 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "entity_links_source_type_source_id_target_type_target_id_relation_pk": {
-          "name": "entity_links_source_type_source_id_target_type_target_id_relation_pk",
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "entity_links_uq": {
+          "name": "entity_links_uq",
+          "nullsNotDistinct": false,
           "columns": [
             "source_type",
             "source_id",
@@ -1564,7 +1566,6 @@
           ]
         }
       },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3221,16 +3222,17 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "link_policies_workspace_id_module_pk": {
-          "name": "link_policies_workspace_id_module_pk",
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "link_policies_ws_module_uq": {
+          "name": "link_policies_ws_module_uq",
+          "nullsNotDistinct": false,
           "columns": [
             "workspace_id",
             "module"
           ]
         }
       },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

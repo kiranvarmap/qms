@@ -26,7 +26,7 @@ CREATE TABLE "entity_links" (
 	"relation" varchar(40) NOT NULL,
 	"created_by" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "entity_links_source_type_source_id_target_type_target_id_relation_pk" PRIMARY KEY("source_type","source_id","target_type","target_id","relation")
+	CONSTRAINT "entity_links_uq" UNIQUE("source_type","source_id","target_type","target_id","relation")
 );
 --> statement-breakpoint
 CREATE TABLE "event_outbox" (
@@ -57,7 +57,7 @@ CREATE TABLE "link_policies" (
 	"is_active" boolean DEFAULT true NOT NULL,
 	"updated_by" uuid,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "link_policies_workspace_id_module_pk" PRIMARY KEY("workspace_id","module")
+	CONSTRAINT "link_policies_ws_module_uq" UNIQUE("workspace_id","module")
 );
 --> statement-breakpoint
 CREATE TABLE "notification_preferences" (
