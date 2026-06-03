@@ -325,11 +325,28 @@ function DateCell({
   const inputRef = useRef<HTMLInputElement>(null);
   const dateStr = value ? new Date(value).toISOString().split("T")[0] : "";
 
+  const openPicker = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    // showPicker() opens the native calendar reliably; fall back to focus.
+    if (typeof el.showPicker === "function") {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        /* showPicker can throw if not user-activated — fall through to focus */
+      }
+    }
+    el.focus();
+    el.click();
+  };
+
   return (
     <div className="relative">
       <button
+        type="button"
         className="w-full text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100 text-center min-h-[28px]"
-        onClick={() => inputRef.current?.showPicker?.()}
+        onClick={openPicker}
       >
         {dateStr
           ? new Date(dateStr).toLocaleDateString("en-US", {
@@ -338,10 +355,13 @@ function DateCell({
             })
           : <span className="text-gray-300">—</span>}
       </button>
+      {/* Visually hidden (not overlaying the button, so clicks reach it), but
+          still in the DOM so showPicker() works. */}
       <input
         ref={inputRef}
         type="date"
-        className="absolute inset-0 opacity-0 cursor-pointer"
+        className="sr-only"
+        tabIndex={-1}
         value={dateStr}
         onChange={(e) => onChange(e.target.value || null)}
       />

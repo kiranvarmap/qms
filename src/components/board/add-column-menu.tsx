@@ -13,7 +13,6 @@ import {
   Link,
   Star,
   AlertTriangle,
-  Paperclip,
 } from "lucide-react";
 
 const COLUMN_TYPES = [
@@ -27,7 +26,6 @@ const COLUMN_TYPES = [
   { type: "link", label: "Link", icon: Link, description: "URL" },
   { type: "priority", label: "Priority", icon: AlertTriangle, description: "Priority labels" },
   { type: "rating", label: "Rating", icon: Star, description: "1–5 star rating" },
-  { type: "file", label: "File", icon: Paperclip, description: "Upload files" },
 ] as const;
 
 interface AddColumnMenuProps {
