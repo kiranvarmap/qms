@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { timeLogs, employees, workshops, empProjects, empTasks } from "@/lib/db/schema";
+import { timeLogs, employees, workshops, empProjects, empTasks, boards, items } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { emitEventStandalone } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
+import type { LinkLevel } from "@/lib/services/linking";
 
 const logSelect = {
   id: timeLogs.id,
@@ -69,10 +72,26 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const { employeeId, workshopId, projectId, taskId, checkInPhoto } = body;
+  // Scope ladder (Plan B.4): link the shift to a work item so labor rolls up.
+  let { workspaceId, boardId, groupId, itemId } = body as {
+    workspaceId?: string | null; boardId?: string | null; groupId?: string | null; itemId?: string | null;
+  };
 
   if (!employeeId) {
     return NextResponse.json({ error: "employeeId is required" }, { status: 400 });
   }
+
+  // Resolve & verify the work-item ancestry (item → group/board, board → workspace).
+  if (itemId) {
+    const [it] = await db.select().from(items).where(eq(items.id, itemId)).limit(1);
+    if (!it) return NextResponse.json({ error: "Selected task not found" }, { status: 400 });
+    boardId = it.boardId; groupId = it.groupId; workspaceId = it.workspaceId ?? workspaceId ?? null;
+  }
+  if (boardId && !workspaceId) {
+    const [b] = await db.select({ workspaceId: boards.workspaceId }).from(boards).where(eq(boards.id, boardId)).limit(1);
+    workspaceId = b?.workspaceId ?? null;
+  }
+  const linkLevel: LinkLevel = itemId ? "item" : groupId ? "group" : boardId ? "board" : workspaceId ? "workspace" : "none";
 
   // Verify employee exists
   const [emp] = await db
@@ -99,11 +118,29 @@ export async function POST(request: Request) {
       workshopId: workshopId || null,
       projectId: projectId || null,
       taskId: taskId || null,
+      // Scope-ladder ancestry — powers task/board/workspace roll-ups (Plan B.5).
+      workspaceId: workspaceId || null,
+      boardId: boardId || null,
+      groupId: groupId || null,
+      itemId: itemId || null,
+      linkLevel,
       checkInAt: new Date(),
       checkInPhoto: checkInPhoto || null,
       status: "active",
     })
     .returning();
+
+  // Labor Loop: record on the event bus + activity feed (Plan E.2 #4).
+  void emitEventStandalone({
+    workspaceId: log.workspaceId,
+    eventType: "timelog.checked_in",
+    aggregateType: "time_log",
+    aggregateId: log.id,
+    payload: {
+      boardId: log.boardId, groupId: log.groupId, itemId: log.itemId,
+      summary: `${emp.name} clocked in`,
+    },
+  }).then(() => dispatchInline()).catch(() => {});
 
   return NextResponse.json(log, { status: 201 });
 }

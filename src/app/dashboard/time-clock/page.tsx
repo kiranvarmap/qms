@@ -29,6 +29,9 @@ interface ActiveLog {
 interface WorkshopOpt { id: string; name: string; }
 interface ProjectOpt  { id: string; name: string; }
 interface TaskOpt     { id: string; name: string; }
+interface WorkspaceOpt { id: string; name: string; }
+interface BoardOpt     { id: string; name: string; }
+interface BoardItemOpt { id: string; name: string; }
 
 type KioskState = "idle" | "looking_up" | "check_in" | "check_out" | "success" | "error";
 
@@ -213,6 +216,14 @@ export default function TimeClockPage() {
   const [selectedTask, setSelectedTask] = useState("");
   const [checkoutNotes, setCheckoutNotes] = useState("");
 
+  // Scope ladder: link the shift to Workspace → Board → Task (Plan B.4)
+  const [workspaces, setWorkspaces] = useState<WorkspaceOpt[]>([]);
+  const [wsBoards, setWsBoards] = useState<BoardOpt[]>([]);
+  const [boardItems, setBoardItems] = useState<BoardItemOpt[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [selectedBoard, setSelectedBoard] = useState("");
+  const [selectedBoardItem, setSelectedBoardItem] = useState("");
+
   // Live elapsed timer for check-out display
   useEffect(() => {
     if (state !== "check_out" || !activeLog) return;
@@ -250,6 +261,30 @@ export default function TimeClockPage() {
       .catch(() => {});
   }, [selectedProject]);
 
+  // ── Scope ladder: Workspace → Board → Task ───────────────────────────
+  useEffect(() => {
+    fetch("/api/workspaces")
+      .then((r) => r.json())
+      .then((d) => setWorkspaces(Array.isArray(d) ? d : (d.data ?? [])))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedWorkspace) { setWsBoards([]); setBoardItems([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    fetch(`/api/workspaces/${selectedWorkspace}`)
+      .then((r) => r.json())
+      .then((d) => setWsBoards(d.boards ?? []))
+      .catch(() => {});
+  }, [selectedWorkspace]);
+
+  useEffect(() => {
+    if (!selectedBoard) { setBoardItems([]); return; } // eslint-disable-line react-hooks/set-state-in-effect
+    fetch(`/api/boards/${selectedBoard}`)
+      .then((r) => r.json())
+      .then((d) => setBoardItems((d.items ?? []).map((i: { id: string; name: string }) => ({ id: i.id, name: i.name }))))
+      .catch(() => {});
+  }, [selectedBoard]);
+
   const lookupEmployee = async () => {
     const badge = badgeInput.trim().toUpperCase();
     if (!badge) return;
@@ -283,6 +318,10 @@ export default function TimeClockPage() {
         workshopId: selectedWorkshop || null,
         projectId: selectedProject || null,
         taskId: selectedTask || null,
+        // Scope ladder — link the shift to a work item for roll-up reporting
+        workspaceId: selectedWorkspace || null,
+        boardId: selectedBoard || null,
+        itemId: selectedBoardItem || null,
         checkInPhoto: photoUrl,
       }),
     });
@@ -327,6 +366,9 @@ export default function TimeClockPage() {
     setSelectedWorkshop("");
     setSelectedProject("");
     setSelectedTask("");
+    setSelectedWorkspace("");
+    setSelectedBoard("");
+    setSelectedBoardItem("");
     setCheckoutNotes("");
   };
 
@@ -466,6 +508,50 @@ export default function TimeClockPage() {
                   <option value="">— Select Task —</option>
                   {tasks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
+              </div>
+
+              {/* ── Link to Work: Workspace → Board → Task (optional) ── */}
+              <div className="border-t border-white/10 pt-3 mt-1">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-2">
+                  Link to Work Item (optional) — tracked &amp; rolled up by task / board / workspace
+                </p>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Workspace</label>
+                    <select
+                      value={selectedWorkspace}
+                      onChange={(e) => { setSelectedWorkspace(e.target.value); setSelectedBoard(""); setSelectedBoardItem(""); }}
+                      className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="">— Select Workspace —</option>
+                      {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Board</label>
+                    <select
+                      value={selectedBoard}
+                      onChange={(e) => { setSelectedBoard(e.target.value); setSelectedBoardItem(""); }}
+                      disabled={!selectedWorkspace}
+                      className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      <option value="">— Select Board —</option>
+                      {wsBoards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Task</label>
+                    <select
+                      value={selectedBoardItem}
+                      onChange={(e) => setSelectedBoardItem(e.target.value)}
+                      disabled={!selectedBoard}
+                      className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      <option value="">— Select Task —</option>
+                      {boardItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 

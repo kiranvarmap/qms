@@ -96,6 +96,7 @@ export function Sidebar({ user }: SidebarProps) {
           { name: "Workshops", href: "/dashboard/emp-workshops", icon: Hammer },
           { name: "Projects & Tasks", href: "/dashboard/emp-projects", icon: FolderKanban },
           { name: "EMP Reports", href: "/dashboard/emp-reports", icon: BarChart3 },
+          { name: "Work Time", href: "/dashboard/work-time", icon: Clock },
         ]
       : []),
   ];
