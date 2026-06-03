@@ -15,6 +15,13 @@
       "when": 1780385139793,
       "tag": "0001_parched_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780492200936,
+      "tag": "0002_youthful_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

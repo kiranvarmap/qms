@@ -27,13 +27,19 @@ export function CalendarView({ board }: CalendarViewProps) {
 
   const itemsByDate = useMemo(() => {
     const map: Record<string, ItemDef[]> = {};
+    const add = (key: string, item: ItemDef) => {
+      if (!map[key]) map[key] = [];
+      if (!map[key].find(i => i.id === item.id)) map[key].push(item);
+    };
     for (const item of board.items) {
-      for (const col of dateColumns) {
-        const val = item.values[col.id];
-        if (val?.dateValue) {
-          const key = val.dateValue.slice(0, 10);
-          if (!map[key]) map[key] = [];
-          if (!map[key].find(i => i.id === item.id)) map[key].push(item);
+      // First-class start/end dates take priority.
+      if (item.startDate) add(item.startDate.slice(0, 10), item);
+      if (item.endDate) add(item.endDate.slice(0, 10), item);
+      // Fallback: any date columns.
+      if (!item.startDate && !item.endDate) {
+        for (const col of dateColumns) {
+          const val = item.values[col.id];
+          if (val?.dateValue) add(val.dateValue.slice(0, 10), item);
         }
       }
     }

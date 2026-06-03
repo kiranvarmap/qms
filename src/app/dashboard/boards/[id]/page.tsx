@@ -873,6 +873,9 @@ export default function BoardPage() {
           itemName={board.items.find((i) => i.id === openItemId)?.name ?? ""}
           boardId={boardId}
           currentUserId={(session?.user as { id?: string })?.id}
+          startDate={board.items.find((i) => i.id === openItemId)?.startDate ?? null}
+          endDate={board.items.find((i) => i.id === openItemId)?.endDate ?? null}
+          onDatesChanged={fetchBoard}
           onClose={() => setOpenItemId(null)}
         />
       )}

@@ -256,6 +256,9 @@ export const items = pgTable("items", {
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 500 }).notNull(),
   position: real("position").default(0).notNull(),
+  // First-class scheduling fields for the task (powers Gantt/Calendar durations).
+  startDate: timestamp("start_date", { mode: "date" }),
+  endDate: timestamp("end_date", { mode: "date" }),
   // Soft-archive (Plan D.6) — replaces the "[Archived] " name-prefix hack.
   archivedAt: timestamp("archived_at", { mode: "date" }),
   createdBy: uuid("created_by")

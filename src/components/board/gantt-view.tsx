@@ -40,6 +40,15 @@ export function GanttView({ board }: GanttViewProps) {
   );
 
   const getItemDateRange = (item: ItemDef): { start: Date | null; end: Date | null } => {
+    // Prefer the task's first-class Start/End dates.
+    if (item.startDate || item.endDate) {
+      const s = item.startDate ? new Date(item.startDate) : null;
+      const e = item.endDate ? new Date(item.endDate) : null;
+      s?.setHours(0, 0, 0, 0);
+      e?.setHours(0, 0, 0, 0);
+      return { start: s ?? e, end: e ?? s };
+    }
+    // Fallback: min/max of any date columns.
     let start: Date | null = null;
     let end: Date | null = null;
     for (const col of dateColumns) {
@@ -54,6 +63,8 @@ export function GanttView({ board }: GanttViewProps) {
     return { start, end };
   };
 
+  const anyItemHasDates = allItems.some((i) => i.startDate || i.endDate);
+
   const todayOffset = getDaysBetween(startDate, today);
 
   const MONTH_LABELS: string[] = [];
@@ -63,15 +74,15 @@ export function GanttView({ board }: GanttViewProps) {
     else MONTH_LABELS.push("");
   });
 
-  if (dateColumns.length === 0) {
+  if (dateColumns.length === 0 && !anyItemHasDates) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12">
         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
           <CalendarDays className="h-8 w-8 text-gray-300" />
         </div>
         <div className="text-center">
-          <h3 className="text-sm font-semibold text-gray-600 mb-1">No date columns</h3>
-          <p className="text-xs text-gray-400">Add a <strong>Date</strong> column to see the Gantt chart.</p>
+          <h3 className="text-sm font-semibold text-gray-600 mb-1">No task dates yet</h3>
+          <p className="text-xs text-gray-400">Set a task&apos;s <strong>Start</strong> and <strong>End date</strong> (open a task) to see the Gantt chart.</p>
         </div>
       </div>
     );

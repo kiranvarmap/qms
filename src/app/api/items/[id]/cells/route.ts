@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { cellValues, items, columns, boards, users } from "@/lib/db/schema";
+import { cellValues, items, columns, boards, users, notifications } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { triggerStatusNotifications } from "@/lib/notifications";
 import { runAutomations } from "@/lib/automations";
@@ -79,10 +79,51 @@ export async function PUT(
       }
     }
 
+    // ── In-app notifications: assignment (person) + status change (owner) ──
+    void createCellNotifications({
+      itemId, columnId, jsonValue, effectiveValue, actorId: session.user.id,
+    }).catch(() => {});
+
     return NextResponse.json({ itemId, columnId, ...data });
   } catch (err) {
     console.error("[PUT /api/items/[id]/cells]", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 });
+  }
+}
+
+// Create in-app notifications for a cell change:
+//  • person column set → notify the assignee ("you were assigned")
+//  • status column changed → notify the item owner
+async function createCellNotifications(args: {
+  itemId: string; columnId: string; jsonValue: unknown; effectiveValue: string | null; actorId: string;
+}) {
+  const { itemId, columnId, jsonValue, effectiveValue, actorId } = args;
+  const [col] = await db.select({ type: columns.type }).from(columns).where(eq(columns.id, columnId)).limit(1);
+  const [itm] = await db.select({ name: items.name, createdBy: items.createdBy, boardId: items.boardId })
+    .from(items).where(eq(items.id, itemId)).limit(1);
+  if (!col || !itm) return;
+
+  if (col.type === "person" && jsonValue && typeof jsonValue === "object") {
+    const assignee = (jsonValue as { userId?: string }).userId;
+    if (assignee && assignee !== actorId) {
+      await db.insert(notifications).values({
+        userId: assignee,
+        type: "item_assigned",
+        title: "You were assigned",
+        body: `You were assigned to "${itm.name}"`,
+        boardId: itm.boardId, itemId, meta: {},
+      });
+    }
+  }
+
+  if (col.type === "status" && effectiveValue && itm.createdBy && itm.createdBy !== actorId) {
+    await db.insert(notifications).values({
+      userId: itm.createdBy,
+      type: "status_changed",
+      title: "Status updated",
+      body: `"${itm.name}" → ${effectiveValue}`,
+      boardId: itm.boardId, itemId, meta: {},
+    });
   }
 }
 

@@ -38,6 +38,9 @@ interface ItemDetailPanelProps {
   itemName: string;
   boardId: string;
   currentUserId?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  onDatesChanged?: () => void;
   onClose: () => void;
 }
 
@@ -64,9 +67,20 @@ function Avatar({ name, image, size = 7 }: { name: string | null; image?: string
   return <div className={cn(s, "rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700 flex-shrink-0")}>{initials}</div>;
 }
 
-export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, onClose }: ItemDetailPanelProps) {
+export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, startDate, endDate, onDatesChanged, onClose }: ItemDetailPanelProps) {
   type Tab = "comments" | "inspections" | "timelogs" | "activity";
   const [activeTab, setActiveTab] = useState<Tab>("comments");
+  const [start, setStart] = useState((startDate ?? "").slice(0, 10));
+  const [end, setEnd] = useState((endDate ?? "").slice(0, 10));
+
+  const saveDates = async (next: { startDate?: string | null; endDate?: string | null }) => {
+    await fetch(`/api/items/${itemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    }).catch(() => {});
+    onDatesChanged?.();
+  };
   const [inspections, setInspections] = useState<LinkedInspection[]>([]);
   const [timeLogs, setTimeLogs] = useState<LinkedTimeLog[]>([]);
   const [loadingInspections, setLoadingInspections] = useState(false);
@@ -161,6 +175,30 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, onCl
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><X className="h-4 w-4" /></button>
         </div>
+
+        {/* Schedule: Start / End date (powers Gantt & Calendar) */}
+        <div className="flex items-center gap-4 px-5 py-3 border-b border-gray-200 flex-shrink-0">
+          <div className="flex flex-col">
+            <label className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-1">Start date</label>
+            <input
+              type="date"
+              value={start}
+              onChange={(e) => { setStart(e.target.value); saveDates({ startDate: e.target.value || null }); }}
+              className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-1">End date</label>
+            <input
+              type="date"
+              value={end}
+              min={start || undefined}
+              onChange={(e) => { setEnd(e.target.value); saveDates({ endDate: e.target.value || null }); }}
+              className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+
         <div className="border-b border-gray-200 flex px-5 flex-shrink-0 overflow-x-auto">
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}

@@ -18,6 +18,8 @@ export async function PATCH(
   if (body.name !== undefined) update.name = body.name;
   if (body.groupId !== undefined) update.groupId = body.groupId;
   if (body.position !== undefined) update.position = body.position;
+  if (body.startDate !== undefined) update.startDate = body.startDate ? new Date(body.startDate) : null;
+  if (body.endDate !== undefined) update.endDate = body.endDate ? new Date(body.endDate) : null;
 
   const [updated] = await db
     .update(items)
