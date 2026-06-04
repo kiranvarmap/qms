@@ -5,6 +5,7 @@ import { count, eq } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX, Clock } from "lucide-react";
 import { BizOpsWidgets } from "@/components/dashboard/biz-ops-widgets";
+import { ModuleLauncher } from "@/components/dashboard/module-launcher";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -45,6 +46,11 @@ export default async function DashboardPage() {
       </div>
 
       <BizOpsWidgets />
+
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">Quick access</h2>
+        <ModuleLauncher role={session?.user.role} />
+      </div>
 
       {isAdmin && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
