@@ -25,10 +25,24 @@ import {
   timeLogs,
   workspaceMembers,
   users,
+  approvalRequests,
+  employees,
+  purchaseOrders,
+  goodsReceipts,
+  goodsReceiptLines,
+  poLineItems,
+  stockMovements,
+  expenses,
+  leaveRequests,
+  leaveBalances,
+  certifications,
+  certificationRecords,
 } from "@/lib/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { sendEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
+import { emitEventStandalone } from "./outbox";
+import { applyStockMovement } from "@/lib/services/inventory";
 import type { OutboxRow } from "./types";
 
 const CORRECTIVE_GROUP_NAME = "Corrective Actions";
@@ -127,6 +141,241 @@ async function runLaborRollup(evt: OutboxRow): Promise<void> {
   // nothing more to mutate here. Hook kept explicit for future cost roll-ups.
 }
 
+// ── Approval routing (Plan §2.4) ─────────────────────────────────────
+// Directed notifications for the generic approval engine: on each pending
+// step, ping the current approver; on resolution, ping the requester. This
+// is targeted (one user), distinct from the broadcast runNotifications below.
+async function approverUserId(approverEmployeeId?: string | null): Promise<string | null> {
+  if (!approverEmployeeId) return null;
+  const [emp] = await db
+    .select({ userId: employees.userId })
+    .from(employees)
+    .where(eq(employees.id, approverEmployeeId))
+    .limit(1);
+  return emp?.userId ?? null;
+}
+
+async function notifyUser(
+  userId: string,
+  type: string,
+  title: string,
+  body: string,
+  meta: Record<string, unknown>
+): Promise<void> {
+  await db.insert(notifications).values({ userId, type, title, body, meta });
+}
+
+async function runApprovalRouting(evt: OutboxRow): Promise<void> {
+  const p = evt.payload ?? {};
+  if (evt.eventType === "approval.requested") {
+    const target = await approverUserId(p.approverEmployeeId as string | undefined);
+    if (!target) return; // role-only step: broadcast handled elsewhere / admin inbox
+    await notifyUser(
+      target,
+      "approval_requested",
+      "Approval needed",
+      `A ${String(p.subjectType ?? "request").replace(/_/g, " ")} is awaiting your approval.`,
+      { eventId: evt.id, requestId: evt.aggregateId, subjectType: p.subjectType, subjectId: p.subjectId }
+    );
+    return;
+  }
+
+  if (evt.eventType === "approval.approved" || evt.eventType === "approval.rejected") {
+    if (!evt.aggregateId) return;
+    const [req] = await db
+      .select({ requestedBy: approvalRequests.requestedBy })
+      .from(approvalRequests)
+      .where(eq(approvalRequests.id, evt.aggregateId))
+      .limit(1);
+    if (!req?.requestedBy) return;
+    const approved = evt.eventType === "approval.approved";
+    await notifyUser(
+      req.requestedBy,
+      evt.eventType.replace(".", "_"),
+      approved ? "Request approved" : "Request rejected",
+      `Your ${String(p.subjectType ?? "request").replace(/_/g, " ")} was ${approved ? "approved" : "rejected"}.`,
+      { eventId: evt.id, requestId: evt.aggregateId, subjectType: p.subjectType, subjectId: p.subjectId }
+    );
+  }
+}
+
+// ── Approval subject sync (Plan §5) ──────────────────────────────────
+// When a generic approval resolves, reflect the outcome on the subject it
+// governs and emit the subject's own domain event. Decoupled: the subject
+// module never imports the approval engine's decision path. Idempotent —
+// only transitions a still-pending subject. Extended per phase (PO now;
+// expense / invoice / leave added with their modules).
+async function runApprovalSubjectSync(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "approval.approved" && evt.eventType !== "approval.rejected") return;
+  const approved = evt.eventType === "approval.approved";
+  const subjectType = (evt.payload?.subjectType as string) ?? null;
+  const subjectId = (evt.payload?.subjectId as string) ?? null;
+  if (!subjectType || !subjectId) return;
+
+  if (subjectType === "purchase_order") {
+    const [po] = await db.select().from(purchaseOrders).where(eq(purchaseOrders.id, subjectId)).limit(1);
+    if (!po || po.status !== "pending_approval") return; // idempotent guard
+    await db
+      .update(purchaseOrders)
+      .set({ status: approved ? "approved" : "cancelled", updatedAt: new Date() })
+      .where(eq(purchaseOrders.id, subjectId));
+    await emitEventStandalone({
+      workspaceId: po.workspaceId,
+      eventType: approved ? "po.approved" : "po.rejected",
+      aggregateType: "purchase_order",
+      aggregateId: po.id,
+      actorUserId: evt.actorUserId,
+      payload: { docNumber: po.docNumber, vendorId: po.vendorId, boardId: po.boardId, itemId: po.itemId },
+    });
+  } else if (subjectType === "expense") {
+    const [exp] = await db.select().from(expenses).where(eq(expenses.id, subjectId)).limit(1);
+    if (!exp || exp.status !== "submitted") return; // idempotent guard
+    await db
+      .update(expenses)
+      .set({ status: approved ? "approved" : "rejected", updatedAt: new Date() })
+      .where(eq(expenses.id, subjectId));
+    await emitEventStandalone({
+      workspaceId: exp.workspaceId,
+      eventType: approved ? "expense.approved" : "expense.rejected",
+      aggregateType: "expense",
+      aggregateId: exp.id,
+      actorUserId: evt.actorUserId,
+      payload: { docNumber: exp.docNumber, employeeId: exp.employeeId, boardId: exp.boardId, itemId: exp.itemId },
+    });
+  } else if (subjectType === "leave_request") {
+    const [lr] = await db.select().from(leaveRequests).where(eq(leaveRequests.id, subjectId)).limit(1);
+    if (!lr || lr.status !== "pending") return; // idempotent guard
+    await db
+      .update(leaveRequests)
+      .set({ status: approved ? "approved" : "rejected", updatedAt: new Date() })
+      .where(eq(leaveRequests.id, subjectId));
+
+    // On approval, roll the days into the matching period balance.
+    if (approved) {
+      const year = lr.startDate.getUTCFullYear();
+      await db
+        .insert(leaveBalances)
+        .values({
+          workspaceId: lr.workspaceId,
+          employeeId: lr.employeeId,
+          leaveTypeId: lr.leaveTypeId,
+          periodYear: year,
+          takenDays: lr.days,
+        })
+        .onConflictDoUpdate({
+          target: [leaveBalances.employeeId, leaveBalances.leaveTypeId, leaveBalances.periodYear],
+          set: { takenDays: sql`${leaveBalances.takenDays} + ${lr.days}`, updatedAt: new Date() },
+        });
+    }
+
+    await emitEventStandalone({
+      workspaceId: lr.workspaceId,
+      eventType: approved ? "leave.approved" : "leave.rejected",
+      aggregateType: "leave_request",
+      aggregateId: lr.id,
+      actorUserId: evt.actorUserId,
+      payload: { employeeId: lr.employeeId, days: lr.days },
+    });
+  }
+}
+
+// ── Stock ledger (Plan §4 / §6.3) ────────────────────────────────────
+// On goods receipt, raise on-hand for each received line that maps to a
+// tracked product, into the receipt's destination warehouse. Idempotent:
+// skips if movements already exist for this GRN (refType/refId guard), so a
+// retried `po.received` never double-counts. Lines without a product or with
+// no warehouse on the GRN are skipped (free-text / un-located receipts).
+async function runStockLedger(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "po.received") return;
+  const grnId = (evt.payload?.goodsReceiptId as string) ?? null;
+  if (!grnId) return;
+
+  const [grn] = await db.select().from(goodsReceipts).where(eq(goodsReceipts.id, grnId)).limit(1);
+  if (!grn || !grn.warehouseId) return; // no destination → nothing to post
+
+  // Idempotency guard — already posted for this receipt?
+  const [existing] = await db
+    .select({ id: stockMovements.id })
+    .from(stockMovements)
+    .where(and(eq(stockMovements.refType, "goods_receipt"), eq(stockMovements.refId, grnId)))
+    .limit(1);
+  if (existing) return;
+
+  const lines = await db
+    .select({
+      productId: goodsReceiptLines.productId,
+      quantity: goodsReceiptLines.quantity,
+      lineProductId: poLineItems.productId,
+    })
+    .from(goodsReceiptLines)
+    .leftJoin(poLineItems, eq(poLineItems.id, goodsReceiptLines.poLineItemId))
+    .where(eq(goodsReceiptLines.goodsReceiptId, grnId));
+
+  await db.transaction(async (tx) => {
+    for (const line of lines) {
+      const productId = line.productId ?? line.lineProductId;
+      if (!productId || line.quantity <= 0) continue;
+      await applyStockMovement(tx, {
+        workspaceId: grn.workspaceId,
+        productId,
+        warehouseId: grn.warehouseId!,
+        type: "receipt",
+        quantity: line.quantity,
+        refType: "goods_receipt",
+        refId: grnId,
+        actorUserId: evt.actorUserId,
+      });
+    }
+  });
+}
+
+// ── Certification issuance (Plan §9) ─────────────────────────────────
+// On course completion, mint a certification_record for every certification
+// that requires this course. Idempotent: skips if a valid record already
+// exists for the employee × certification.
+async function runCertificationIssue(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "course.completed") return;
+  const courseId = evt.aggregateId;
+  const employeeId = (evt.payload?.employeeId as string) ?? null;
+  if (!courseId || !employeeId) return;
+
+  const defs = await db.select().from(certifications).where(eq(certifications.requiresCourseId, courseId));
+  for (const def of defs) {
+    const [existing] = await db
+      .select({ id: certificationRecords.id })
+      .from(certificationRecords)
+      .where(
+        and(
+          eq(certificationRecords.employeeId, employeeId),
+          eq(certificationRecords.certificationId, def.id),
+          eq(certificationRecords.status, "valid")
+        )
+      )
+      .limit(1);
+    if (existing) continue;
+
+    const issuedAt = new Date();
+    const expiresAt =
+      def.validityMonths > 0
+        ? new Date(new Date(issuedAt).setMonth(issuedAt.getMonth() + def.validityMonths))
+        : null;
+
+    const [rec] = await db
+      .insert(certificationRecords)
+      .values({ workspaceId: def.workspaceId, employeeId, certificationId: def.id, issuedAt, expiresAt, status: "valid" })
+      .returning();
+
+    await emitEventStandalone({
+      workspaceId: def.workspaceId,
+      eventType: "certification.issued",
+      aggregateType: "certification_record",
+      aggregateId: rec.id,
+      actorUserId: evt.actorUserId,
+      payload: { certificationId: def.id, employeeId, name: def.name },
+    });
+  }
+}
+
 // ── Notifications fan-out ────────────────────────────────────────────
 // Unified delivery: write in-app rows and (optionally) email, honouring
 // notification_preferences. (Plan D.5.2.) Audience = workspace members for
@@ -144,6 +393,12 @@ async function runNotifications(evt: OutboxRow): Promise<void> {
     },
     "ncr.raised": { title: "NCR raised", body: "A non-conformance report was raised." },
     "signdoc.completed": { title: "Document signed", body: "A document completed signing." },
+    "stock.low": { title: "Low stock", body: "A product dropped below its reorder level." },
+    "estimate.accepted": { title: "Estimate accepted", body: "A customer accepted an estimate." },
+    "estimate.rejected": { title: "Estimate rejected", body: "A customer rejected an estimate." },
+    "invoice.paid": { title: "Invoice paid", body: "An invoice was fully paid." },
+    "invoice.overdue": { title: "Invoice overdue", body: "An invoice is past its due date." },
+    "certification.expiring": { title: "Certification expiring", body: "A certification is expiring soon." },
   };
   const spec = notify[evt.eventType];
   if (!spec || !evt.workspaceId) return;
@@ -199,6 +454,44 @@ const FEED_ACTIONS: Partial<Record<string, { refType: string; action: string; su
   "timelog.checked_out": { refType: "time_log", action: "clocked_out", summary: "Clocked out" },
   "signdoc.completed": { refType: "sign_document", action: "document_signed", summary: "Document signed" },
   "form.submitted": { refType: "form", action: "form_submitted", summary: "Form submitted" },
+  // ── Business-ops (Plan §10) ────────────────────────────────────────
+  "vendor.created": { refType: "vendor", action: "vendor_created", summary: "Vendor added" },
+  "approval.requested": { refType: "approval_request", action: "approval_requested", summary: "Approval requested" },
+  "approval.approved": { refType: "approval_request", action: "approval_approved", summary: "Approval granted" },
+  "approval.rejected": { refType: "approval_request", action: "approval_rejected", summary: "Approval rejected" },
+  "po.submitted": { refType: "purchase_order", action: "po_submitted", summary: "PO submitted for approval" },
+  "po.approved": { refType: "purchase_order", action: "po_approved", summary: "PO approved" },
+  "po.rejected": { refType: "purchase_order", action: "po_rejected", summary: "PO rejected" },
+  "po.sent": { refType: "purchase_order", action: "po_sent", summary: "PO sent to vendor" },
+  "po.received": { refType: "purchase_order", action: "po_received", summary: "Goods received" },
+  "stock.received": { refType: "product", action: "stock_received", summary: "Stock received" },
+  "stock.adjusted": { refType: "product", action: "stock_adjusted", summary: "Stock adjusted" },
+  "stock.low": { refType: "product", action: "stock_low", summary: "Low stock" },
+  "estimate.sent": { refType: "estimate", action: "estimate_sent", summary: "Estimate sent" },
+  "estimate.accepted": { refType: "estimate", action: "estimate_accepted", summary: "Estimate accepted" },
+  "estimate.rejected": { refType: "estimate", action: "estimate_rejected", summary: "Estimate rejected" },
+  "estimate.converted": { refType: "estimate", action: "estimate_converted", summary: "Estimate converted" },
+  "salesorder.approved": { refType: "sales_order", action: "so_approved", summary: "Sales order approved & reserved" },
+  "salesorder.cancelled": { refType: "sales_order", action: "so_cancelled", summary: "Sales order cancelled" },
+  "salesorder.invoiced": { refType: "sales_order", action: "so_invoiced", summary: "Sales order invoiced" },
+  "shipment.shipped": { refType: "shipment", action: "shipment_shipped", summary: "Shipment dispatched" },
+  "shipment.delivered": { refType: "shipment", action: "shipment_delivered", summary: "Shipment delivered" },
+  "invoice.created": { refType: "invoice", action: "invoice_created", summary: "Invoice created" },
+  "invoice.sent": { refType: "invoice", action: "invoice_sent", summary: "Invoice sent" },
+  "invoice.paid": { refType: "invoice", action: "invoice_paid", summary: "Invoice paid" },
+  "invoice.overdue": { refType: "invoice", action: "invoice_overdue", summary: "Invoice overdue" },
+  "payment.recorded": { refType: "payment", action: "payment_recorded", summary: "Payment recorded" },
+  "expense.submitted": { refType: "expense", action: "expense_submitted", summary: "Expense submitted" },
+  "expense.approved": { refType: "expense", action: "expense_approved", summary: "Expense approved" },
+  "expense.rejected": { refType: "expense", action: "expense_rejected", summary: "Expense rejected" },
+  "expense.reimbursed": { refType: "expense", action: "expense_reimbursed", summary: "Expense reimbursed" },
+  "leave.requested": { refType: "leave_request", action: "leave_requested", summary: "Leave requested" },
+  "leave.approved": { refType: "leave_request", action: "leave_approved", summary: "Leave approved" },
+  "leave.rejected": { refType: "leave_request", action: "leave_rejected", summary: "Leave rejected" },
+  "course.assigned": { refType: "enrollment", action: "course_assigned", summary: "Course assigned" },
+  "course.completed": { refType: "course", action: "course_completed", summary: "Course completed" },
+  "certification.issued": { refType: "certification_record", action: "certification_issued", summary: "Certification issued" },
+  "certification.expiring": { refType: "certification_record", action: "certification_expiring", summary: "Certification expiring" },
 };
 
 async function runActivityFeed(evt: OutboxRow): Promise<void> {
@@ -224,6 +517,10 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runActivityFeed(evt);
   await runQualityLoop(evt);
   await runLaborRollup(evt);
+  await runApprovalRouting(evt);
+  await runApprovalSubjectSync(evt);
+  await runStockLedger(evt);
+  await runCertificationIssue(evt);
   await runNotifications(evt);
 }
 

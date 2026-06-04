@@ -14,7 +14,17 @@ import { boards, groups, items, linkPolicies } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 
 export type LinkLevel = "none" | "workspace" | "board" | "group" | "item";
-export type LinkModule = "inspection" | "time_clock" | "sign" | "form";
+export type LinkModule =
+  | "inspection"
+  | "time_clock"
+  | "sign"
+  | "form"
+  // ── Business-ops modules (Plan §2.5) — same scope ladder & governance ──
+  | "purchase_order"
+  | "invoice"
+  | "estimate"
+  | "sales_order"
+  | "expense";
 
 const LEVEL_ORDER: Record<LinkLevel, number> = {
   none: 0,

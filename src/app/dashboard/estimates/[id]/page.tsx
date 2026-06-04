@@ -1,0 +1,155 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Send, CheckCircle2, XCircle, RotateCcw, AlertCircle, ArrowRightLeft } from "lucide-react";
+
+interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }
+interface Version { id: string; version: number; createdAt: string }
+interface Estimate {
+  id: string; docNumber: string; status: string; version: number; currency: string;
+  subtotalMinor: number; taxMinor: number; totalMinor: number; validUntil: string | null; notes: string | null;
+  convertedToType: string | null;
+  convertedToId: string | null;
+  customer: { id: string; name: string } | null;
+  lines: Line[]; versions: Version[];
+}
+
+const statusColors: Record<string, string> = {
+  draft: "bg-gray-600/40 text-gray-300",
+  sent: "bg-indigo-500/20 text-indigo-400",
+  viewed: "bg-blue-500/20 text-blue-400",
+  accepted: "bg-green-500/20 text-green-400",
+  rejected: "bg-red-500/20 text-red-400",
+  expired: "bg-amber-500/20 text-amber-400",
+  converted: "bg-purple-500/20 text-purple-400",
+};
+
+function money(minor: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(minor / 100);
+}
+
+export default function EstimateDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [est, setEst] = useState<Estimate | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch(`/api/estimates/${id}`);
+    setEst(res.ok ? await res.json() : null);
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
+
+  const act = async (path: string) => {
+    setBusy(true); setError("");
+    const res = await fetch(`/api/estimates/${id}/${path}`, { method: "POST", headers: { "Content-Type": "application/json" } });
+    setBusy(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); setError(e.error || "Action failed"); return; }
+    load();
+  };
+
+  const convertToSalesOrder = async () => {
+    setBusy(true); setError("");
+    const res = await fetch(`/api/estimates/${id}/convert`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target: "sales_order" }),
+    });
+    setBusy(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); setError(e.error || "Convert failed"); return; }
+    const data = await res.json();
+    if (data.salesOrderId) router.push(`/dashboard/sales-orders/${data.salesOrderId}`);
+    else load();
+  };
+
+  if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
+  if (!est) return <div className="p-8 text-gray-500">Estimate not found.</div>;
+
+  const sendable = est.status === "draft";
+  const decidable = ["sent", "viewed"].includes(est.status);
+  const revisable = est.status !== "converted";
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <Link href="/dashboard/estimates" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 mb-4">
+        <ArrowLeft className="h-4 w-4" /> Estimates
+      </Link>
+
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold text-white">{est.docNumber}</h1>
+            <span className="text-xs text-gray-500">v{est.version}</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[est.status] ?? ""}`}>{est.status}</span>
+          </div>
+          <p className="text-sm text-gray-400 mt-1">{est.customer?.name ?? "—"}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {sendable && <button onClick={() => act("send")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Send className="h-4 w-4" /> Send</button>}
+          {decidable && <button onClick={() => act("accept")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><CheckCircle2 className="h-4 w-4" /> Accept</button>}
+          {decidable && <button onClick={() => act("reject")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-medium rounded-md"><XCircle className="h-4 w-4" /> Reject</button>}
+          {est.status === "accepted" && !est.convertedToType && <button onClick={convertToSalesOrder} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><ArrowRightLeft className="h-4 w-4" /> Convert to Sales Order</button>}
+          {revisable && est.status !== "draft" && <button onClick={() => act("revise")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-white/10 text-gray-300 hover:text-white text-xs font-medium rounded-md"><RotateCcw className="h-4 w-4" /> Revise</button>}
+        </div>
+      </div>
+
+      {est.convertedToType === "sales_order" && est.convertedToId && (
+        <div className="mb-4 text-sm text-gray-300 bg-white/5 rounded-md px-3 py-2">
+          Converted to <Link href={`/dashboard/sales-orders/${est.convertedToId}`} className="text-blue-400 hover:underline">sales order</Link>.
+        </div>
+      )}
+      {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
+
+      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden mb-4">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 border-b border-white/10">
+              <th className="px-4 py-2.5 font-medium">Description</th>
+              <th className="px-4 py-2.5 font-medium text-right">Qty</th>
+              <th className="px-4 py-2.5 font-medium text-right">Unit price</th>
+              <th className="px-4 py-2.5 font-medium text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {est.lines.map((l) => (
+              <tr key={l.id} className="border-b border-white/5">
+                <td className="px-4 py-2.5 text-gray-200">{l.description}</td>
+                <td className="px-4 py-2.5 text-right text-gray-400">{l.quantity}</td>
+                <td className="px-4 py-2.5 text-right text-gray-400">{money(l.unitPriceMinor, est.currency)}</td>
+                <td className="px-4 py-2.5 text-right text-gray-200">{money(l.amountMinor + l.lineTaxMinor, est.currency)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-end mb-8">
+        <div className="w-56 text-sm space-y-1">
+          <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>{money(est.subtotalMinor, est.currency)}</span></div>
+          <div className="flex justify-between text-gray-400"><span>Tax</span><span>{money(est.taxMinor, est.currency)}</span></div>
+          <div className="flex justify-between text-gray-100 font-medium border-t border-white/10 pt-1"><span>Total</span><span>{money(est.totalMinor, est.currency)}</span></div>
+        </div>
+      </div>
+
+      {est.versions.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-300 mb-2">Version history</h2>
+          <div className="space-y-1">
+            {est.versions.map((v) => (
+              <div key={v.id} className="bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm flex justify-between">
+                <span className="text-gray-300">Version {v.version}</span>
+                <span className="text-gray-500">{new Date(v.createdAt).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

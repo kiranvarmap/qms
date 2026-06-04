@@ -4,6 +4,7 @@ import { users } from "@/lib/db/schema";
 import { count, eq } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, UserX, Clock } from "lucide-react";
+import { BizOpsWidgets } from "@/components/dashboard/biz-ops-widgets";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -42,6 +43,8 @@ export default async function DashboardPage() {
           Welcome back, {session?.user.name || session?.user.email}
         </p>
       </div>
+
+      <BizOpsWidgets />
 
       {isAdmin && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

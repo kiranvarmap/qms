@@ -151,6 +151,11 @@ export const workspaces = pgTable("workspaces", {
   ownerId: uuid("owner_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  // ── Business-ops money settings (Plan §2.3) ──────────────────────
+  // ISO-4217 currency code; all monetary columns store integer minor units
+  // (see lib/money.ts). fiscalYearStart is 1–12 (month the FY begins).
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  fiscalYearStart: integer("fiscal_year_start").default(1).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -171,6 +176,14 @@ export const workspaceMembers = pgTable(
     canAccessInspections: boolean("can_access_inspections").default(false).notNull(),
     canAccessDocSign: boolean("can_access_doc_sign").default(false).notNull(),
     canAccessTimeClock: boolean("can_access_time_clock").default(false).notNull(),
+    // ── Business-ops module access (Plan §1.3 / §2.5) ────────────────
+    canAccessVendors: boolean("can_access_vendors").default(false).notNull(),
+    canAccessPurchasing: boolean("can_access_purchasing").default(false).notNull(),
+    canAccessInventory: boolean("can_access_inventory").default(false).notNull(),
+    canAccessInvoicing: boolean("can_access_invoicing").default(false).notNull(),
+    canAccessExpenses: boolean("can_access_expenses").default(false).notNull(),
+    canAccessHR: boolean("can_access_hr").default(false).notNull(),
+    canAccessTraining: boolean("can_access_training").default(false).notNull(),
     joinedAt: timestamp("joined_at", { mode: "date" }).defaultNow().notNull(),
   },
   (wm) => [primaryKey({ columns: [wm.workspaceId, wm.userId] })]
@@ -566,6 +579,13 @@ export const employees = pgTable("employees", {
   department: varchar("department", { length: 100 }),
   designation: varchar("designation", { length: 100 }),
   joiningDate: timestamp("joining_date", { mode: "date" }),
+  // ── Manager hierarchy (Plan §2.4 / §8) — drives default approval routing ──
+  // Self-FK; `AnyPgColumn` annotation breaks the self-referential type cycle.
+  managerEmployeeId: uuid("manager_employee_id").references((): AnyPgColumn => employees.id, { onDelete: "set null" }),
+  // ── HR fields (Plan §8) — `department` varchar kept for back-compat ──
+  departmentId: uuid("department_id").references((): AnyPgColumn => departments.id, { onDelete: "set null" }),
+  employmentType: varchar("employment_type", { length: 40 }), // full_time | part_time | contract | intern
+  dateOfBirth: timestamp("date_of_birth", { mode: "date" }),
   avatarUrl: text("avatar_url"),
   // Hashed PIN for shared-device signature authentication (future use)
   pin: varchar("pin", { length: 255 }),
@@ -1128,3 +1148,924 @@ export const notificationPreferences = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.eventType] })]
 );
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS PLATFORM — Phase 1: Shared Primitives (Plan §2)
+// Additive foundation every new module depends on: parties (vendors /
+// customers), document numbering, money/tax config, and one generic
+// approval engine. Each carries `workspaceId` (the tenant boundary) and
+// plugs into the existing event outbox + activity_feed + entity_links.
+// ════════════════════════════════════════════════════════════════════
+
+// ── Parties: shared status ─────────────────────────────────────────
+export const partyStatusEnum = pgEnum("party_status", ["active", "inactive"]);
+
+// ── Vendors / Suppliers (Plan §2.1 / §3) ───────────────────────────
+export const vendors = pgTable("vendors", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  // Short workspace-unique code (e.g. "ACME"); used on POs/bills.
+  code: varchar("code", { length: 50 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  taxId: varchar("tax_id", { length: 100 }),
+  // Free-form address block (line1, line2, city, state, postalCode, country).
+  address: jsonb("address").default("{}").notNull(),
+  // Net payment terms in days (e.g. 30 = Net-30). Used for bill due dates.
+  paymentTermsDays: integer("payment_terms_days").default(30).notNull(),
+  // Internal owner of the relationship.
+  accountManagerEmployeeId: uuid("account_manager_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  status: partyStatusEnum("status").default("active").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("vendors_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// ── Vendor contacts (optional multi-contact, Plan §3) ──────────────
+export const vendorContacts = pgTable("vendor_contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  vendorId: uuid("vendor_id")
+    .notNull()
+    .references(() => vendors.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  title: varchar("title", { length: 100 }),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ── Customers / Bill-to parties (Plan §2.1 / §6) ───────────────────
+export const customers = pgTable("customers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 50 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  taxId: varchar("tax_id", { length: 100 }),
+  billingAddress: jsonb("billing_address").default("{}").notNull(),
+  shippingAddress: jsonb("shipping_address").default("{}").notNull(),
+  paymentTermsDays: integer("payment_terms_days").default(30).notNull(),
+  accountManagerEmployeeId: uuid("account_manager_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  // Optional link to the project board this customer's work lives on.
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  status: partyStatusEnum("status").default("active").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("customers_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// ── Document numbering (Plan §2.2) ─────────────────────────────────
+// Generalizes ncrSequences into one table keyed by (workspace, docType,
+// scopeId?). `nextDocNumber(tx, …)` atomically bumps lastNumber inside the
+// producing transaction. format tokens: {YYYY} {YY} {MM} {SEQ} {PREFIX}.
+export const documentSequences = pgTable("document_sequences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  // 'invoice' | 'purchase_order' | 'expense' | 'estimate' | 'sales_order' | 'goods_receipt'
+  docType: varchar("doc_type", { length: 40 }).notNull(),
+  // Optional sub-scope (e.g. per-board sequences); empty string = workspace-wide.
+  scopeId: varchar("scope_id", { length: 64 }).default("").notNull(),
+  prefix: varchar("prefix", { length: 20 }).default("").notNull(),
+  // e.g. "INV-{YYYY}-{SEQ}" ; {SEQ} is zero-padded to `padding` width.
+  format: varchar("format", { length: 100 }).default("{PREFIX}{SEQ}").notNull(),
+  padding: integer("padding").default(4).notNull(),
+  lastNumber: integer("last_number").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("doc_sequences_uq").on(t.workspaceId, t.docType, t.scopeId)]);
+
+// ── Tax rates (Plan §2.3) ──────────────────────────────────────────
+// Referenced by invoice / PO / expense line items. rateBasisPoints stores
+// the percentage in basis points (e.g. 7.5% = 750) to avoid float drift.
+export const taxRates = pgTable("tax_rates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  rateBasisPoints: integer("rate_basis_points").default(0).notNull(),
+  // 'sales' | 'purchase' | 'both'
+  type: varchar("type", { length: 20 }).default("both").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ── Generic approval engine (Plan §2.4) ────────────────────────────
+// One polymorphic engine for leave / PO / expense / invoice-send sign-off.
+// A request emits approval.* events, fans out notifications to the current
+// approver, writes activity_feed, and can spawn a board task. No per-module
+// approval forks (Plan §13 "approval consistency").
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "pending",
+  "approved",
+  "rejected",
+  "cancelled",
+]);
+
+export const approvalDecisionEnum = pgEnum("approval_decision", [
+  "pending",
+  "approved",
+  "rejected",
+  "skipped",
+]);
+
+export const approvalRequests = pgTable("approval_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  // 'leave_request' | 'purchase_order' | 'expense' | 'invoice'
+  subjectType: varchar("subject_type", { length: 40 }).notNull(),
+  subjectId: uuid("subject_id").notNull(),
+  status: approvalStatusEnum("status").default("pending").notNull(),
+  requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+  // 1-based index of the step currently awaiting a decision.
+  currentStep: integer("current_step").default(1).notNull(),
+  policyId: uuid("policy_id"),
+  // Optional scope ladder so approvals surface in the 360° item view.
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at", { mode: "date" }),
+}, (t) => [unique("approval_subject_uq").on(t.subjectType, t.subjectId)]);
+
+export const approvalSteps = pgTable("approval_steps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requestId: uuid("request_id")
+    .notNull()
+    .references(() => approvalRequests.id, { onDelete: "cascade" }),
+  stepNumber: integer("step_number").notNull(), // 1-based, ordered
+  // The approver: an employee, or a role fallback when employeeId is null.
+  approverEmployeeId: uuid("approver_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  approverRole: varchar("approver_role", { length: 30 }), // 'manager' | 'admin' | 'finance' | ...
+  decision: approvalDecisionEnum("decision").default("pending").notNull(),
+  decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { mode: "date" }),
+  comment: text("comment"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ── Approval policies (optional, admin) — step template per subject ─
+export const approvalPolicies = pgTable("approval_policies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  subjectType: varchar("subject_type", { length: 40 }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  // Ordered step template, e.g.
+  // [{ "approverRole":"manager" },
+  //  { "approverRole":"finance", "minAmountMinor": 100000 }]
+  steps: jsonb("steps").default("[]").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("approval_policies_uq").on(t.workspaceId, t.subjectType)]);
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 2: Purchasing & Purchase Orders (Plan §5)
+// PO → approval engine → vendor → goods receipt. Receipt records quantities
+// now; the inventory stock-ledger consumer (Phase 3) reacts to po.received.
+// All money in integer minor units (lib/money.ts). productId columns are
+// nullable and FK-less until the `products` table lands in Phase 3.
+// ════════════════════════════════════════════════════════════════════
+
+export const purchaseOrderStatusEnum = pgEnum("purchase_order_status", [
+  "draft",
+  "pending_approval",
+  "approved",
+  "sent",
+  "partially_received",
+  "received",
+  "closed",
+  "cancelled",
+]);
+
+export const purchaseOrders = pgTable("purchase_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id")
+    .notNull()
+    .references(() => vendors.id, { onDelete: "restrict" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  status: purchaseOrderStatusEnum("status").default("draft").notNull(),
+  // Totals in minor units, recomputed from lines on every edit.
+  subtotalMinor: integer("subtotal_minor").default(0).notNull(),
+  taxMinor: integer("tax_minor").default(0).notNull(),
+  totalMinor: integer("total_minor").default(0).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  expectedDate: timestamp("expected_date", { mode: "date" }),
+  notes: text("notes"),
+  // ── Scope ladder (Plan B.4) — links the PO to a project board/item ──
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  sentAt: timestamp("sent_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("purchase_orders_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const poLineItems = pgTable("po_line_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  purchaseOrderId: uuid("purchase_order_id")
+    .notNull()
+    .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  // FK to products (Phase 3); free-text description always set as a fallback.
+  productId: uuid("product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: real("quantity").default(1).notNull(),
+  // Quantity received so far (driven by goods_receipt_lines).
+  qtyReceived: real("qty_received").default(0).notNull(),
+  unitCostMinor: integer("unit_cost_minor").default(0).notNull(),
+  taxRateId: uuid("tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  // Net (qty × unit cost) and tax, both in minor units.
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  lineTaxMinor: integer("line_tax_minor").default(0).notNull(),
+  position: real("position").default(0).notNull(),
+});
+
+export const goodsReceipts = pgTable("goods_receipts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  purchaseOrderId: uuid("purchase_order_id")
+    .notNull()
+    .references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  // Destination warehouse for the received goods (drives the stock receipt).
+  warehouseId: uuid("warehouse_id").references((): AnyPgColumn => warehouses.id, { onDelete: "set null" }),
+  receivedBy: uuid("received_by").references(() => users.id, { onDelete: "set null" }),
+  receivedAt: timestamp("received_at", { mode: "date" }).defaultNow().notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const goodsReceiptLines = pgTable("goods_receipt_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  goodsReceiptId: uuid("goods_receipt_id")
+    .notNull()
+    .references(() => goodsReceipts.id, { onDelete: "cascade" }),
+  poLineItemId: uuid("po_line_item_id")
+    .notNull()
+    .references(() => poLineItems.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+  quantity: real("quantity").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 3: Inventory (Plan §4)
+// Products + warehouses + an immutable stock-movement ledger. Stock is NEVER
+// a bare counter: every change is a `stock_movements` row whose deltas roll
+// into `stock_levels`. `available = onHand − committed` is derived. Reservation
+// moves `committed` only; goods leave `onHand` exactly once, at shipment
+// (Phase 5). Invoices never touch stock. (Plan §6.3 stock lifecycle.)
+// ════════════════════════════════════════════════════════════════════
+
+export const productTypeEnum = pgEnum("product_type", ["good", "service"]);
+
+export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
+  "receipt",
+  "reservation",
+  "reservation_release",
+  "shipment",
+  "adjustment",
+  "transfer",
+]);
+
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  sku: varchar("sku", { length: 80 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: productTypeEnum("type").default("good").notNull(),
+  // Free-text category / unit for now (normalized tables deferred — Plan §4).
+  category: varchar("category", { length: 120 }),
+  unit: varchar("unit", { length: 40 }).default("unit").notNull(),
+  description: text("description"),
+  costMinor: integer("cost_minor").default(0).notNull(),
+  priceMinor: integer("price_minor").default(0).notNull(),
+  // Reorder threshold; `stock.low` fires when available drops below it.
+  reorderLevel: real("reorder_level").default(0).notNull(),
+  // Services don't carry stock; the ledger/levels ignore non-tracked products.
+  trackInventory: boolean("track_inventory").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  // Optional link to the project board this product belongs to.
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("products_ws_sku_uq").on(t.workspaceId, t.sku)]);
+
+export const warehouses = pgTable("warehouses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 40 }),
+  location: varchar("location", { length: 255 }),
+  // A warehouse may map to a physical workshop/station (reuse, Plan §4).
+  workshopId: uuid("workshop_id").references(() => workshops.id, { onDelete: "set null" }),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("warehouses_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// Current on-hand / committed per product × warehouse (read model over the
+// ledger). available = onHand − committed (derived, not stored).
+export const stockLevels = pgTable("stock_levels", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id")
+    .notNull()
+    .references(() => warehouses.id, { onDelete: "cascade" }),
+  onHand: real("on_hand").default(0).notNull(),
+  committed: real("committed").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("stock_levels_product_warehouse_uq").on(t.productId, t.warehouseId)]);
+
+// Immutable ledger — one row per stock change. Deltas are explicit so the
+// level update is a pure increment and the lifecycle (§6.3) is auditable.
+export const stockMovements = pgTable("stock_movements", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id")
+    .notNull()
+    .references(() => warehouses.id, { onDelete: "cascade" }),
+  type: stockMovementTypeEnum("type").notNull(),
+  // Signed magnitude (negative for outward/adjustment-down), plus the exact
+  // deltas applied to the level so replay/audit needs no re-derivation.
+  quantity: real("quantity").notNull(),
+  onHandDelta: real("on_hand_delta").default(0).notNull(),
+  committedDelta: real("committed_delta").default(0).notNull(),
+  // Source artifact: 'goods_receipt' | 'sales_order' | 'shipment' | 'adjustment' | 'transfer'
+  refType: varchar("ref_type", { length: 40 }),
+  refId: uuid("ref_id"),
+  note: text("note"),
+  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 4: Estimates / Quotes (Plan §6.1)
+// First-class pre-sale document. Accepted in the Customer Portal (Phase 7) or
+// by staff; converts to a sales order (Phase 5) or invoice (Phase 6). No stock
+// impact at any estimate stage (Plan §6.3). Versions are immutable snapshots.
+// ════════════════════════════════════════════════════════════════════
+
+export const estimateStatusEnum = pgEnum("estimate_status", [
+  "draft",
+  "sent",
+  "viewed",
+  "accepted",
+  "rejected",
+  "expired",
+  "converted",
+]);
+
+export const estimates = pgTable("estimates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "restrict" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  status: estimateStatusEnum("status").default("draft").notNull(),
+  version: integer("version").default(1).notNull(),
+  validUntil: timestamp("valid_until", { mode: "date" }),
+  subtotalMinor: integer("subtotal_minor").default(0).notNull(),
+  taxMinor: integer("tax_minor").default(0).notNull(),
+  totalMinor: integer("total_minor").default(0).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  notes: text("notes"),
+  // ── Scope ladder (Plan B.4) — links the estimate to a project board/item ──
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  // Default-deny exposure to the customer portal; flipped true on send.
+  customerVisible: boolean("customer_visible").default(false).notNull(),
+  // Portal acceptance — FK to portal_contacts (Phase 7).
+  acceptedByPortalContactId: uuid("accepted_by_portal_contact_id").references((): AnyPgColumn => portalContacts.id, { onDelete: "set null" }),
+  acceptedAt: timestamp("accepted_at", { mode: "date" }),
+  sentAt: timestamp("sent_at", { mode: "date" }),
+  // One-way conversion record: 'sales_order' | 'invoice'.
+  convertedToType: varchar("converted_to_type", { length: 20 }),
+  convertedToId: uuid("converted_to_id"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("estimates_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const estimateLineItems = pgTable("estimate_line_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  estimateId: uuid("estimate_id")
+    .notNull()
+    .references(() => estimates.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: real("quantity").default(1).notNull(),
+  // Unit sell price in minor units (estimates quote prices, not costs).
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+  taxRateId: uuid("tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  lineTaxMinor: integer("line_tax_minor").default(0).notNull(),
+  position: real("position").default(0).notNull(),
+});
+
+// Immutable per-revision snapshot (full line JSON + totals), like
+// inspections.templateSnapshot — version history is auditable.
+export const estimateVersions = pgTable("estimate_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  estimateId: uuid("estimate_id")
+    .notNull()
+    .references(() => estimates.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  snapshot: jsonb("snapshot").notNull(), // { lines: [...], subtotalMinor, taxMinor, totalMinor, ... }
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("estimate_versions_uq").on(t.estimateId, t.version)]);
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 5: Sales Orders & Fulfillment (Plan §6.2 / §6.3)
+// Order-to-ship lifecycle. Approve → reserve (committed+). Ship → deduct
+// (onHand− AND committed−) — the SINGLE on-hand deduction for sales. Per-line
+// qtyReserved/qtyShipped/qtyInvoiced prevent double reserve/ship/bill, parallel
+// to how committed/onHand prevent double stock deduction.
+// ════════════════════════════════════════════════════════════════════
+
+export const salesOrderStatusEnum = pgEnum("sales_order_status", [
+  "draft",
+  "pending_approval",
+  "approved",
+  "reserved",
+  "picking",
+  "packed",
+  "shipped",
+  "delivered",
+  "invoiced",
+  "cancelled",
+]);
+
+export const shipmentStatusEnum = pgEnum("shipment_status", [
+  "pending",
+  "picked",
+  "packed",
+  "shipped",
+  "delivered",
+]);
+
+export const salesOrders = pgTable("sales_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "restrict" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  estimateId: uuid("estimate_id").references(() => estimates.id, { onDelete: "set null" }),
+  status: salesOrderStatusEnum("status").default("draft").notNull(),
+  // Default warehouse stock is reserved from / shipped out of.
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  subtotalMinor: integer("subtotal_minor").default(0).notNull(),
+  taxMinor: integer("tax_minor").default(0).notNull(),
+  totalMinor: integer("total_minor").default(0).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  notes: text("notes"),
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  approvedAt: timestamp("approved_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("sales_orders_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const salesOrderLineItems = pgTable("sales_order_line_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  salesOrderId: uuid("sales_order_id")
+    .notNull()
+    .references(() => salesOrders.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: real("quantity").default(1).notNull(), // ordered
+  qtyReserved: real("qty_reserved").default(0).notNull(),
+  qtyShipped: real("qty_shipped").default(0).notNull(),
+  qtyInvoiced: real("qty_invoiced").default(0).notNull(),
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+  taxRateId: uuid("tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  lineTaxMinor: integer("line_tax_minor").default(0).notNull(),
+  position: real("position").default(0).notNull(),
+});
+
+export const shipments = pgTable("shipments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  salesOrderId: uuid("sales_order_id")
+    .notNull()
+    .references(() => salesOrders.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }),
+  status: shipmentStatusEnum("status").default("pending").notNull(),
+  carrier: varchar("carrier", { length: 120 }),
+  tracking: varchar("tracking", { length: 120 }),
+  shippedAt: timestamp("shipped_at", { mode: "date" }),
+  deliveredAt: timestamp("delivered_at", { mode: "date" }),
+  shippedBy: uuid("shipped_by").references(() => users.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const shipmentLines = pgTable("shipment_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shipmentId: uuid("shipment_id")
+    .notNull()
+    .references(() => shipments.id, { onDelete: "cascade" }),
+  salesOrderLineId: uuid("sales_order_line_id")
+    .notNull()
+    .references(() => salesOrderLineItems.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  quantity: real("quantity").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 6: Invoicing (Plan §6) — MANUAL PAYMENTS ONLY
+// An invoice is a financial document: it references already-shipped quantities
+// and NEVER moves stock (Plan §6.3). Payments are offline records — no gateway,
+// no card processing (Plan §13). Generated from a sales order / shipment, from
+// billable time, or standalone.
+// ════════════════════════════════════════════════════════════════════
+
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "partially_paid",
+  "paid",
+  "overdue",
+  "void",
+]);
+
+export const invoices = pgTable("invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "restrict" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  status: invoiceStatusEnum("status").default("draft").notNull(),
+  salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+  issueDate: timestamp("issue_date", { mode: "date" }).defaultNow().notNull(),
+  dueDate: timestamp("due_date", { mode: "date" }),
+  subtotalMinor: integer("subtotal_minor").default(0).notNull(),
+  taxMinor: integer("tax_minor").default(0).notNull(),
+  totalMinor: integer("total_minor").default(0).notNull(),
+  amountPaidMinor: integer("amount_paid_minor").default(0).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  notes: text("notes"),
+  // Default-deny portal exposure; flipped true on send.
+  customerVisible: boolean("customer_visible").default(false).notNull(),
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  sentAt: timestamp("sent_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("invoices_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const invoiceLineItems = pgTable("invoice_line_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id, { onDelete: "cascade" }),
+  // Optional source provenance (Plan §6) — any may be set.
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  timeLogId: uuid("time_log_id").references(() => timeLogs.id, { onDelete: "set null" }),
+  salesOrderLineId: uuid("sales_order_line_id").references(() => salesOrderLineItems.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: real("quantity").default(1).notNull(),
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+  taxRateId: uuid("tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  lineTaxMinor: integer("line_tax_minor").default(0).notNull(),
+  position: real("position").default(0).notNull(),
+});
+
+// Manual/offline payments only — NO gateway, NO card processing (Plan §13).
+export const payments = pgTable("payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id, { onDelete: "cascade" }),
+  amountMinor: integer("amount_minor").notNull(),
+  // 'cash' | 'cheque' | 'bank_transfer' | 'other' — descriptive only.
+  method: varchar("method", { length: 30 }).default("other").notNull(),
+  reference: varchar("reference", { length: 120 }),
+  receivedDate: timestamp("received_date", { mode: "date" }).defaultNow().notNull(),
+  note: text("note"),
+  recordedBy: uuid("recorded_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 7: Customer Portal (Plan §6.5)
+// A SEPARATE identity plane: portal contacts authenticate only into /portal,
+// never the staff /dashboard or staff APIs. Every portal query is filtered by
+// the session's customerId AND workspaceId; default-deny via `customerVisible`
+// flags on shareable artifacts. Portal contacts are excluded from
+// workspaceMembers and staff nav. (Plan §13 portal isolation.)
+// ════════════════════════════════════════════════════════════════════
+
+export const portalContacts = pgTable("portal_contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull(),
+  passwordHash: text("password_hash").notNull(),
+  status: partyStatusEnum("status").default("active").notNull(),
+  lastLoginAt: timestamp("last_login_at", { mode: "date" }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("portal_contacts_ws_email_uq").on(t.workspaceId, t.email)]);
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 8: Expense Management (Plan §7) — MANUAL REIMBURSE
+// Reuses `employees` and the generic approval engine. Submit → approval engine
+// (subjectType 'expense') → runApprovalSubjectSync flips status. Reimbursement
+// is a manual/offline record (no gateway, Plan §13).
+// ════════════════════════════════════════════════════════════════════
+
+export const expenseStatusEnum = pgEnum("expense_status", [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "reimbursed",
+]);
+
+export const expenseCategories = pgTable("expense_categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("expense_categories_ws_name_uq").on(t.workspaceId, t.name)]);
+
+export const expenses = pgTable("expenses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "restrict" }),
+  categoryId: uuid("category_id").references(() => expenseCategories.id, { onDelete: "set null" }),
+  vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  spentAt: timestamp("spent_at", { mode: "date" }).defaultNow().notNull(),
+  description: text("description"),
+  receiptFilePath: text("receipt_file_path"),
+  status: expenseStatusEnum("status").default("draft").notNull(),
+  // Billable expenses link to a project board/item (roll up into 360°).
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+  linkLevel: linkLevelEnum("link_level").default("none").notNull(),
+  // Manual reimbursement record.
+  reimbursedAt: timestamp("reimbursed_at", { mode: "date" }),
+  reimburseMethod: varchar("reimburse_method", { length: 30 }),
+  reimburseReference: varchar("reimburse_reference", { length: 120 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("expenses_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 9: HR + Leave (Plan §8)
+// Extends `employees` (the master record). Leave approval = the generic
+// approval engine (subjectType 'leave_request'); runApprovalSubjectSync flips
+// the request status and rolls the balance.
+// ════════════════════════════════════════════════════════════════════
+
+export const departments = pgTable("departments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  // Optional department head (an employee).
+  headEmployeeId: uuid("head_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("departments_ws_name_uq").on(t.workspaceId, t.name)]);
+
+export const leaveTypes = pgTable("leave_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  // Default annual entitlement (days) used when seeding balances.
+  defaultDays: real("default_days").default(0).notNull(),
+  isPaid: boolean("is_paid").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("leave_types_ws_name_uq").on(t.workspaceId, t.name)]);
+
+export const leaveBalances = pgTable("leave_balances", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  leaveTypeId: uuid("leave_type_id")
+    .notNull()
+    .references(() => leaveTypes.id, { onDelete: "cascade" }),
+  periodYear: integer("period_year").notNull(),
+  entitledDays: real("entitled_days").default(0).notNull(),
+  takenDays: real("taken_days").default(0).notNull(), // remaining = entitled − taken
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("leave_balances_uq").on(t.employeeId, t.leaveTypeId, t.periodYear)]);
+
+export const leaveStatusEnum = pgEnum("leave_status", ["pending", "approved", "rejected", "cancelled"]);
+
+export const leaveRequests = pgTable("leave_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  leaveTypeId: uuid("leave_type_id")
+    .notNull()
+    .references(() => leaveTypes.id, { onDelete: "restrict" }),
+  startDate: timestamp("start_date", { mode: "date" }).notNull(),
+  endDate: timestamp("end_date", { mode: "date" }).notNull(),
+  days: real("days").notNull(),
+  reason: text("reason"),
+  status: leaveStatusEnum("status").default("pending").notNull(),
+  coveringEmployeeId: uuid("covering_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// BUSINESS-OPS — Phase 10: Training, Courses & Certification (Plan §9)
+// Reuses `employees` (learners), `sops`/storage (material), `signDocuments`
+// (certificates). Completion → course.completed → runCertificationIssue mints
+// a certification_record; an expiry cron flips records to expiring/expired.
+// ════════════════════════════════════════════════════════════════════
+
+export const enrollmentStatusEnum = pgEnum("enrollment_status", ["enrolled", "in_progress", "completed"]);
+export const certStatusEnum = pgEnum("cert_status", ["valid", "expiring", "expired"]);
+
+export const courses = pgTable("courses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 120 }),
+  isPublished: boolean("is_published").default(false).notNull(),
+  // Optionally required for everyone in a department (compliance training).
+  requiredForDepartmentId: uuid("required_for_department_id").references(() => departments.id, { onDelete: "set null" }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const lessons = pgTable("lessons", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  courseId: uuid("course_id")
+    .notNull()
+    .references(() => courses.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  // 'text' | 'video' | 'sop' | 'file' — content lives in the matching column.
+  contentType: varchar("content_type", { length: 20 }).default("text").notNull(),
+  contentText: text("content_text"),
+  contentUrl: text("content_url"),
+  sopId: uuid("sop_id").references(() => sops.id, { onDelete: "set null" }),
+  position: real("position").default(0).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const enrollments = pgTable("enrollments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  courseId: uuid("course_id")
+    .notNull()
+    .references(() => courses.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  status: enrollmentStatusEnum("status").default("enrolled").notNull(),
+  progressPct: integer("progress_pct").default(0).notNull(),
+  assignedAt: timestamp("assigned_at", { mode: "date" }).defaultNow().notNull(),
+  dueDate: timestamp("due_date", { mode: "date" }),
+  completedAt: timestamp("completed_at", { mode: "date" }),
+}, (t) => [unique("enrollments_course_employee_uq").on(t.courseId, t.employeeId)]);
+
+export const lessonProgress = pgTable("lesson_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  enrollmentId: uuid("enrollment_id")
+    .notNull()
+    .references(() => enrollments.id, { onDelete: "cascade" }),
+  lessonId: uuid("lesson_id")
+    .notNull()
+    .references(() => lessons.id, { onDelete: "cascade" }),
+  completedAt: timestamp("completed_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("lesson_progress_uq").on(t.enrollmentId, t.lessonId)]);
+
+// Certification definitions (name + validity + optional course prerequisite).
+export const certifications = pgTable("certifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  // 0 = never expires; otherwise months of validity from issue.
+  validityMonths: integer("validity_months").default(0).notNull(),
+  // When set, completing this course auto-issues the certification.
+  requiresCourseId: uuid("requires_course_id").references(() => courses.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("certifications_ws_name_uq").on(t.workspaceId, t.name)]);
+
+export const certificationRecords = pgTable("certification_records", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  certificationId: uuid("certification_id")
+    .notNull()
+    .references(() => certifications.id, { onDelete: "cascade" }),
+  issuedAt: timestamp("issued_at", { mode: "date" }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }),
+  status: certStatusEnum("status").default("valid").notNull(),
+  // Issued certificate document (DocSign), if any.
+  certificateDocId: uuid("certificate_doc_id").references(() => signDocuments.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});

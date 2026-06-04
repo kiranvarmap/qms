@@ -43,6 +43,10 @@ export async function proxy(req: NextRequest) {
   if (publicPages.some((p) => pathname === p || pathname.startsWith(p + "/"))) {
     return NextResponse.next();
   }
+  // Customer Portal is a separate identity plane (Plan §6.5) — bypass the staff
+  // NextAuth guard; portal routes enforce their own portal-session auth.
+  if (pathname === "/portal" || pathname.startsWith("/portal/")) return NextResponse.next();
+  if (pathname.startsWith("/api/portal")) return NextResponse.next();
   if (pathname.startsWith("/api/auth")) return NextResponse.next();
   if (pathname.startsWith("/api/forms/slug/")) return NextResponse.next();
   if (pathname.startsWith("/api/forms/") && pathname.endsWith("/submit")) return NextResponse.next();

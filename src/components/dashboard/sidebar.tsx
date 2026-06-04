@@ -25,6 +25,16 @@ import {
   BarChart3,
   FileSignature,
   Settings2,
+  Building2,
+  Inbox,
+  ShoppingCart,
+  Boxes,
+  FileText,
+  Receipt,
+  Users2,
+  Wallet,
+  CalendarDays,
+  GraduationCap,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
 
@@ -105,6 +115,31 @@ export function Sidebar({ user }: SidebarProps) {
     { name: "Documents", href: "/dashboard/sign", icon: FileSignature },
   ];
 
+  // Business-ops modules roll out by phase; links appear as their pages ship.
+  const bizOpsNavItems = [
+    { name: "Approvals", href: "/dashboard/approvals", icon: Inbox },
+    ...(user.role === "admin" || user.role === "manager"
+      ? [
+          { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+          { name: "Invoices", href: "/dashboard/invoices", icon: Receipt },
+        ]
+      : []),
+    ...(user.role === "admin" || user.role === "manager"
+      ? [
+          { name: "Vendors", href: "/dashboard/vendors", icon: Building2 },
+          { name: "Purchase Orders", href: "/dashboard/purchase-orders", icon: ShoppingCart },
+          { name: "Inventory", href: "/dashboard/inventory", icon: Boxes },
+          { name: "Customers", href: "/dashboard/customers", icon: Users2 },
+          { name: "Estimates", href: "/dashboard/estimates", icon: FileText },
+          { name: "Sales Orders", href: "/dashboard/sales-orders", icon: ClipboardList },
+          { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },
+          { name: "HR", href: "/dashboard/hr", icon: UserCog },
+          { name: "Leave", href: "/dashboard/leave", icon: CalendarDays },
+          { name: "Training", href: "/dashboard/training", icon: GraduationCap },
+        ]
+      : []),
+  ];
+
   const adminNavItems = user.role === "admin"
     ? [{ name: "Users", href: "/dashboard/users", icon: Users }]
     : [];
@@ -175,6 +210,33 @@ export function Sidebar({ user }: SidebarProps) {
             </span>
           </div>
           {signNavItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-colors",
+                  isActive
+                    ? "bg-white/10 text-white"
+                    : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                )}
+              >
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Business Operations section */}
+        <div className="pt-4">
+          <div className="px-2.5 mb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Business Operations
+            </span>
+          </div>
+          {bizOpsNavItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link

@@ -9,6 +9,7 @@
  */
 
 export type EventType =
+  // ── Core (existing) ────────────────────────────────────────────────
   | "item.created"
   | "item.updated"
   | "item.status_changed"
@@ -24,15 +25,80 @@ export type EventType =
   | "signdoc.sent"
   | "signdoc.completed"
   | "signdoc.declined"
-  | "automation.executed";
+  | "automation.executed"
+  // ── Business-ops catalogue (Plan §10) ──────────────────────────────
+  | "vendor.created"
+  | "po.submitted"
+  | "po.approved"
+  | "po.rejected"
+  | "po.sent"
+  | "po.received"
+  | "stock.received"
+  | "stock.reserved"
+  | "stock.reservation_released"
+  | "stock.shipped"
+  | "stock.adjusted"
+  | "stock.low"
+  | "estimate.sent"
+  | "estimate.viewed"
+  | "estimate.accepted"
+  | "estimate.rejected"
+  | "estimate.expired"
+  | "estimate.converted"
+  | "salesorder.approved"
+  | "salesorder.cancelled"
+  | "salesorder.invoiced"
+  | "shipment.picked"
+  | "shipment.packed"
+  | "shipment.shipped"
+  | "shipment.delivered"
+  | "invoice.created"
+  | "invoice.sent"
+  | "invoice.paid"
+  | "invoice.overdue"
+  | "payment.recorded"
+  | "expense.submitted"
+  | "expense.approved"
+  | "expense.rejected"
+  | "expense.reimbursed"
+  | "approval.requested"
+  | "approval.approved"
+  | "approval.rejected"
+  | "leave.requested"
+  | "leave.approved"
+  | "leave.rejected"
+  | "portal.comment_added"
+  | "course.assigned"
+  | "course.completed"
+  | "certification.issued"
+  | "certification.expiring";
 
 export type AggregateType =
+  // ── Core (existing) ────────────────────────────────────────────────
   | "item"
   | "inspection"
   | "sign_document"
   | "time_log"
   | "form"
-  | "comment";
+  | "comment"
+  // ── Business-ops (Plan §10) ────────────────────────────────────────
+  | "vendor"
+  | "customer"
+  | "product"
+  | "purchase_order"
+  | "goods_receipt"
+  | "estimate"
+  | "sales_order"
+  | "shipment"
+  | "invoice"
+  | "payment"
+  | "expense"
+  | "approval_request"
+  | "leave_request"
+  | "portal_contact"
+  | "course"
+  | "enrollment"
+  | "certification_record";
 
 /** The shape a producer hands to `emitEvent()`. */
 export interface DomainEventInput {
