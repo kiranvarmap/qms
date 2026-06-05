@@ -53,11 +53,11 @@ export function CalendarView({ board }: CalendarViewProps) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12">
         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-          <CalendarDays className="h-8 w-8 text-gray-300" />
+          <CalendarDays className="h-8 w-8 text-gray-700" />
         </div>
         <div className="text-center">
           <h3 className="text-sm font-semibold text-gray-600 mb-1">No date columns</h3>
-          <p className="text-xs text-gray-400">Add a <strong>Date</strong> column to see items in the calendar.</p>
+          <p className="text-xs text-gray-600">Add a <strong>Date</strong> column to see items in the calendar.</p>
         </div>
       </div>
     );
@@ -68,14 +68,14 @@ export function CalendarView({ board }: CalendarViewProps) {
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-white flex-shrink-0">
         <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
-          <button onClick={prevMonth} className="px-2 py-1.5 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors border-r border-gray-200">
+          <button onClick={prevMonth} className="px-2 py-1.5 hover:bg-gray-50 text-gray-600 hover:text-gray-600 transition-colors border-r border-gray-200">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <button onClick={() => { setMonth(today.getMonth()); setYear(today.getFullYear()); }}
             className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors">
             Today
           </button>
-          <button onClick={nextMonth} className="px-2 py-1.5 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors border-l border-gray-200">
+          <button onClick={nextMonth} className="px-2 py-1.5 hover:bg-gray-50 text-gray-600 hover:text-gray-600 transition-colors border-l border-gray-200">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -90,8 +90,8 @@ export function CalendarView({ board }: CalendarViewProps) {
           {/* Weekday header */}
           <div className="grid grid-cols-7 border-b border-gray-200 flex-shrink-0 bg-gray-50">
             {WEEKDAYS.map(wd => (
-              <div key={wd} className={cn("py-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wide border-r border-gray-100 last:border-r-0",
-                (wd === "Sun" || wd === "Sat") && "text-gray-300")}>
+              <div key={wd} className={cn("py-2 text-center text-xs font-bold text-gray-600 uppercase tracking-wide border-r border-gray-100 last:border-r-0",
+                (wd === "Sun" || wd === "Sat") && "text-gray-700")}>
                 {wd}
               </div>
             ))}
@@ -114,7 +114,7 @@ export function CalendarView({ board }: CalendarViewProps) {
                   i % 7 === 6 && "border-r-0",
                   isTodayDay ? "bg-blue-50/60" : isWeekend ? "bg-gray-50/40" : "bg-white hover:bg-gray-50/50")}>
                   <span className={cn("text-xs font-bold self-start w-6 h-6 flex items-center justify-center rounded-full mb-1.5 transition-colors",
-                    isTodayDay ? "bg-blue-600 text-white shadow-sm" : isWeekend ? "text-gray-300" : "text-gray-500")}>
+                    isTodayDay ? "bg-blue-600 text-white shadow-sm" : isWeekend ? "text-gray-700" : "text-gray-500")}>
                     {dayNum}
                   </span>
                   <div className="space-y-0.5 flex-1 overflow-hidden">
@@ -122,7 +122,7 @@ export function CalendarView({ board }: CalendarViewProps) {
                       const group = getGroup(item);
                       return (
                         <div key={item.id}
-                          className="text-[10px] px-1.5 py-0.5 rounded-md text-white truncate font-semibold leading-tight cursor-default hover:brightness-110 transition-all"
+                          className="text-[10px] px-1.5 py-0.5 rounded-md text-gray-900 truncate font-semibold leading-tight cursor-default hover:brightness-110 transition-all"
                           style={{ backgroundColor: group?.color ?? "#6366f1" }}
                           title={item.name}>
                           {item.name}
@@ -130,7 +130,7 @@ export function CalendarView({ board }: CalendarViewProps) {
                       );
                     })}
                     {dayItems.length > 3 && (
-                      <div className="text-[10px] text-gray-400 font-medium px-0.5">+{dayItems.length - 3} more</div>
+                      <div className="text-[10px] text-gray-600 font-medium px-0.5">+{dayItems.length - 3} more</div>
                     )}
                   </div>
                 </div>

@@ -18,13 +18,13 @@ interface Estimate {
 }
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-600/40 text-gray-300",
-  sent: "bg-indigo-500/20 text-indigo-400",
-  viewed: "bg-blue-500/20 text-blue-400",
-  accepted: "bg-green-500/20 text-green-400",
-  rejected: "bg-red-500/20 text-red-400",
-  expired: "bg-amber-500/20 text-amber-400",
-  converted: "bg-purple-500/20 text-purple-400",
+  draft: "bg-gray-600/40 text-gray-700",
+  sent: "bg-indigo-500/20 text-indigo-600",
+  viewed: "bg-blue-500/20 text-blue-600",
+  accepted: "bg-green-500/20 text-green-600",
+  rejected: "bg-red-500/20 text-red-600",
+  expired: "bg-amber-500/20 text-amber-600",
+  converted: "bg-purple-500/20 text-purple-600",
 };
 
 function money(minor: number, currency = "USD") {
@@ -77,39 +77,39 @@ export default function EstimateDetailPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <Link href="/dashboard/estimates" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 mb-4">
+      <Link href="/dashboard/estimates" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 mb-4">
         <ArrowLeft className="h-4 w-4" /> Estimates
       </Link>
 
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-white">{est.docNumber}</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{est.docNumber}</h1>
             <span className="text-xs text-gray-500">v{est.version}</span>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[est.status] ?? ""}`}>{est.status}</span>
           </div>
-          <p className="text-sm text-gray-400 mt-1">{est.customer?.name ?? "—"}</p>
+          <p className="text-sm text-gray-600 mt-1">{est.customer?.name ?? "—"}</p>
         </div>
         <div className="flex items-center gap-2">
           {sendable && <button onClick={() => act("send")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Send className="h-4 w-4" /> Send</button>}
           {decidable && <button onClick={() => act("accept")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><CheckCircle2 className="h-4 w-4" /> Accept</button>}
           {decidable && <button onClick={() => act("reject")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-medium rounded-md"><XCircle className="h-4 w-4" /> Reject</button>}
           {est.status === "accepted" && !est.convertedToType && <button onClick={convertToSalesOrder} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><ArrowRightLeft className="h-4 w-4" /> Convert to Sales Order</button>}
-          {revisable && est.status !== "draft" && <button onClick={() => act("revise")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-white/10 text-gray-300 hover:text-white text-xs font-medium rounded-md"><RotateCcw className="h-4 w-4" /> Revise</button>}
+          {revisable && est.status !== "draft" && <button onClick={() => act("revise")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-medium rounded-md"><RotateCcw className="h-4 w-4" /> Revise</button>}
         </div>
       </div>
 
       {est.convertedToType === "sales_order" && est.convertedToId && (
-        <div className="mb-4 text-sm text-gray-300 bg-white/5 rounded-md px-3 py-2">
-          Converted to <Link href={`/dashboard/sales-orders/${est.convertedToId}`} className="text-blue-400 hover:underline">sales order</Link>.
+        <div className="mb-4 text-sm text-gray-700 bg-gray-50 rounded-md px-3 py-2">
+          Converted to <Link href={`/dashboard/sales-orders/${est.convertedToId}`} className="text-blue-600 hover:underline">sales order</Link>.
         </div>
       )}
-      {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
+      {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
 
-      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden mb-4">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b border-white/10">
+            <tr className="text-left text-gray-500 border-b border-gray-200">
               <th className="px-4 py-2.5 font-medium">Description</th>
               <th className="px-4 py-2.5 font-medium text-right">Qty</th>
               <th className="px-4 py-2.5 font-medium text-right">Unit price</th>
@@ -118,11 +118,11 @@ export default function EstimateDetailPage() {
           </thead>
           <tbody>
             {est.lines.map((l) => (
-              <tr key={l.id} className="border-b border-white/5">
-                <td className="px-4 py-2.5 text-gray-200">{l.description}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400">{l.quantity}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400">{money(l.unitPriceMinor, est.currency)}</td>
-                <td className="px-4 py-2.5 text-right text-gray-200">{money(l.amountMinor + l.lineTaxMinor, est.currency)}</td>
+              <tr key={l.id} className="border-b border-gray-200">
+                <td className="px-4 py-2.5 text-gray-900">{l.description}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600">{l.quantity}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600">{money(l.unitPriceMinor, est.currency)}</td>
+                <td className="px-4 py-2.5 text-right text-gray-900">{money(l.amountMinor + l.lineTaxMinor, est.currency)}</td>
               </tr>
             ))}
           </tbody>
@@ -131,19 +131,19 @@ export default function EstimateDetailPage() {
 
       <div className="flex justify-end mb-8">
         <div className="w-56 text-sm space-y-1">
-          <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>{money(est.subtotalMinor, est.currency)}</span></div>
-          <div className="flex justify-between text-gray-400"><span>Tax</span><span>{money(est.taxMinor, est.currency)}</span></div>
-          <div className="flex justify-between text-gray-100 font-medium border-t border-white/10 pt-1"><span>Total</span><span>{money(est.totalMinor, est.currency)}</span></div>
+          <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{money(est.subtotalMinor, est.currency)}</span></div>
+          <div className="flex justify-between text-gray-600"><span>Tax</span><span>{money(est.taxMinor, est.currency)}</span></div>
+          <div className="flex justify-between text-gray-900 font-medium border-t border-gray-200 pt-1"><span>Total</span><span>{money(est.totalMinor, est.currency)}</span></div>
         </div>
       </div>
 
       {est.versions.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-300 mb-2">Version history</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-2">Version history</h2>
           <div className="space-y-1">
             {est.versions.map((v) => (
-              <div key={v.id} className="bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm flex justify-between">
-                <span className="text-gray-300">Version {v.version}</span>
+              <div key={v.id} className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm flex justify-between">
+                <span className="text-gray-700">Version {v.version}</span>
                 <span className="text-gray-500">{new Date(v.createdAt).toLocaleString()}</span>
               </div>
             ))}

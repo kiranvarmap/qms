@@ -59,7 +59,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-sm font-medium text-gray-500">
                 Total Users
               </CardTitle>
-              <Users className="h-4 w-4 text-gray-400" />
+              <Users className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stats.total}</div>

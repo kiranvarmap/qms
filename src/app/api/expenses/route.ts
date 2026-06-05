@@ -93,6 +93,13 @@ export async function POST(req: Request) {
       throw err;
     }
 
+    // Mileage expenses derive their amount from distance × rate.
+    const mileageRateMinor = input.mileageRate !== undefined ? toMinor(input.mileageRate) : 0;
+    const amountMinor = input.kind === "mileage"
+      ? Math.round((input.mileageDistance ?? 0) * mileageRateMinor)
+      : toMinor(input.amount ?? 0);
+    if (amountMinor <= 0) return badRequest("Amount must be greater than 0 (or provide mileage distance × rate)");
+
     const expense = await db.transaction(async (tx) => {
       const docNumber = await nextDocNumber(tx, { workspaceId: input.workspaceId, docType: "expense" });
       const [row] = await tx
@@ -103,11 +110,17 @@ export async function POST(req: Request) {
           employeeId,
           categoryId: input.categoryId || null,
           vendorId: input.vendorId || null,
-          amountMinor: toMinor(input.amount),
+          amountMinor,
           spentAt: input.spentAt ? new Date(input.spentAt) : new Date(),
           description: input.description || null,
           receiptFilePath: input.receiptFilePath || null,
           status: "draft",
+          kind: input.kind,
+          mileageDistance: input.mileageDistance ?? 0,
+          mileageRateMinor,
+          costCentre: input.costCentre || null,
+          billable: input.billable ?? false,
+          customerId: input.customerId || null,
           boardId: scope.boardId,
           groupId: scope.groupId,
           itemId: scope.itemId,

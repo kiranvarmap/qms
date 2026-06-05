@@ -171,7 +171,7 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-semibold text-gray-900 truncate">{itemName}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Item details</p>
+            <p className="text-xs text-gray-600 mt-0.5">Item details</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><X className="h-4 w-4" /></button>
         </div>
@@ -179,7 +179,7 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
         {/* Schedule: Start / End date (powers Gantt & Calendar) */}
         <div className="flex items-center gap-4 px-5 py-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex flex-col">
-            <label className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-1">Start date</label>
+            <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium mb-1">Start date</label>
             <input
               type="date"
               value={start}
@@ -188,7 +188,7 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
             />
           </div>
           <div className="flex flex-col">
-            <label className="text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-1">End date</label>
+            <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium mb-1">End date</label>
             <input
               type="date"
               value={end}
@@ -219,17 +219,17 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
             <div className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {loadingComments ? (
-                  <div className="flex items-center gap-2 text-gray-400 text-sm py-8 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+                  <div className="flex items-center gap-2 text-gray-600 text-sm py-8 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
                 ) : comments.length === 0 ? (
-                  <div className="text-center py-8"><MessageSquare className="h-8 w-8 text-gray-200 mx-auto mb-2" /><p className="text-sm text-gray-400">No comments yet.</p></div>
+                  <div className="text-center py-8"><MessageSquare className="h-8 w-8 text-gray-900 mx-auto mb-2" /><p className="text-sm text-gray-600">No comments yet.</p></div>
                 ) : comments.map(comment => (
                   <div key={comment.id} className="flex gap-3 group">
                     <Avatar name={comment.userName} image={comment.userImage} size={7} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-sm font-medium text-gray-900">{comment.userName ?? "Unknown"}</span>
-                        <span className="text-xs text-gray-400">{formatRelative(comment.createdAt)}</span>
-                        {comment.updatedAt !== comment.createdAt && <span className="text-xs text-gray-300">(edited)</span>}
+                        <span className="text-xs text-gray-600">{formatRelative(comment.createdAt)}</span>
+                        {comment.updatedAt !== comment.createdAt && <span className="text-xs text-gray-700">(edited)</span>}
                       </div>
                       {editingId === comment.id ? (
                         <div className="space-y-2">
@@ -246,8 +246,8 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                     </div>
                     {currentUserId === comment.userId && editingId !== comment.id && (
                       <div className="hidden group-hover:flex items-center gap-1 flex-shrink-0 pt-1">
-                        <button onClick={() => { setEditingId(comment.id); setEditText(comment.content); }} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"><Pencil className="h-3 w-3" /></button>
-                        <button onClick={() => deleteComment(comment.id)} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                        <button onClick={() => { setEditingId(comment.id); setEditText(comment.content); }} className="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-600"><Pencil className="h-3 w-3" /></button>
+                        <button onClick={() => deleteComment(comment.id)} className="p-1 rounded hover:bg-red-50 text-gray-600 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
                       </div>
                     )}
                   </div>
@@ -279,9 +279,9 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                 </button>
               </div>
               {loadingInspections ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm py-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+                <div className="flex items-center gap-2 text-gray-600 text-sm py-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
               ) : inspections.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No inspections linked yet.</p>
+                <p className="text-sm text-gray-600 py-6 text-center">No inspections linked yet.</p>
               ) : inspections.map(insp => (
                 <div key={insp.inspectionId} className="border border-gray-200 rounded-lg p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -294,9 +294,9 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                         {insp.score != null && <span className="text-xs text-gray-500">Score: <strong>{insp.score.toFixed(1)}%</strong></span>}
                       </div>
                       <p className="text-sm font-medium text-gray-900 truncate">{insp.title}</p>
-                      <p className="text-xs text-gray-400">{insp.templateTitle}</p>
+                      <p className="text-xs text-gray-600">{insp.templateTitle}</p>
                     </div>
-                    <button onClick={() => unlinkInspection(insp.inspectionId)} className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => unlinkInspection(insp.inspectionId)} className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
               ))}
@@ -319,9 +319,9 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                 </div>
               )}
               {loadingTimeLogs ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm py-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+                <div className="flex items-center gap-2 text-gray-600 text-sm py-4 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
               ) : timeLogs.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No time logs linked yet.</p>
+                <p className="text-sm text-gray-600 py-6 text-center">No time logs linked yet.</p>
               ) : timeLogs.map(log => (
                 <div key={log.timeLogId} className="border border-gray-200 rounded-lg p-3">
                   <div className="flex items-start justify-between gap-2">
@@ -329,7 +329,7 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">{log.employeeName.charAt(0)}</div>
                         <span className="text-sm font-medium text-gray-900">{log.employeeName}</span>
-                        <span className="text-xs text-gray-400">#{log.employeeCode}</span>
+                        <span className="text-xs text-gray-600">#{log.employeeCode}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-sm font-semibold text-gray-700">{formatDuration(log.durationMinutes)}</span>
@@ -338,7 +338,7 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => unlinkTimeLog(log.timeLogId)} className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => unlinkTimeLog(log.timeLogId)} className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500"><X className="h-3.5 w-3.5" /></button>
                   </div>
                 </div>
               ))}
@@ -349,13 +349,13 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
             <div className="p-5 space-y-3">
               <h3 className="text-sm font-semibold text-gray-700">Activity</h3>
               {loadingActivity ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm py-8 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
+                <div className="flex items-center gap-2 text-gray-600 text-sm py-8 justify-center"><Loader2 className="h-4 w-4 animate-spin" />Loading...</div>
               ) : activity.length === 0 ? (
-                <div className="text-center py-8"><Activity className="h-8 w-8 text-gray-200 mx-auto mb-2" /><p className="text-sm text-gray-400">No activity recorded yet.</p></div>
+                <div className="text-center py-8"><Activity className="h-8 w-8 text-gray-900 mx-auto mb-2" /><p className="text-sm text-gray-600">No activity recorded yet.</p></div>
               ) : activity.map(entry => (
                 <div key={entry.id} className="flex gap-3">
                   <Avatar name={entry.userName} size={6} />
-                  <div><p className="text-sm text-gray-700"><span className="font-medium">{entry.userName ?? "System"}</span> <span className="text-gray-500">{entry.action}</span></p><p className="text-xs text-gray-400">{formatRelative(entry.createdAt)}</p></div>
+                  <div><p className="text-sm text-gray-700"><span className="font-medium">{entry.userName ?? "System"}</span> <span className="text-gray-500">{entry.action}</span></p><p className="text-xs text-gray-600">{formatRelative(entry.createdAt)}</p></div>
                 </div>
               ))}
             </div>
@@ -369,10 +369,10 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
           <div className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-semibold">Link an Inspection</h3><button onClick={() => setShowLinkInspection(false)} className="p-1 rounded hover:bg-gray-100"><X className="h-4 w-4 text-gray-500" /></button></div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-              {availableInspections.length === 0 ? <p className="p-5 text-sm text-gray-400 text-center">No inspections available.</p> : availableInspections.map(insp => (
+              {availableInspections.length === 0 ? <p className="p-5 text-sm text-gray-600 text-center">No inspections available.</p> : availableInspections.map(insp => (
                 <button key={insp.id} disabled={linking || inspections.some(i => i.inspectionId === insp.id)} onClick={() => linkInspection(insp.id)} className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 disabled:opacity-50 text-left">
-                  <div><p className="text-sm font-medium">{insp.title}</p><p className="text-xs text-gray-400">{insp.status === "completed" ? "Completed" : "In Progress"}</p></div>
-                  {inspections.some(i => i.inspectionId === insp.id) ? <span className="text-xs text-green-600 font-medium">Linked</span> : <Plus className="h-4 w-4 text-gray-400" />}
+                  <div><p className="text-sm font-medium">{insp.title}</p><p className="text-xs text-gray-600">{insp.status === "completed" ? "Completed" : "In Progress"}</p></div>
+                  {inspections.some(i => i.inspectionId === insp.id) ? <span className="text-xs text-green-600 font-medium">Linked</span> : <Plus className="h-4 w-4 text-gray-600" />}
                 </button>
               ))}
             </div>
@@ -386,10 +386,10 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
           <div className="fixed z-[70] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center justify-between"><h3 className="font-semibold">Link a Time Log</h3><button onClick={() => setShowLinkTimeLog(false)} className="p-1 rounded hover:bg-gray-100"><X className="h-4 w-4 text-gray-500" /></button></div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-              {availableTimeLogs.length === 0 ? <p className="p-5 text-sm text-gray-400 text-center">No time logs available.</p> : availableTimeLogs.map(log => (
+              {availableTimeLogs.length === 0 ? <p className="p-5 text-sm text-gray-600 text-center">No time logs available.</p> : availableTimeLogs.map(log => (
                 <button key={log.id} disabled={linking || timeLogs.some(t => t.timeLogId === log.id)} onClick={() => linkTimeLog(log.id)} className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 disabled:opacity-50 text-left">
-                  <div><p className="text-sm font-medium">{log.employeeName}</p><p className="text-xs text-gray-400">{formatDate(log.checkInAt)}</p></div>
-                  {timeLogs.some(t => t.timeLogId === log.id) ? <span className="text-xs text-green-600 font-medium">Linked</span> : <Plus className="h-4 w-4 text-gray-400" />}
+                  <div><p className="text-sm font-medium">{log.employeeName}</p><p className="text-xs text-gray-600">{formatDate(log.checkInAt)}</p></div>
+                  {timeLogs.some(t => t.timeLogId === log.id) ? <span className="text-xs text-green-600 font-medium">Linked</span> : <Plus className="h-4 w-4 text-gray-600" />}
                 </button>
               ))}
             </div>

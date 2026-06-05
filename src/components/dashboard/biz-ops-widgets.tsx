@@ -43,7 +43,7 @@ export function BizOpsWidgets() {
         {cards(summary).map((c) => (
           <Link key={c.label} href={c.href} className="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
             <div className="flex items-center justify-between">
-              <c.icon className={`h-5 w-5 ${c.alert ? "text-amber-500" : "text-gray-400"}`} />
+              <c.icon className={`h-5 w-5 ${c.alert ? "text-amber-500" : "text-gray-600"}`} />
               <span className={`text-2xl font-semibold ${c.alert ? "text-amber-600" : "text-gray-900"}`}>{c.value}</span>
             </div>
             <div className="text-xs text-gray-500 mt-2">{c.label}</div>

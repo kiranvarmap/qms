@@ -498,7 +498,7 @@ export default function BoardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -545,7 +545,7 @@ export default function BoardPage() {
           </div>
 
           <div className="relative flex-1 max-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -557,7 +557,7 @@ export default function BoardPage() {
                 className="absolute right-2 top-1/2 -translate-y-1/2"
                 onClick={() => setSearchQuery("")}
               >
-                <X className="h-3 w-3 text-gray-400" />
+                <X className="h-3 w-3 text-gray-600" />
               </button>
             )}
           </div>
@@ -709,7 +709,7 @@ export default function BoardPage() {
           {bulkAction && (
             <div className="fixed inset-0 z-[79]" onClick={() => setBulkAction(null)} />
           )}
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-gray-900 text-white rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 text-sm">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] bg-white text-gray-900 rounded-xl shadow-2xl px-5 py-3 flex items-center gap-3 text-sm">
             <span className="font-medium tabular-nums">
               {selectedItems.size} task{selectedItems.size > 1 ? "s" : ""} selected
             </span>
@@ -717,7 +717,7 @@ export default function BoardPage() {
 
             {/* Delete */}
             <button
-              className="px-3 py-1 rounded-md hover:bg-gray-700 text-red-400 flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1 rounded-md hover:bg-gray-100 text-red-600 flex items-center gap-1.5 transition-colors"
               onClick={bulkDelete}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -729,7 +729,7 @@ export default function BoardPage() {
               <button
                 className={cn(
                   "px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors",
-                  bulkAction === "move" ? "bg-gray-700" : "hover:bg-gray-700"
+                  bulkAction === "move" ? "bg-gray-100" : "hover:bg-gray-100"
                 )}
                 onClick={() => setBulkAction(bulkAction === "move" ? null : "move")}
               >
@@ -768,7 +768,7 @@ export default function BoardPage() {
                   <button
                     className={cn(
                       "px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors",
-                      bulkAction === "status" ? "bg-gray-700" : "hover:bg-gray-700"
+                      bulkAction === "status" ? "bg-gray-100" : "hover:bg-gray-100"
                     )}
                     onClick={() =>
                       setBulkAction(bulkAction === "status" ? null : "status")
@@ -817,7 +817,7 @@ export default function BoardPage() {
                   <button
                     className={cn(
                       "px-3 py-1 rounded-md flex items-center gap-1.5 transition-colors",
-                      bulkAction === "priority" ? "bg-gray-700" : "hover:bg-gray-700"
+                      bulkAction === "priority" ? "bg-gray-100" : "hover:bg-gray-100"
                     )}
                     onClick={() =>
                       setBulkAction(bulkAction === "priority" ? null : "priority")
@@ -857,7 +857,7 @@ export default function BoardPage() {
 
             {/* Deselect */}
             <button
-              className="p-1 rounded-md hover:bg-gray-700 transition-colors ml-1"
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors ml-1"
               onClick={() => setSelectedItems(new Set())}
             >
               <X className="h-4 w-4" />

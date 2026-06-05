@@ -16,7 +16,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-white">
       <Sidebar user={session.user} />
-      <main className="flex-1 min-h-0 overflow-y-auto">
+      <main className="flex-1 min-h-0 overflow-y-auto bg-[var(--allgrey-background-color)] text-[var(--primary-text-color)]">
         {children}
       </main>
     </div>

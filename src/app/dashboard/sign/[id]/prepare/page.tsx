@@ -201,7 +201,7 @@ export default function PreparePage() {
 
   if (!doc) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-screen text-gray-600">
         <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
@@ -215,12 +215,12 @@ export default function PreparePage() {
         <div className="px-4 py-3 border-b border-gray-200">
           <Link
             href="/dashboard/sign"
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 mb-2"
+            className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-600 mb-2"
           >
             <ArrowLeft className="h-3 w-3" /> Back to Documents
           </Link>
           <h1 className="font-semibold text-gray-900 truncate text-sm">{doc.title}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-600 mt-0.5">
             {doc.status === "draft" ? "Click the PDF to place fields" : "View only — document sent"}
           </p>
         </div>
@@ -244,7 +244,7 @@ export default function PreparePage() {
 
             <div className="space-y-2">
               {recipients.length === 0 ? (
-                <div className="text-center py-4 text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg">
+                <div className="text-center py-4 text-xs text-gray-600 border border-dashed border-gray-200 rounded-lg">
                   <UserPlus className="h-5 w-5 mx-auto mb-1 opacity-50" />
                   Add recipients to get started
                 </div>
@@ -260,17 +260,17 @@ export default function PreparePage() {
                     }`}
                   >
                     <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold flex-shrink-0"
                       style={{ backgroundColor: r.color }}
                     >
                       {r.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-gray-800 truncate">{r.name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{r.email}</p>
+                      <p className="text-[10px] text-gray-600 truncate">{r.email}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-gray-600">
                         {fields.filter((f) => f.recipientId === r.id).length} fields
                       </span>
                       {doc.status === "draft" && (
@@ -279,7 +279,7 @@ export default function PreparePage() {
                             e.stopPropagation();
                             handleRemoveRecipient(r.id);
                           }}
-                          className="p-0.5 text-gray-300 hover:text-red-500 transition-colors"
+                          className="p-0.5 text-gray-700 hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -363,7 +363,7 @@ export default function PreparePage() {
                       <Icon className="h-4 w-4 flex-shrink-0" />
                       <div className="text-left">
                         <div className="text-xs font-semibold">{tool.label}</div>
-                        <div className={`text-[10px] ${isActive ? "text-blue-200" : "text-gray-400"}`}>
+                        <div className={`text-[10px] ${isActive ? "text-blue-200" : "text-gray-600"}`}>
                           {tool.description}
                         </div>
                       </div>
@@ -420,7 +420,7 @@ export default function PreparePage() {
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-gray-200 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
               )}

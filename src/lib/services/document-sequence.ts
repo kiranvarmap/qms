@@ -20,7 +20,17 @@ export type DocType =
   | "expense"
   | "estimate"
   | "sales_order"
-  | "goods_receipt";
+  | "goods_receipt"
+  | "engineering_change_request"
+  | "work_order"
+  | "maintenance_order"
+  | "incident"
+  | "purchase_requisition"
+  | "purchase_return"
+  | "sales_return"
+  | "credit_note"
+  | "journal_entry"
+  | "expense_advance";
 
 export interface NextDocNumberOpts {
   workspaceId: string;
@@ -40,6 +50,16 @@ const DEFAULTS: Record<DocType, { prefix: string; format: string }> = {
   estimate: { prefix: "EST-", format: "{PREFIX}{YYYY}-{SEQ}" },
   sales_order: { prefix: "SO-", format: "{PREFIX}{SEQ}" },
   goods_receipt: { prefix: "GRN-", format: "{PREFIX}{SEQ}" },
+  engineering_change_request: { prefix: "ECR-", format: "{PREFIX}{SEQ}" },
+  work_order: { prefix: "WO-", format: "{PREFIX}{SEQ}" },
+  maintenance_order: { prefix: "MO-", format: "{PREFIX}{SEQ}" },
+  incident: { prefix: "INC-", format: "{PREFIX}{SEQ}" },
+  purchase_requisition: { prefix: "PR-", format: "{PREFIX}{SEQ}" },
+  purchase_return: { prefix: "DN-", format: "{PREFIX}{SEQ}" },
+  sales_return: { prefix: "RMA-", format: "{PREFIX}{SEQ}" },
+  credit_note: { prefix: "CN-", format: "{PREFIX}{YYYY}-{SEQ}" },
+  journal_entry: { prefix: "JE-", format: "{PREFIX}{SEQ}" },
+  expense_advance: { prefix: "ADV-", format: "{PREFIX}{SEQ}" },
 };
 
 function render(format: string, prefix: string, seq: number, padding: number): string {

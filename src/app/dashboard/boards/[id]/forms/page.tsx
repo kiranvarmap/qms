@@ -67,7 +67,7 @@ function FieldPreview({ field, col, isSelected, onClick }: {
       )}
     >
       <div className="flex items-center gap-2 mb-1">
-        <GripVertical className="h-4 w-4 text-gray-200 flex-shrink-0 cursor-grab" />
+        <GripVertical className="h-4 w-4 text-gray-900 flex-shrink-0 cursor-grab" />
         {col && (
           <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", colTypeColor(col.type))}>
             {colTypeIcon(col.type)}{col.type}
@@ -75,7 +75,7 @@ function FieldPreview({ field, col, isSelected, onClick }: {
         )}
         {field.isRequired && <span className="text-[10px] font-semibold text-red-500">Required</span>}
         {!field.isVisible && (
-          <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-gray-400"><EyeOff className="h-3 w-3" />Hidden</span>
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-gray-600"><EyeOff className="h-3 w-3" />Hidden</span>
         )}
       </div>
 
@@ -83,7 +83,7 @@ function FieldPreview({ field, col, isSelected, onClick }: {
         {field.label || "Untitled question"}
         {field.isRequired && <span className="text-red-500 ml-0.5">*</span>}
       </label>
-      {field.helpText && <p className="text-xs text-gray-400 mb-2">{field.helpText}</p>}
+      {field.helpText && <p className="text-xs text-gray-600 mb-2">{field.helpText}</p>}
 
       {/* Render the appropriate input widget */}
       {(type === "status" || type === "priority" || type === "dropdown") && labels.length > 0 ? (
@@ -94,16 +94,16 @@ function FieldPreview({ field, col, isSelected, onClick }: {
       ) : type === "checkbox" ? (
         <div className="flex items-center gap-2 pointer-events-none">
           <div className="w-4 h-4 rounded border-2 border-gray-300 bg-gray-50 flex-shrink-0" />
-          <span className="text-sm text-gray-400">{field.label}</span>
+          <span className="text-sm text-gray-600">{field.label}</span>
         </div>
       ) : type === "date" ? (
-        <input type="date" disabled className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400" />
+        <input type="date" disabled className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
       ) : type === "number" ? (
-        <input type="number" disabled placeholder="0" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400" />
+        <input type="number" disabled placeholder="0" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
       ) : type === "link" ? (
-        <input type="url" disabled placeholder="https://" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400" />
+        <input type="url" disabled placeholder="https://" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
       ) : (
-        <input type="text" disabled placeholder="Type your answer…" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400" />
+        <input type="text" disabled placeholder="Type your answer…" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
       )}
 
       {isSelected && (
@@ -124,10 +124,10 @@ function SettingsPanel({ field, col, onUpdate, onDelete, onClose }: {
     <div className="w-72 border-l border-gray-200 bg-white flex flex-col flex-shrink-0 overflow-y-auto">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Settings className="h-4 w-4 text-gray-400" />
+          <Settings className="h-4 w-4 text-gray-600" />
           <span className="text-sm font-bold text-gray-900">Question settings</span>
         </div>
-        <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+        <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-600">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -187,7 +187,7 @@ function SettingsPanel({ field, col, onUpdate, onDelete, onClose }: {
           <div className="flex items-center justify-between px-3 py-3">
             <div>
               <p className="text-sm font-semibold text-gray-800">Required</p>
-              <p className="text-[11px] text-gray-400">Must be answered to submit</p>
+              <p className="text-[11px] text-gray-600">Must be answered to submit</p>
             </div>
             <button
               onClick={() => onUpdate({ isRequired: !field.isRequired })}
@@ -200,7 +200,7 @@ function SettingsPanel({ field, col, onUpdate, onDelete, onClose }: {
           <div className="flex items-center justify-between px-3 py-3">
             <div>
               <p className="text-sm font-semibold text-gray-800">Visible</p>
-              <p className="text-[11px] text-gray-400">Show this question on the form</p>
+              <p className="text-[11px] text-gray-600">Show this question on the form</p>
             </div>
             <button
               onClick={() => onUpdate({ isVisible: !field.isVisible })}
@@ -243,13 +243,13 @@ function AddContentModal({ columns, addedColumnIds, onAdd, onClose }: {
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[80vh]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-900">Add content</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-3">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Board columns</p>
+          <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide mb-2">Board columns</p>
           <div className="space-y-1">
             {columns.map(col => {
               const already = addedColumnIds.has(col.id);
@@ -269,10 +269,10 @@ function AddContentModal({ columns, addedColumnIds, onAdd, onClose }: {
                   </span>
                   <span className="flex-1 text-sm text-gray-700 font-medium">{col.name}</span>
                   {already ? (
-                    <Check className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-gray-700 flex-shrink-0" />
                   ) : checked ? (
                     <div className="w-4 h-4 rounded bg-blue-600 flex items-center justify-center flex-shrink-0">
-                      <Check className="h-2.5 w-2.5 text-white" />
+                      <Check className="h-2.5 w-2.5 text-gray-900" />
                     </div>
                   ) : (
                     <div className="w-4 h-4 rounded border-2 border-gray-200 flex-shrink-0" />
@@ -284,7 +284,7 @@ function AddContentModal({ columns, addedColumnIds, onAdd, onClose }: {
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-xs text-gray-400">{selected.size} selected</span>
+          <span className="text-xs text-gray-600">{selected.size} selected</span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
             <button
@@ -469,7 +469,7 @@ export default function FormsPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-          <FileText className="h-3.5 w-3.5 text-white" />
+          <FileText className="h-3.5 w-3.5 text-gray-900" />
         </div>
 
         {selectedForm ? (
@@ -517,29 +517,29 @@ export default function FormsPage() {
         {/* Forms list sidebar */}
         <div className={cn("border-r border-gray-200 bg-white flex-shrink-0 flex flex-col transition-all", sidebarOpen ? "w-56" : "w-0 overflow-hidden")}>
           <div className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Forms</p>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">Forms</p>
           </div>
           <div className="flex-1 overflow-y-auto py-1">
             {loading ? (
-              <div className="flex items-center justify-center py-10"><Loader2 className="h-4 w-4 animate-spin text-gray-300" /></div>
+              <div className="flex items-center justify-center py-10"><Loader2 className="h-4 w-4 animate-spin text-gray-700" /></div>
             ) : forms.length === 0 ? (
               <div className="py-8 px-4 text-center">
-                <FileText className="h-7 w-7 text-gray-200 mx-auto mb-2" />
-                <p className="text-xs text-gray-400">No forms yet</p>
+                <FileText className="h-7 w-7 text-gray-900 mx-auto mb-2" />
+                <p className="text-xs text-gray-600">No forms yet</p>
               </div>
             ) : forms.map(form => (
               <div key={form.id} onClick={() => selectForm(form)}
                 className={cn("group flex items-start gap-2 px-2 py-2.5 mx-1 rounded-lg cursor-pointer transition-all",
                   selectedForm?.id === form.id ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50")}>
-                <FileText className={cn("h-4 w-4 flex-shrink-0 mt-0.5", selectedForm?.id === form.id ? "text-blue-600" : "text-gray-300")} />
+                <FileText className={cn("h-4 w-4 flex-shrink-0 mt-0.5", selectedForm?.id === form.id ? "text-blue-600" : "text-gray-700")} />
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-xs font-semibold truncate", selectedForm?.id === form.id ? "text-blue-900" : "text-gray-700")}>{form.name}</p>
-                  <span className={cn("text-[10px] px-1 py-0.5 rounded font-medium", form.isActive ? "text-green-600" : "text-gray-400")}>
+                  <span className={cn("text-[10px] px-1 py-0.5 rounded font-medium", form.isActive ? "text-green-600" : "text-gray-600")}>
                     {form.isActive ? "Active" : "Inactive"}
                   </span>
                 </div>
                 <button onClick={e => { e.stopPropagation(); deleteForm(form.id); }}
-                  className="hidden group-hover:flex p-0.5 rounded text-gray-300 hover:text-red-500 flex-shrink-0">
+                  className="hidden group-hover:flex p-0.5 rounded text-gray-700 hover:text-red-500 flex-shrink-0">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -554,7 +554,7 @@ export default function FormsPage() {
             </div>
             <div className="text-center">
               <h3 className="text-sm font-semibold text-gray-700 mb-1">Select a form to edit</h3>
-              <p className="text-xs text-gray-400">Or create a new one to get started</p>
+              <p className="text-xs text-gray-600">Or create a new one to get started</p>
             </div>
             <button onClick={createForm} disabled={creating}
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors">
@@ -577,11 +577,11 @@ export default function FormsPage() {
                   <div className="flex-1 overflow-y-auto py-1">
                     <div className="px-2 py-1">
                       <div className="flex items-center gap-1 px-2 py-1 mb-1">
-                        <ChevronRight className="h-3 w-3 text-gray-400" />
+                        <ChevronRight className="h-3 w-3 text-gray-600" />
                         <span className="text-[11px] text-gray-500 font-semibold">Page 1</span>
                       </div>
                       {fields.length === 0 ? (
-                        <p className="text-[11px] text-gray-400 italic px-4 py-2">No questions yet</p>
+                        <p className="text-[11px] text-gray-600 italic px-4 py-2">No questions yet</p>
                       ) : (
                         <div className="space-y-0.5 pl-1">
                           {fields.map(field => {
@@ -593,7 +593,7 @@ export default function FormsPage() {
                                 {/* Select field */}
                                 <button className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
                                   onClick={() => setSelectedFieldId(field.id)}>
-                                  <span className={cn("flex-shrink-0", col ? colTypeColor(col.type) : "text-gray-300")}>
+                                  <span className={cn("flex-shrink-0", col ? colTypeColor(col.type) : "text-gray-700")}>
                                     {colTypeIcon(col?.type ?? "text")}
                                   </span>
                                   <span className={cn("text-[11px] font-medium truncate", selectedFieldId === field.id ? "text-blue-800" : "text-gray-600", !field.isVisible && "opacity-50")}>
@@ -605,7 +605,7 @@ export default function FormsPage() {
                                   title={field.isVisible ? "Hide from form" : "Show on form"}
                                   onClick={e => { e.stopPropagation(); toggleFieldVisible(field.id); }}
                                   className={cn("flex-shrink-0 p-0.5 rounded transition-colors",
-                                    field.isVisible ? "text-blue-500 hover:text-blue-700" : "text-gray-300 hover:text-gray-500")}
+                                    field.isVisible ? "text-blue-500 hover:text-blue-700" : "text-gray-700 hover:text-gray-500")}
                                 >
                                   {field.isVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                                 </button>
@@ -639,12 +639,12 @@ export default function FormsPage() {
 
                     {loadingFields ? (
                       <div className="flex items-center justify-center py-20">
-                        <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+                        <Loader2 className="h-6 w-6 animate-spin text-gray-700" />
                       </div>
                     ) : fields.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-20 gap-3">
-                        <Layers className="h-10 w-10 text-gray-200" />
-                        <p className="text-sm text-gray-400">No questions yet</p>
+                        <Layers className="h-10 w-10 text-gray-900" />
+                        <p className="text-sm text-gray-600">No questions yet</p>
                         <button onClick={() => setShowAddModal(true)}
                           className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                           <Plus className="h-3.5 w-3.5" />Add content
@@ -685,7 +685,7 @@ export default function FormsPage() {
                   />
                 )}
                 {savingField && (
-                  <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
+                  <div className="fixed bottom-4 right-4 flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-900 text-xs rounded-lg shadow-lg">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />Saving…
                   </div>
                 )}
@@ -717,7 +717,7 @@ export default function FormsPage() {
                     <div className="flex items-center justify-between px-5 py-4">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Accept submissions</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Allow new responses to be submitted</p>
+                        <p className="text-xs text-gray-600 mt-0.5">Allow new responses to be submitted</p>
                       </div>
                       <button onClick={() => updateForm({ isActive: !selectedForm.isActive })}
                         className={cn("relative w-10 h-5 rounded-full transition-colors", selectedForm.isActive ? "bg-blue-600" : "bg-gray-200")}>
@@ -727,7 +727,7 @@ export default function FormsPage() {
                     <div className="flex items-center justify-between px-5 py-4">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">Public access</p>
-                        <p className="text-xs text-gray-400 mt-0.5">No login required to submit</p>
+                        <p className="text-xs text-gray-600 mt-0.5">No login required to submit</p>
                       </div>
                       <button onClick={() => updateForm({ isPublic: !selectedForm.isPublic })}
                         className={cn("relative w-10 h-5 rounded-full transition-colors", selectedForm.isPublic ? "bg-blue-600" : "bg-gray-200")}>
@@ -750,7 +750,7 @@ export default function FormsPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-gray-900">Share this form</h3>
-                        <p className="text-xs text-gray-400">Distribute the link to collect responses</p>
+                        <p className="text-xs text-gray-600">Distribute the link to collect responses</p>
                       </div>
                     </div>
                     {!selectedForm.isPublic ? (
@@ -766,7 +766,7 @@ export default function FormsPage() {
                             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                             {copied ? "Copied!" : "Copy link"}
                           </button>
-                          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 transition-colors">
+                          <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-600 transition-colors">
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         </div>
@@ -782,7 +782,7 @@ export default function FormsPage() {
                   {selectedForm.isPublic && (
                     <div className="bg-white rounded-2xl border border-gray-200 p-5">
                       <h4 className="text-sm font-bold text-gray-900 mb-2">Embed in your website</h4>
-                      <div className="bg-gray-900 rounded-xl p-3 font-mono text-xs text-green-400 overflow-x-auto whitespace-pre">
+                      <div className="bg-white rounded-xl p-3 font-mono text-xs text-green-600 overflow-x-auto whitespace-pre">
                         {`<iframe src="${publicUrl}" width="100%" height="600" frameborder="0" />`}
                       </div>
                     </div>

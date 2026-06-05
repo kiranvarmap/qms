@@ -63,14 +63,14 @@ export default function ApprovalsPage() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Inbox className="h-6 w-6 text-blue-400" />
-        <h1 className="text-xl font-semibold text-white">My Approvals</h1>
+        <Inbox className="h-6 w-6 text-blue-600" />
+        <h1 className="text-xl font-semibold text-gray-900">My Approvals</h1>
       </div>
 
       <select
         value={workspaceId}
         onChange={(e) => setWorkspaceId(e.target.value)}
-        className="mb-4 bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200"
+        className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
       >
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -80,27 +80,27 @@ export default function ApprovalsPage() {
         {loading ? (
           <p className="text-gray-500 text-sm">Loading…</p>
         ) : requests.length === 0 ? (
-          <div className="bg-gray-900 border border-white/10 rounded-lg px-4 py-12 text-center text-gray-500 text-sm">
+          <div className="bg-white border border-gray-200 rounded-lg px-4 py-12 text-center text-gray-500 text-sm">
             Nothing awaiting your approval.
           </div>
         ) : requests.map((r) => (
-          <div key={r.id} className="bg-gray-900 border border-white/10 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div key={r.id} className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center justify-between">
             <div>
-              <div className="text-gray-200 text-sm font-medium">{subjectLabels[r.subjectType] ?? r.subjectType}</div>
+              <div className="text-gray-900 text-sm font-medium">{subjectLabels[r.subjectType] ?? r.subjectType}</div>
               <div className="text-gray-500 text-xs">Step {r.currentStep} · {new Date(r.createdAt).toLocaleDateString()}</div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => decide(r.id, "approved")}
                 disabled={busy === r.id}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs font-medium rounded-md disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 text-green-600 text-xs font-medium rounded-md disabled:opacity-50"
               >
                 <CheckCircle2 className="h-4 w-4" /> Approve
               </button>
               <button
                 onClick={() => decide(r.id, "rejected")}
                 disabled={busy === r.id}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-medium rounded-md disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-600 text-xs font-medium rounded-md disabled:opacity-50"
               >
                 <XCircle className="h-4 w-4" /> Reject
               </button>

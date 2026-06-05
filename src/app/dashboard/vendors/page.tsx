@@ -19,8 +19,8 @@ interface Vendor {
 }
 
 const statusColors: Record<string, string> = {
-  active: "bg-green-500/20 text-green-400",
-  inactive: "bg-gray-600/40 text-gray-400",
+  active: "bg-green-500/20 text-green-600",
+  inactive: "bg-gray-600/40 text-gray-600",
 };
 
 const emptyForm = { name: "", code: "", email: "", phone: "", taxId: "", paymentTermsDays: "30", notes: "" };
@@ -106,8 +106,8 @@ export default function VendorsPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Building2 className="h-6 w-6 text-blue-400" />
-          <h1 className="text-xl font-semibold text-white">Vendors</h1>
+          <Building2 className="h-6 w-6 text-blue-600" />
+          <h1 className="text-xl font-semibold text-gray-900">Vendors</h1>
         </div>
         <button
           onClick={openCreate}
@@ -122,7 +122,7 @@ export default function VendorsPage() {
         <select
           value={workspaceId}
           onChange={(e) => setWorkspaceId(e.target.value)}
-          className="bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200"
+          className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
         >
           {workspaces.length === 0 && <option value="">No workspaces</option>}
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -133,15 +133,15 @@ export default function VendorsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search vendors…"
-            className="w-full bg-gray-900 border border-white/10 rounded-md pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-500"
+            className="w-full bg-white border border-gray-200 rounded-md pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-500"
           />
         </div>
       </div>
 
-      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b border-white/10">
+            <tr className="text-left text-gray-500 border-b border-gray-200">
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Code</th>
               <th className="px-4 py-3 font-medium">Email</th>
@@ -156,23 +156,23 @@ export default function VendorsPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No vendors yet.</td></tr>
             ) : filtered.map((v) => (
-              <tr key={v.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                <td className="px-4 py-3 text-gray-200">{v.name}</td>
-                <td className="px-4 py-3 text-gray-400">{v.code || "—"}</td>
-                <td className="px-4 py-3 text-gray-400">{v.email || "—"}</td>
-                <td className="px-4 py-3 text-gray-400">Net {v.paymentTermsDays}</td>
+              <tr key={v.id} className="border-b border-gray-200 hover:bg-gray-50">
+                <td className="px-4 py-3"><a href={`/dashboard/vendors/${v.id}`} className="text-blue-600 hover:underline font-medium">{v.name}</a></td>
+                <td className="px-4 py-3 text-gray-600">{v.code || "—"}</td>
+                <td className="px-4 py-3 text-gray-600">{v.email || "—"}</td>
+                <td className="px-4 py-3 text-gray-600">Net {v.paymentTermsDays}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[v.status]}`}>{v.status}</span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => openEdit(v)} className="p-1.5 text-gray-500 hover:text-gray-200" title="Edit"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => openEdit(v)} className="p-1.5 text-gray-500 hover:text-gray-900" title="Edit"><Pencil className="h-4 w-4" /></button>
                   {deleteConfirm === v.id ? (
                     <span className="inline-flex items-center gap-1">
-                      <button onClick={() => remove(v.id)} className="p-1.5 text-red-400 hover:text-red-300" title="Confirm delete"><Trash2 className="h-4 w-4" /></button>
-                      <button onClick={() => setDeleteConfirm(null)} className="p-1.5 text-gray-500 hover:text-gray-300"><X className="h-4 w-4" /></button>
+                      <button onClick={() => remove(v.id)} className="p-1.5 text-red-600 hover:text-red-600" title="Confirm delete"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setDeleteConfirm(null)} className="p-1.5 text-gray-500 hover:text-gray-700"><X className="h-4 w-4" /></button>
                     </span>
                   ) : (
-                    <button onClick={() => setDeleteConfirm(v.id)} className="p-1.5 text-gray-500 hover:text-red-400" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setDeleteConfirm(v.id)} className="p-1.5 text-gray-500 hover:text-red-600" title="Delete"><Trash2 className="h-4 w-4" /></button>
                   )}
                 </td>
               </tr>
@@ -183,13 +183,13 @@ export default function VendorsPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-lg w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-gray-200 rounded-lg w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">{editTarget ? "Edit Vendor" : "New Vendor"}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-300"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">{editTarget ? "Edit Vendor" : "New Vendor"}</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700"><X className="h-5 w-5" /></button>
             </div>
             {error && (
-              <div className="mb-3 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 rounded-md px-3 py-2">
+              <div className="mb-3 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2">
                 <AlertCircle className="h-4 w-4" /> {error}
               </div>
             )}
@@ -203,7 +203,7 @@ export default function VendorsPage() {
               <Field label="Notes" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} className="col-span-2" />
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</button>
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
               <button onClick={save} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md">
                 {saving ? "Saving…" : editTarget ? "Save" : "Create"}
               </button>
@@ -225,7 +225,7 @@ function Field({ label, value, onChange, type = "text", className = "" }: {
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full bg-gray-950 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200"
+        className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
       />
     </label>
   );

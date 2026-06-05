@@ -117,7 +117,7 @@ export default function ViewDocPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="flex items-center justify-center h-64 text-gray-600">
         <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
@@ -125,7 +125,7 @@ export default function ViewDocPage() {
 
   if (!doc) {
     return (
-      <div className="p-8 text-center text-gray-400">
+      <div className="p-8 text-center text-gray-600">
         <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
         <p>Document not found</p>
         <Link href="/dashboard/sign" className="text-blue-600 text-sm mt-2 inline-block">← Back</Link>
@@ -140,7 +140,7 @@ export default function ViewDocPage() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start gap-4">
-        <Link href="/dashboard/sign" className="mt-1 text-gray-400 hover:text-gray-600 transition-colors">
+        <Link href="/dashboard/sign" className="mt-1 text-gray-600 hover:text-gray-600 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
@@ -150,7 +150,7 @@ export default function ViewDocPage() {
               <StatusIcon className="h-3 w-3" />
               {statusCfg.label}
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-600">
               Created {new Date(doc.createdAt).toLocaleDateString()}{doc.creatorName ? ` by ${doc.creatorName}` : ""}
             </span>
             {doc.completedAt && (
@@ -188,11 +188,11 @@ export default function ViewDocPage() {
           {/* Recipients */}
           <div className="bg-white border border-gray-200 rounded-xl p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
+              <User className="h-4 w-4 text-gray-600" />
               Recipients
             </h2>
             {doc.recipients.length === 0 ? (
-              <p className="text-xs text-gray-400">No recipients added</p>
+              <p className="text-xs text-gray-600">No recipients added</p>
             ) : (
               <div className="space-y-2">
                 {doc.recipients.map((r) => {
@@ -201,19 +201,19 @@ export default function ViewDocPage() {
                   return (
                     <div key={r.id} className="flex items-center gap-2.5 py-1.5">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-gray-900 text-xs font-bold flex-shrink-0"
                         style={{ backgroundColor: r.color }}
                       >
                         {r.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
-                        <p className="text-xs text-gray-400 truncate">{r.email}</p>
+                        <p className="text-xs text-gray-600 truncate">{r.email}</p>
                         <div className={`flex items-center gap-1 mt-0.5 text-xs ${rCfg.color}`}>
                           <RIcon className="h-3 w-3" />
                           {rCfg.label}
                           {r.signedAt && (
-                            <span className="text-gray-400">
+                            <span className="text-gray-600">
                               · {new Date(r.signedAt).toLocaleDateString()}
                             </span>
                           )}
@@ -237,11 +237,11 @@ export default function ViewDocPage() {
           {/* Audit Trail */}
           <div className="bg-white border border-gray-200 rounded-xl p-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
+              <Calendar className="h-4 w-4 text-gray-600" />
               Audit Trail
             </h2>
             {doc.events.length === 0 ? (
-              <p className="text-xs text-gray-400">No events yet</p>
+              <p className="text-xs text-gray-600">No events yet</p>
             ) : (
               <div className="space-y-3">
                 {doc.events.map((ev) => (
@@ -251,7 +251,7 @@ export default function ViewDocPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-700">{ev.description}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
+                      <p className="text-[10px] text-gray-600 mt-0.5">
                         {new Date(ev.createdAt).toLocaleString()}
                         {ev.ipAddress && ` · ${ev.ipAddress}`}
                       </p>

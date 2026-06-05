@@ -65,6 +65,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(patch.price !== undefined ? { priceMinor: toMinor(patch.price) } : {}),
         ...(patch.reorderLevel !== undefined ? { reorderLevel: patch.reorderLevel } : {}),
         ...(patch.trackInventory !== undefined ? { trackInventory: patch.trackInventory } : {}),
+        ...(patch.lifecycleStatus !== undefined ? { lifecycleStatus: patch.lifecycleStatus } : {}),
         ...(patch.boardId !== undefined ? { boardId: patch.boardId || null } : {}),
         ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
         updatedAt: new Date(),

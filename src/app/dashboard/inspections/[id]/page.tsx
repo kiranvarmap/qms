@@ -271,13 +271,13 @@ export default function InspectionPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-full">
-      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
     </div>
   );
 
   if (!inspection) return (
     <div className="flex flex-col items-center justify-center h-full text-gray-500">
-      <ClipboardList className="h-10 w-10 text-gray-300 mb-2" />
+      <ClipboardList className="h-10 w-10 text-gray-700 mb-2" />
       <p>Inspection not found.</p>
       <Link href="/dashboard/inspections" className="mt-3 text-sm text-blue-600 hover:underline">← Back to Inspections</Link>
     </div>
@@ -290,12 +290,12 @@ export default function InspectionPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Top bar */}
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
-        <Link href="/dashboard/inspections" className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors">
+        <Link href="/dashboard/inspections" className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 hover:text-gray-700 transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-[15px] font-semibold text-gray-900 truncate">{inspection.title}</h1>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
             {inspection.site && <span>{inspection.site}</span>}
             {inspection.site && <span>·</span>}
             <span>{new Date(inspection.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -353,7 +353,7 @@ export default function InspectionPage() {
             <ScoreWidget score={inspection.score} />
           )}
           <div className="px-3 py-2 pt-4">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 px-1">Sections</p>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider mb-1 px-1">Sections</p>
             {sections.map((sec, idx) => {
               const repeatCount = sectionRepeatCounts[sec.id] ?? 1;
               // Count answered across all repeat instances
@@ -394,7 +394,7 @@ export default function InspectionPage() {
                         style={{ width: total > 0 ? `${Math.round((answered / total) * 100)}%` : "0%" }}
                       />
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{answered}/{total}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{answered}/{total}</p>
                   </div>
                 </button>
               );
@@ -491,7 +491,7 @@ function ConductView({
   onAddAction: (qId: string, repeatIndex: number) => void;
 }) {
   const section = sections[activeSectionIdx];
-  if (!section) return <div className="p-8 text-gray-400">No sections found.</div>;
+  if (!section) return <div className="p-8 text-gray-600">No sections found.</div>;
 
   const repeatCount = sectionRepeatCounts[section.id] ?? 1;
   const maxReps = section.maxRepetitions;
@@ -527,7 +527,7 @@ function ConductView({
               </span>
             )}
           </div>
-          <span className="text-xs text-gray-400 font-medium">{totalAnswered}/{totalQuestionsAcrossInstances} answered</span>
+          <span className="text-xs text-gray-600 font-medium">{totalAnswered}/{totalQuestionsAcrossInstances} answered</span>
         </div>
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -569,11 +569,11 @@ function ConductView({
               <Plus className="h-4 w-4" />
               Add another {section.title}
               {maxReps !== null && (
-                <span className="text-xs text-orange-400 font-normal ml-1">({repeatCount}/{maxReps} max)</span>
+                <span className="text-xs text-orange-600 font-normal ml-1">({repeatCount}/{maxReps} max)</span>
               )}
             </button>
           ) : maxReps !== null ? (
-            <div className="text-center text-xs text-gray-400 py-2">
+            <div className="text-center text-xs text-gray-600 py-2">
               Maximum {maxReps} instance{maxReps !== 1 ? "s" : ""} reached
             </div>
           ) : null}
@@ -589,7 +589,7 @@ function ConductView({
         >
           <ChevronLeft className="h-4 w-4" /> Previous
         </button>
-        <span className="text-xs text-gray-400">{activeSectionIdx + 1} of {sections.length}</span>
+        <span className="text-xs text-gray-600">{activeSectionIdx + 1} of {sections.length}</span>
         <button
           disabled={activeSectionIdx === sections.length - 1}
           onClick={() => setActiveSectionIdx(activeSectionIdx + 1)}
@@ -658,7 +658,7 @@ function RepeatInstance({
             <span className="text-sm font-semibold text-orange-700">
               {section.title} — Instance {repeatIndex + 1}
             </span>
-            <span className="text-xs text-orange-400">({answeredInInstance}/{visibleQuestions.length} answered)</span>
+            <span className="text-xs text-orange-600">({answeredInInstance}/{visibleQuestions.length} answered)</span>
           </div>
           {repeatIndex > 0 && (
             <button
@@ -688,7 +688,7 @@ function RepeatInstance({
           />
         ))}
         {visibleQuestions.length === 0 && (
-          <div className="text-center py-8 text-gray-400 text-sm">
+          <div className="text-center py-8 text-gray-600 text-sm">
             All questions are hidden by conditional logic.
           </div>
         )}
@@ -739,13 +739,13 @@ function QuestionCard({
         <div>
           <span className="text-[14px] font-medium text-gray-900">{q.title}</span>
           {q.required && <span className="ml-1 text-red-500 text-sm">*</span>}
-          {q.description && <p className="text-xs text-gray-400 mt-0.5">{q.description}</p>}
+          {q.description && <p className="text-xs text-gray-600 mt-0.5">{q.description}</p>}
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {hasInstructions && (
             <button
               onClick={() => setShowInstr(!showInstr)}
-              className={cn("p-1.5 rounded-md transition-colors", showInstr ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-blue-400")}
+              className={cn("p-1.5 rounded-md transition-colors", showInstr ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-blue-600")}
               title="View instructions"
             >
               <FileText className="h-3.5 w-3.5" />
@@ -753,21 +753,21 @@ function QuestionCard({
           )}
           <button
             onClick={() => onSave(q.id, sectionId, { flagged: !isFlagged }, repeatIndex)}
-            className={cn("p-1.5 rounded-md transition-colors", isFlagged ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-400")}
+            className={cn("p-1.5 rounded-md transition-colors", isFlagged ? "bg-red-100 text-red-600" : "hover:bg-gray-100 text-gray-600")}
             title={isFlagged ? "Remove flag" : "Flag this item"}
           >
             <Flag className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => setShowNote((v) => !v)}
-            className={cn("p-1.5 rounded-md transition-colors", showNote ? "bg-yellow-100 text-yellow-600" : "hover:bg-gray-100 text-gray-400")}
+            className={cn("p-1.5 rounded-md transition-colors", showNote ? "bg-yellow-100 text-yellow-600" : "hover:bg-gray-100 text-gray-600")}
             title="Add note"
           >
             <StickyNote className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => onAddAction(q.id, repeatIndex)}
-            className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 transition-colors"
+            className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600 transition-colors"
             title="Add action"
           >
             <MessageSquarePlus className="h-3.5 w-3.5" />
@@ -930,7 +930,7 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
         )}
       >
         <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center transition-colors", val === "checked" ? "bg-blue-600 border-blue-600" : "border-gray-300")}>
-          {val === "checked" && <Check className="h-2.5 w-2.5 text-white" />}
+          {val === "checked" && <Check className="h-2.5 w-2.5 text-gray-900" />}
         </div>
         {val === "checked" ? "Checked" : "Not checked"}
       </button>
@@ -958,11 +958,11 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
             onClick={() => save(val === String(star) ? "" : String(star))}
             className="transition-transform hover:scale-110"
           >
-            <Star className={cn("h-7 w-7", star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200 hover:text-yellow-200")} />
+            <Star className={cn("h-7 w-7", star <= rating ? "fill-yellow-400 text-yellow-600" : "text-gray-900 hover:text-yellow-200")} />
           </button>
         ))}
         {rating > 0 && (
-          <span className="ml-2 text-xs text-gray-400">{rating}/5</span>
+          <span className="ml-2 text-xs text-gray-600">{rating}/5</span>
         )}
       </div>
     );
@@ -1025,7 +1025,7 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
               )}
             >
               <div className={cn("w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0", isOn ? "bg-blue-600 border-blue-600" : "border-gray-300")}>
-                {isOn && <Check className="h-2 w-2 text-white" />}
+                {isOn && <Check className="h-2 w-2 text-gray-900" />}
               </div>
               {o.text}
             </button>
@@ -1053,8 +1053,8 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
           </div>
         ) : (
           <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-lg p-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors">
-            <Camera className="h-8 w-8 text-gray-300" />
-            <span className="text-sm text-gray-400">Click to attach a photo</span>
+            <Camera className="h-8 w-8 text-gray-700" />
+            <span className="text-sm text-gray-600">Click to attach a photo</span>
             <input
               type="file"
               accept="image/*"
@@ -1098,7 +1098,7 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
     return <TableWidget question={q} value={val} onSave={save} />;
   }
 
-  return <p className="text-xs text-gray-400">Unsupported question type: {q.type}</p>;
+  return <p className="text-xs text-gray-600">Unsupported question type: {q.type}</p>;
 }
 
 // ── Signature Widget (canvas-based with timestamp) ──────────────────
@@ -1196,7 +1196,7 @@ function SignatureWidget({ value, onSave }: { value: string; onSave: (v: string)
       <div className="space-y-2">
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
           <p className="font-serif italic text-lg text-gray-700">{parsed.name}</p>
-          <p className="text-xs text-gray-400 mt-1">(Legacy text signature)</p>
+          <p className="text-xs text-gray-600 mt-1">(Legacy text signature)</p>
         </div>
         <button onClick={handleReset} className="text-xs text-red-500 hover:text-red-700 hover:underline">
           Clear & draw new signature
@@ -1215,7 +1215,7 @@ function SignatureWidget({ value, onSave }: { value: string; onSave: (v: string)
         />
         {!signed && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-sm text-gray-300">Sign here</span>
+            <span className="text-sm text-gray-700">Sign here</span>
           </div>
         )}
       </div>
@@ -1278,7 +1278,7 @@ function TableWidget({ question: q, value, onSave }: { question: TemplateQuestio
   };
 
   if (columns.length === 0) {
-    return <p className="text-xs text-gray-400 italic">No table columns defined in template.</p>;
+    return <p className="text-xs text-gray-600 italic">No table columns defined in template.</p>;
   }
 
   return (
@@ -1313,7 +1313,7 @@ function TableWidget({ question: q, value, onSave }: { question: TemplateQuestio
                   {rows.length > 1 && (
                     <button
                       onClick={() => removeRow(ri)}
-                      className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"
+                      className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500 transition-colors"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1354,7 +1354,7 @@ function ReportView({ inspection, responses, sections }: {
           <ScoreWidget score={score} />
           <div>
             <h2 className="text-lg font-bold text-gray-900">Inspection Report</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <p className="text-sm text-gray-600 mt-0.5">
               Completed {inspection.completedAt
                 ? new Date(inspection.completedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
                 : ""}
@@ -1406,13 +1406,13 @@ function ReportView({ inspection, responses, sections }: {
                         <Repeat className="h-3 w-3" /> Instance {ri + 1}
                       </span>
                       {(yesCount + noCount > 0) && (
-                        <span className="text-xs text-gray-400">{yesCount} pass · {noCount} fail</span>
+                        <span className="text-xs text-gray-600">{yesCount} pass · {noCount} fail</span>
                       )}
                     </div>
                   )}
                   {repeatCount === 1 && (yesCount + noCount > 0) && (
                     <div className="flex justify-end mb-1">
-                      <span className="text-xs text-gray-400">{yesCount} pass · {noCount} fail</span>
+                      <span className="text-xs text-gray-600">{yesCount} pass · {noCount} fail</span>
                     </div>
                   )}
                   <div className={cn("space-y-2", repeatCount > 1 && "p-3 bg-orange-50/20")}>
@@ -1427,7 +1427,7 @@ function ReportView({ inspection, responses, sections }: {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <span className="text-[13px] font-medium text-gray-800">{q.title}</span>
-                              {q.description && <p className="text-xs text-gray-400 mt-0.5">{q.description}</p>}
+                              {q.description && <p className="text-xs text-gray-600 mt-0.5">{q.description}</p>}
                             </div>
                             <ResponseBadge type={q.type} value={(r?.value as string) ?? ""} />
                           </div>
@@ -1470,7 +1470,7 @@ function ReportView({ inspection, responses, sections }: {
 }
 
 function ResponseBadge({ type, value }: { type: string; value: string }) {
-  if (!value) return <span className="text-xs text-gray-300 italic">—</span>;
+  if (!value) return <span className="text-xs text-gray-700 italic">—</span>;
   if (type === "yes_no_na") {
     const styles: Record<string, string> = {
       yes: "bg-green-100 text-green-700",
@@ -1483,7 +1483,7 @@ function ResponseBadge({ type, value }: { type: string; value: string }) {
     return (
       <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map((s) => (
-          <Star key={s} className={cn("h-3.5 w-3.5", s <= parseInt(value) ? "fill-yellow-400 text-yellow-400" : "text-gray-200")} />
+          <Star key={s} className={cn("h-3.5 w-3.5", s <= parseInt(value) ? "fill-yellow-400 text-yellow-600" : "text-gray-900")} />
         ))}
       </div>
     );
@@ -1496,7 +1496,7 @@ function ResponseBadge({ type, value }: { type: string; value: string }) {
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={parsed.signature} alt="Signature" className="h-8 border border-gray-200 rounded" />
-            <span className="text-[10px] text-gray-400">{new Date(parsed.signedAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}</span>
+            <span className="text-[10px] text-gray-600">{new Date(parsed.signedAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}</span>
           </div>
         );
       }
@@ -1543,7 +1543,7 @@ function AddActionModal({ inspectionId, questionId, onClose, onAdded }: {
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-gray-900">Add Action</h2>
-            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-gray-100"><X className="h-4 w-4 text-gray-400" /></button>
+            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-gray-100"><X className="h-4 w-4 text-gray-600" /></button>
           </div>
           <div className="space-y-3">
             <div>
@@ -1653,7 +1653,7 @@ function PdfExportButton({ inspectionId }: { inspectionId: string }) {
       {open && (
         <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
           <div className="px-3 py-2 border-b border-gray-100">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">PDF Template</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600">PDF Template</p>
           </div>
           <div className="max-h-48 overflow-y-auto">
             <button
@@ -1674,7 +1674,7 @@ function PdfExportButton({ inspectionId }: { inspectionId: string }) {
                   selectedId === t.id ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
-                <FileText className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                <FileText className="h-3.5 w-3.5 flex-shrink-0 text-gray-600" />
                 <span className="truncate">{t.name}</span>
                 {t.isDefault && <span className="text-[9px] bg-green-100 text-green-700 px-1 py-0.5 rounded-full font-bold ml-auto flex-shrink-0">DEFAULT</span>}
               </button>

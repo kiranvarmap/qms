@@ -224,6 +224,8 @@ export const createProductSchema = z.object({
   price:          z.coerce.number().min(0).optional(),
   reorderLevel:   z.coerce.number().min(0).optional(),
   trackInventory: z.boolean().optional(),
+  // Product Management (BRD 0X): engineering lifecycle.
+  lifecycleStatus: z.enum(["draft", "active", "obsolete"]).optional(),
   boardId:        uuidSchema.optional(),
 });
 export const updateProductSchema = createProductSchema
@@ -388,14 +390,44 @@ export const createExpenseSchema = z.object({
   employeeId:      uuidSchema.optional(), // defaults to the caller's employee
   categoryId:      uuidSchema.optional(),
   vendorId:        uuidSchema.optional(),
-  amount:          z.coerce.number().positive("Must be > 0"), // major units
+  amount:          z.coerce.number().min(0).optional(), // major units (computed for mileage)
   spentAt:         z.string().datetime({ offset: true }).optional(),
   description:     z.string().max(2000).trim().optional(),
   receiptFilePath: z.string().max(1000).optional(),
   boardId:         uuidSchema.optional(),
   groupId:         uuidSchema.optional(),
   itemId:          uuidSchema.optional(),
+  // Full BRD: mileage/per-diem, cost-centre, billable re-invoice.
+  kind:            z.enum(["general", "mileage", "per_diem"]).default("general"),
+  mileageDistance: z.coerce.number().min(0).optional(),
+  mileageRate:     z.coerce.number().min(0).optional(),
+  costCentre:      z.string().max(120).trim().optional(),
+  billable:        z.boolean().default(false),
+  customerId:      uuidSchema.optional(),
 });
+
+// Expenses full BRD — policy, advances, corporate card.
+export const expensePolicySchema = z.object({
+  maxAmount:            z.coerce.number().min(0).default(0),
+  receiptRequiredAbove: z.coerce.number().min(0).default(0),
+});
+export const createAdvanceSchema = z.object({
+  workspaceId: uuidSchema,
+  employeeId:  uuidSchema,
+  amount:      z.coerce.number().positive("Must be > 0"),
+  note:        z.string().max(255).trim().optional(),
+});
+export const advanceDecisionSchema = z.object({ decision: z.enum(["approved", "settled"]), settledAmount: z.coerce.number().min(0).optional() });
+export const importCardTxnsSchema = z.object({
+  workspaceId:  uuidSchema,
+  transactions: z.array(z.object({
+    postedDate:  z.string().datetime({ offset: true }).optional(),
+    description: z.string().max(255).trim().optional(),
+    amount:      z.coerce.number(),
+    last4:       z.string().max(4).optional(),
+  })).default([]),
+});
+export const matchCardTxnSchema = z.object({ expenseId: uuidSchema });
 
 export const updateExpenseSchema = z.object({
   categoryId:      uuidSchema.nullable().optional(),
@@ -491,4 +523,345 @@ export const recordPaymentSchema = z.object({
   reference:    z.string().max(120).trim().optional(),
   receivedDate: z.string().datetime({ offset: true }).optional(),
   note:         z.string().max(500).trim().optional(),
+});
+
+// ── Product Management — engineering layer (BRD 0X) ───────────────────
+export const bomLineSchema = z.object({
+  componentProductId: uuidSchema.optional(),
+  description:        z.string().max(255).trim().optional(),
+  quantity:          z.coerce.number().positive("Must be > 0").default(1),
+  unit:              z.string().max(40).trim().default("unit"),
+  scrapPct:          z.coerce.number().min(0).max(100).default(0),
+});
+
+export const createBomSchema = z.object({
+  version: z.string().max(40).trim().default("v1"),
+  name:    z.string().max(255).trim().optional(),
+  status:  z.enum(["draft", "active", "archived"]).default("draft"),
+  notes:   z.string().max(2000).trim().optional(),
+  lines:   z.array(bomLineSchema).default([]),
+});
+
+export const createRevisionSchema = z.object({
+  revision:      z.string().min(1, "Required").max(40).trim(),
+  changeSummary: z.string().max(2000).trim().optional(),
+  release:       z.boolean().default(false),
+});
+
+export const upsertSpecSchema = z.object({
+  key:   z.string().min(1, "Required").max(120).trim(),
+  value: z.string().max(500).trim().optional(),
+  unit:  z.string().max(40).trim().optional(),
+});
+
+export const createEcrSchema = z.object({
+  workspaceId: uuidSchema,
+  productId:   uuidSchema.optional(),
+  title:       z.string().min(1, "Required").max(255).trim(),
+  description: z.string().max(4000).trim().optional(),
+  priority:    z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  submit:      z.boolean().default(false),
+});
+
+export const ecrDecisionSchema = z.object({
+  decision: z.enum(["approved", "rejected", "implemented"]),
+  notes:    z.string().max(2000).trim().optional(),
+});
+
+// ── Production / Manufacturing (BRD 11) ───────────────────────────────
+export const createWorkOrderSchema = z.object({
+  workspaceId: uuidSchema,
+  productId:   uuidSchema,
+  bomId:       uuidSchema.optional(),
+  warehouseId: uuidSchema.optional(),
+  qtyPlanned:  z.coerce.number().positive("Must be > 0").default(1),
+  dueDate:     z.string().datetime({ offset: true }).optional(),
+  boardId:     uuidSchema.optional(),
+  notes:       z.string().max(2000).trim().optional(),
+});
+
+export const completeWorkOrderSchema = z.object({
+  qtyProduced: z.coerce.number().min(0).default(0),
+  qtyScrapped: z.coerce.number().min(0).default(0),
+  warehouseId: uuidSchema.optional(),
+});
+
+// ── Maintenance (BRD 12) ──────────────────────────────────────────────
+export const createAssetSchema = z.object({
+  workspaceId:   uuidSchema,
+  name:          nameSchema,
+  code:          z.string().max(60).trim().optional(),
+  type:          z.string().max(120).trim().optional(),
+  parentAssetId: uuidSchema.optional(),
+  location:      z.string().max(255).trim().optional(),
+  criticality:   z.enum(["low", "medium", "high"]).default("medium"),
+  notes:         z.string().max(2000).trim().optional(),
+});
+
+export const assetStatusSchema = z.object({
+  status: z.enum(["up", "down", "maintenance", "retired"]),
+});
+
+export const createMaintenanceOrderSchema = z.object({
+  workspaceId:   uuidSchema,
+  assetId:       uuidSchema,
+  type:          z.enum(["corrective", "preventive"]).default("corrective"),
+  priority:      z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+  fault:         z.string().max(2000).trim().optional(),
+  scheduledDate: z.string().datetime({ offset: true }).optional(),
+});
+
+export const maintenancePartSchema = z.object({
+  partProductId: uuidSchema.optional(),
+  description:   z.string().max(255).trim().optional(),
+  qtyUsed:       z.coerce.number().positive("Must be > 0").default(1),
+  warehouseId:   uuidSchema.optional(),
+});
+
+export const completeMaintenanceSchema = z.object({
+  downtimeHours: z.coerce.number().min(0).default(0),
+  parts:         z.array(maintenancePartSchema).default([]),
+});
+
+// ── Safety / EHS (BRD 13) ─────────────────────────────────────────────
+export const createIncidentSchema = z.object({
+  workspaceId: uuidSchema,
+  type:        z.enum(["injury", "near_miss", "property", "environmental"]).default("near_miss"),
+  severity:    z.enum(["low", "medium", "high", "critical"]).default("low"),
+  occurredAt:  z.string().datetime({ offset: true }).optional(),
+  location:    z.string().max(255).trim().optional(),
+  description: z.string().max(4000).trim().optional(),
+  assetId:     uuidSchema.optional(),
+});
+
+export const investigateIncidentSchema = z.object({
+  rootCause: z.string().max(4000).trim().optional(),
+});
+
+export const addSafetyActionSchema = z.object({
+  description: z.string().min(1, "Required").max(2000).trim(),
+  dueDate:     z.string().datetime({ offset: true }).optional(),
+});
+
+export const safetyActionStatusSchema = z.object({
+  actionId: uuidSchema,
+  status:   z.enum(["open", "done"]),
+});
+
+// ── Inventory full BRD ────────────────────────────────────────────────
+export const createLocationSchema = z.object({
+  workspaceId:      uuidSchema,
+  warehouseId:      uuidSchema,
+  code:             z.string().min(1, "Required").max(60).trim(),
+  name:             z.string().max(255).trim().optional(),
+  kind:             z.enum(["zone", "aisle", "rack", "shelf", "bin"]).default("bin"),
+  parentLocationId: uuidSchema.optional(),
+});
+
+export const createLotSchema = z.object({
+  lotNumber:         z.string().min(1, "Required").max(120).trim(),
+  supplierLotNumber: z.string().max(120).trim().optional(),
+  mfgDate:           z.string().datetime({ offset: true }).optional(),
+  expiryDate:        z.string().datetime({ offset: true }).optional(),
+});
+
+export const createSerialSchema = z.object({
+  serialNumber: z.string().min(1, "Required").max(120).trim(),
+  lotId:        uuidSchema.optional(),
+  warehouseId:  uuidSchema.optional(),
+});
+
+export const stockStatusMoveSchema = z.object({
+  workspaceId: uuidSchema,
+  productId:   uuidSchema,
+  warehouseId: uuidSchema,
+  move:        z.enum(["damage", "quarantine", "quarantine_release", "scrap"]),
+  quantity:    z.coerce.number().positive("Must be > 0"),
+  from:        z.enum(["on_hand", "quarantine", "damaged"]).optional(),
+  note:        z.string().max(500).trim().optional(),
+});
+
+export const createCycleCountSchema = z.object({
+  workspaceId: uuidSchema,
+  warehouseId: uuidSchema.optional(),
+  note:        z.string().max(500).trim().optional(),
+});
+
+export const enterCountsSchema = z.object({
+  counts: z.array(z.object({ lineId: uuidSchema, countedQty: z.coerce.number().min(0) })).default([]),
+});
+
+// ── Invoicing & Books full BRD ────────────────────────────────────────
+export const apBillLineSchema = z.object({
+  description: z.string().min(1, "Required").max(500).trim(),
+  quantity:    z.coerce.number().positive().default(1),
+  unitPrice:   z.coerce.number().min(0).default(0),
+});
+export const createApBillSchema = z.object({
+  workspaceId:     uuidSchema,
+  vendorId:        uuidSchema,
+  purchaseOrderId: uuidSchema.optional(),
+  dueDate:         z.string().datetime({ offset: true }).optional(),
+  currency:        z.string().length(3).toUpperCase().default("USD"),
+  notes:           z.string().max(2000).trim().optional(),
+  lines:           z.array(apBillLineSchema).default([]),
+});
+export const createCreditNoteSchema = z.object({
+  workspaceId: uuidSchema,
+  invoiceId:   uuidSchema.optional(),
+  customerId:  uuidSchema.optional(),
+  amount:      z.coerce.number().positive("Must be > 0"),
+  reason:      z.string().max(255).trim().optional(),
+});
+export const writeOffSchema = z.object({ amount: z.coerce.number().positive("Must be > 0") });
+export const createAccountSchema = z.object({
+  workspaceId: uuidSchema,
+  code:        z.string().min(1, "Required").max(20).trim(),
+  name:        z.string().min(1, "Required").max(255).trim(),
+  type:        z.enum(["asset", "liability", "equity", "income", "expense"]),
+});
+export const journalLineSchema = z.object({
+  accountId: uuidSchema,
+  debit:     z.coerce.number().min(0).default(0),
+  credit:    z.coerce.number().min(0).default(0),
+  memo:      z.string().max(255).trim().optional(),
+});
+export const createJournalSchema = z.object({
+  workspaceId: uuidSchema,
+  entryDate:   z.string().datetime({ offset: true }).optional(),
+  memo:        z.string().max(500).trim().optional(),
+  post:        z.boolean().default(false),
+  lines:       z.array(journalLineSchema).min(2, "At least two lines"),
+});
+
+// ── Sales full BRD ────────────────────────────────────────────────────
+export const createPriceListSchema = z.object({
+  workspaceId: uuidSchema,
+  name:        z.string().min(1, "Required").max(255).trim(),
+  currency:    z.string().length(3).toUpperCase().default("USD"),
+  isDefault:   z.boolean().default(false),
+});
+export const priceListItemSchema = z.object({
+  productId: uuidSchema,
+  unitPrice: z.coerce.number().min(0).default(0),
+});
+export const customerSalesSettingsSchema = z.object({
+  creditLimit: z.coerce.number().min(0).optional(),
+  priceListId: uuidSchema.nullable().optional(),
+});
+export const salesReturnLineSchema = z.object({
+  productId:   uuidSchema.optional(),
+  description: z.string().max(500).trim().optional(),
+  quantity:    z.coerce.number().positive("Must be > 0").default(1),
+  unitPrice:   z.coerce.number().min(0).default(0),
+});
+export const createSalesReturnSchema = z.object({
+  workspaceId:  uuidSchema,
+  salesOrderId: uuidSchema.optional(),
+  customerId:   uuidSchema.optional(),
+  warehouseId:  uuidSchema.optional(),
+  reason:       z.string().max(255).trim().optional(),
+  restock:      z.boolean().default(true),
+  lines:        z.array(salesReturnLineSchema).default([]),
+});
+export const recurringOrderSchema = z.object({
+  workspaceId: uuidSchema,
+  customerId:  uuidSchema,
+  name:        z.string().min(1, "Required").max(255).trim(),
+  cadence:     z.enum(["weekly", "monthly", "quarterly"]).default("monthly"),
+  lines:       z.array(z.object({ productId: uuidSchema.optional(), description: z.string().max(500).trim(), quantity: z.coerce.number().positive().default(1), unitPrice: z.coerce.number().min(0).default(0) })).default([]),
+});
+
+// ── Purchasing full BRD ───────────────────────────────────────────────
+export const requisitionLineSchema = z.object({
+  productId:   uuidSchema.optional(),
+  description: z.string().min(1, "Required").max(500).trim(),
+  quantity:    z.coerce.number().positive("Must be > 0").default(1),
+  estUnitCost: z.coerce.number().min(0).default(0),
+});
+export const createRequisitionSchema = z.object({
+  workspaceId: uuidSchema,
+  vendorId:    uuidSchema.optional(),
+  neededBy:    z.string().datetime({ offset: true }).optional(),
+  notes:       z.string().max(2000).trim().optional(),
+  submit:      z.boolean().default(false),
+  lines:       z.array(requisitionLineSchema).default([]),
+});
+export const requisitionDecisionSchema = z.object({ decision: z.enum(["approved", "rejected"]) });
+
+export const landedCostSchema = z.object({
+  costType: z.string().max(40).trim().default("freight"),
+  amount:   z.coerce.number().min(0).default(0),
+  note:     z.string().max(255).trim().optional(),
+});
+
+export const purchaseReturnLineSchema = z.object({
+  productId:   uuidSchema.optional(),
+  description: z.string().max(500).trim().optional(),
+  quantity:    z.coerce.number().positive("Must be > 0").default(1),
+  unitCost:    z.coerce.number().min(0).default(0),
+});
+export const createPurchaseReturnSchema = z.object({
+  workspaceId:     uuidSchema,
+  purchaseOrderId: uuidSchema.optional(),
+  vendorId:        uuidSchema.optional(),
+  warehouseId:     uuidSchema.optional(),
+  reason:          z.string().max(255).trim().optional(),
+  lines:           z.array(purchaseReturnLineSchema).default([]),
+});
+
+// ── Vendor full BRD ───────────────────────────────────────────────────
+export const vendorAddressSchema = z.object({
+  kind:       z.enum(["billing", "shipping", "remit"]).default("billing"),
+  line1:      z.string().max(255).trim().optional(),
+  line2:      z.string().max(255).trim().optional(),
+  city:       z.string().max(120).trim().optional(),
+  state:      z.string().max(120).trim().optional(),
+  country:    z.string().max(2).optional(),
+  postalCode: z.string().max(20).trim().optional(),
+});
+
+export const vendorDocumentSchema = z.object({
+  docType:     z.string().min(1, "Required").max(120).trim(),
+  number:      z.string().max(120).trim().optional(),
+  issuedDate:  z.string().datetime({ offset: true }).optional(),
+  expiryDate:  z.string().datetime({ offset: true }).optional(),
+  fileUrl:     z.string().max(2000).optional(),
+  isMandatory: z.boolean().default(false),
+});
+
+export const vendorBankAccountSchema = z.object({
+  accountName:   z.string().max(255).trim().optional(),
+  accountNumber: z.string().max(60).trim().optional(),
+  bankName:      z.string().max(255).trim().optional(),
+  branch:        z.string().max(255).trim().optional(),
+  routing:       z.string().max(60).trim().optional(),
+});
+
+export const vendorPerformanceSchema = z.object({
+  periodStart:      z.string().datetime({ offset: true }).optional(),
+  periodEnd:        z.string().datetime({ offset: true }).optional(),
+  onTimePct:        z.coerce.number().min(0).max(100).default(0),
+  qualityRejectPct: z.coerce.number().min(0).max(100).default(0),
+  priceVariancePct: z.coerce.number().default(0),
+  rating:           z.coerce.number().min(0).max(5).default(0),
+  note:             z.string().max(1000).trim().optional(),
+});
+
+export const vendorItemSchema = z.object({
+  productId:    uuidSchema.optional(),
+  vendorSku:    z.string().max(120).trim().optional(),
+  description:  z.string().max(255).trim().optional(),
+  unitPrice:    z.coerce.number().min(0).default(0),
+  leadTimeDays: z.coerce.number().int().min(0).default(0),
+});
+
+export const setPreferredSchema = z.object({ isPreferred: z.boolean() });
+
+// ── Localization (BRD 00 §12) ─────────────────────────────────────────
+export const updateLocalizationSchema = z.object({
+  country:  z.string().length(2).toUpperCase(),
+  currency: z.string().length(3).toUpperCase().optional(),
+  locale:   z.string().max(10).optional(),
+  timezone: z.string().max(64).optional(),
 });

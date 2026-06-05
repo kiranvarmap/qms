@@ -74,7 +74,7 @@ export function FilterBar({ columns, filters, onChange }: FilterBarProps) {
           className="flex items-center gap-1 bg-white rounded-md px-2 py-1 ring-1 ring-gray-200 text-xs"
         >
           {idx > 0 && (
-            <span className="text-gray-400 font-medium mr-1">and</span>
+            <span className="text-gray-600 font-medium mr-1">and</span>
           )}
 
           {/* Column selector */}
@@ -118,7 +118,7 @@ export function FilterBar({ columns, filters, onChange }: FilterBarProps) {
           )}
 
           <button
-            className="text-gray-400 hover:text-red-500 ml-1"
+            className="text-gray-600 hover:text-red-500 ml-1"
             onClick={() => removeFilter(filter.id)}
           >
             <X className="h-3 w-3" />
@@ -135,7 +135,7 @@ export function FilterBar({ columns, filters, onChange }: FilterBarProps) {
       </button>
 
       <button
-        className="text-xs text-gray-400 hover:text-red-500 ml-auto"
+        className="text-xs text-gray-600 hover:text-red-500 ml-auto"
         onClick={() => onChange([])}
       >
         Clear all

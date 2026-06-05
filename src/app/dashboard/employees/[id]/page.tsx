@@ -33,9 +33,9 @@ function fmtDateTime(d: string | null) {
 }
 
 const statusColors: Record<string, string> = {
-  active: "bg-green-500/20 text-green-400",
-  inactive: "bg-gray-600/40 text-gray-400",
-  on_leave: "bg-yellow-500/20 text-yellow-400",
+  active: "bg-green-500/20 text-green-600",
+  inactive: "bg-gray-600/40 text-gray-600",
+  on_leave: "bg-yellow-500/20 text-yellow-600",
 };
 
 export default function EmployeeDetailPage() {
@@ -58,7 +58,7 @@ export default function EmployeeDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-500">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">
         Loading employee…
       </div>
     );
@@ -96,38 +96,38 @@ export default function EmployeeDetailPage() {
   }
 
   return (
-    <div className="flex-1 min-h-screen bg-gray-950 p-6">
+    <div className="flex-1 min-h-screen bg-gray-50 p-6">
       {/* Back */}
-      <Link href="/dashboard/employees" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-5 transition-colors w-fit">
+      <Link href="/dashboard/employees" className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm mb-5 transition-colors w-fit">
         <ArrowLeft className="w-4 h-4" /> Back to Employees
       </Link>
 
       {/* Profile header */}
-      <div className="bg-gray-900 rounded-2xl border border-white/10 p-6 mb-5">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
         <div className="flex items-start gap-5">
           <div className="w-20 h-20 rounded-2xl bg-blue-600/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
             {emp.avatarUrl ? (
               <Image src={emp.avatarUrl} alt={emp.name} width={80} height={80} className="object-cover rounded-2xl" />
             ) : (
-              <span className="text-4xl font-bold text-blue-400">{emp.name.charAt(0)}</span>
+              <span className="text-4xl font-bold text-blue-600">{emp.name.charAt(0)}</span>
             )}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-white">{emp.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{emp.name}</h1>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[emp.status]}`}>
                 {emp.status === "on_leave" ? "On Leave" : emp.status.charAt(0).toUpperCase() + emp.status.slice(1)}
               </span>
               {activeLogs.length > 0 && (
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 animate-pulse">
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-600 animate-pulse">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
                   Currently Checked In
                 </span>
               )}
             </div>
-            <p className="text-gray-400 mt-0.5">{emp.designation ?? "—"} · {emp.department ?? "—"}</p>
+            <p className="text-gray-600 mt-0.5">{emp.designation ?? "—"} · {emp.department ?? "—"}</p>
             <div className="flex flex-wrap gap-4 mt-3 text-sm">
-              <span className="text-gray-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> ID: <span className="font-mono text-gray-300">{emp.employeeId}</span></span>
+              <span className="text-gray-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> ID: <span className="font-mono text-gray-700">{emp.employeeId}</span></span>
               {emp.email && <span className="text-gray-500">{emp.email}</span>}
               {emp.phone && <span className="text-gray-500">{emp.phone}</span>}
               {emp.joiningDate && <span className="text-gray-500">Joined {fmtDate(emp.joiningDate)}</span>}
@@ -136,19 +136,19 @@ export default function EmployeeDetailPage() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-white/10">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-gray-200">
           {[
-            { label: "Total Hours", value: fmtDuration(totalMinutes), icon: Clock, color: "text-blue-400" },
-            { label: "Total Sessions", value: completedLogs.length, icon: LogIn, color: "text-green-400" },
-            { label: "Projects", value: Object.keys(projectMap).length, icon: Briefcase, color: "text-purple-400" },
-            { label: "Avg Session", value: completedLogs.length > 0 ? fmtDuration(Math.round(totalMinutes / completedLogs.length)) : "—", icon: TrendingUp, color: "text-yellow-400" },
+            { label: "Total Hours", value: fmtDuration(totalMinutes), icon: Clock, color: "text-blue-600" },
+            { label: "Total Sessions", value: completedLogs.length, icon: LogIn, color: "text-green-600" },
+            { label: "Projects", value: Object.keys(projectMap).length, icon: Briefcase, color: "text-purple-600" },
+            { label: "Avg Session", value: completedLogs.length > 0 ? fmtDuration(Math.round(totalMinutes / completedLogs.length)) : "—", icon: TrendingUp, color: "text-yellow-600" },
           ].map((s) => (
-            <div key={s.label} className="bg-gray-800/50 rounded-xl p-3">
+            <div key={s.label} className="bg-gray-100/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-1">
                 <s.icon className={`w-4 h-4 ${s.color}`} />
-                <span className="text-gray-400 text-xs">{s.label}</span>
+                <span className="text-gray-600 text-xs">{s.label}</span>
               </div>
-              <p className="text-white font-bold text-xl">{s.value}</p>
+              <p className="text-gray-900 font-bold text-xl">{s.value}</p>
             </div>
           ))}
         </div>
@@ -159,26 +159,26 @@ export default function EmployeeDetailPage() {
         <div key={l.id} className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 mb-5 flex items-center gap-3">
           <span className="w-3 h-3 rounded-full bg-green-400 flex-shrink-0 animate-pulse" />
           <div className="flex-1 text-sm">
-            <span className="text-green-400 font-medium">Active session</span>
-            <span className="text-gray-400"> — checked in at {fmtDateTime(l.checkInAt)}</span>
-            {l.projectName && <span className="text-gray-400"> · {l.projectName}</span>}
-            {l.taskName && <span className="text-gray-400"> → {l.taskName}</span>}
-            {l.workshopName && <span className="text-gray-400 ml-2 text-xs">[{l.workshopName}]</span>}
+            <span className="text-green-600 font-medium">Active session</span>
+            <span className="text-gray-600"> — checked in at {fmtDateTime(l.checkInAt)}</span>
+            {l.projectName && <span className="text-gray-600"> · {l.projectName}</span>}
+            {l.taskName && <span className="text-gray-600"> → {l.taskName}</span>}
+            {l.workshopName && <span className="text-gray-600 ml-2 text-xs">[{l.workshopName}]</span>}
           </div>
           {l.checkInPhoto && (
-            <button onClick={() => setPhotoPreview(l.checkInPhoto)} className="text-xs text-green-400 underline">View photo</button>
+            <button onClick={() => setPhotoPreview(l.checkInPhoto)} className="text-xs text-green-600 underline">View photo</button>
           )}
         </div>
       ))}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-900/60 rounded-xl p-1 w-fit border border-white/10">
+      <div className="flex gap-1 mb-5 bg-white/60 rounded-xl p-1 w-fit border border-gray-200">
         {(["overview", "logs", "photos"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-              activeTab === tab ? "bg-white/10 text-white" : "text-gray-400 hover:text-gray-200"
+              activeTab === tab ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"
             }`}
           >
             {tab === "logs" ? `Time Logs (${logs.length})` : tab === "photos" ? `Photos (${allPhotos.length})` : "Overview"}
@@ -190,8 +190,8 @@ export default function EmployeeDetailPage() {
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Projects breakdown */}
-          <div className="bg-gray-900 rounded-xl border border-white/10 p-5">
-            <h3 className="text-white font-semibold mb-3 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-400" /> Projects Worked</h3>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="text-gray-900 font-semibold mb-3 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-600" /> Projects Worked</h3>
             {Object.keys(projectMap).length === 0 ? (
               <p className="text-gray-500 text-sm">No project assignments yet</p>
             ) : (
@@ -200,10 +200,10 @@ export default function EmployeeDetailPage() {
                   <div key={pid} className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-white text-sm truncate">{p.name}</span>
-                        <span className="text-gray-400 text-xs ml-2 flex-shrink-0">{fmtDuration(p.mins)}</span>
+                        <span className="text-gray-900 text-sm truncate">{p.name}</span>
+                        <span className="text-gray-600 text-xs ml-2 flex-shrink-0">{fmtDuration(p.mins)}</span>
                       </div>
-                      <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-purple-500 rounded-full"
                           style={{ width: `${Math.min(100, (p.mins / totalMinutes) * 100)}%` }}
@@ -218,8 +218,8 @@ export default function EmployeeDetailPage() {
           </div>
 
           {/* Recent activity */}
-          <div className="bg-gray-900 rounded-xl border border-white/10 p-5">
-            <h3 className="text-white font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-yellow-400" /> Recent Activity</h3>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="text-gray-900 font-semibold mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-yellow-600" /> Recent Activity</h3>
             {logs.slice(0, 8).length === 0 ? (
               <p className="text-gray-500 text-sm">No activity yet</p>
             ) : (
@@ -227,10 +227,10 @@ export default function EmployeeDetailPage() {
                 {logs.slice(0, 8).map((l) => (
                   <div key={l.id} className="flex items-center gap-2 text-sm">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${l.status === "active" ? "bg-green-400" : "bg-gray-600"}`} />
-                    <span className="text-gray-400 text-xs min-w-[80px]">{fmtDateTime(l.checkInAt)}</span>
-                    <span className="text-white truncate">{l.projectName ?? "—"}</span>
+                    <span className="text-gray-600 text-xs min-w-[80px]">{fmtDateTime(l.checkInAt)}</span>
+                    <span className="text-gray-900 truncate">{l.projectName ?? "—"}</span>
                     {l.taskName && <span className="text-gray-500 truncate text-xs">→ {l.taskName}</span>}
-                    <span className="ml-auto text-gray-400 flex-shrink-0 text-xs">{fmtDuration(l.durationMinutes)}</span>
+                    <span className="ml-auto text-gray-600 flex-shrink-0 text-xs">{fmtDuration(l.durationMinutes)}</span>
                   </div>
                 ))}
               </div>
@@ -241,7 +241,7 @@ export default function EmployeeDetailPage() {
 
       {/* LOGS tab */}
       {activeTab === "logs" && (
-        <div className="bg-gray-900 rounded-xl border border-white/10 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {logs.length === 0 ? (
             <div className="text-center py-16 text-gray-500">
               <Clock className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -250,7 +250,7 @@ export default function EmployeeDetailPage() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-gray-400 text-xs uppercase tracking-wider">
+                <tr className="border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">Date</th>
                   <th className="text-left px-4 py-3 font-medium">Workshop</th>
                   <th className="text-left px-4 py-3 font-medium">Project</th>
@@ -263,38 +263,38 @@ export default function EmployeeDetailPage() {
               </thead>
               <tbody>
                 {logs.map((l, i) => (
-                  <tr key={l.id} className={`border-b border-white/5 hover:bg-white/[0.02] ${i === logs.length - 1 ? "border-b-0" : ""}`}>
-                    <td className="px-4 py-3 text-gray-400">{fmtDate(l.checkInAt)}</td>
+                  <tr key={l.id} className={`border-b border-gray-200 hover:bg-gray-50 ${i === logs.length - 1 ? "border-b-0" : ""}`}>
+                    <td className="px-4 py-3 text-gray-600">{fmtDate(l.checkInAt)}</td>
                     <td className="px-4 py-3">
-                      <span className="flex items-center gap-1.5 text-gray-300"><Hammer className="w-3 h-3 text-gray-500" />{l.workshopName ?? "—"}</span>
+                      <span className="flex items-center gap-1.5 text-gray-700"><Hammer className="w-3 h-3 text-gray-500" />{l.workshopName ?? "—"}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-300">{l.projectName ?? "—"}</td>
-                    <td className="px-4 py-3 text-gray-300">{l.taskName ?? "—"}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">
+                    <td className="px-4 py-3 text-gray-700">{l.projectName ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-700">{l.taskName ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs font-mono">
                       <div className="flex items-center gap-1.5">
                         <LogIn className="w-3 h-3 text-green-500" />
                         {new Date(l.checkInAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                         {l.checkInPhoto && (
-                          <button onClick={() => setPhotoPreview(l.checkInPhoto)} className="text-blue-400 hover:underline">📷</button>
+                          <button onClick={() => setPhotoPreview(l.checkInPhoto)} className="text-blue-600 hover:underline">📷</button>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">
+                    <td className="px-4 py-3 text-gray-600 text-xs font-mono">
                       <div className="flex items-center gap-1.5">
                         {l.checkOutAt ? (
                           <>
-                            <LogOut className="w-3 h-3 text-red-400" />
+                            <LogOut className="w-3 h-3 text-red-600" />
                             {new Date(l.checkOutAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             {l.checkOutPhoto && (
-                              <button onClick={() => setPhotoPreview(l.checkOutPhoto)} className="text-blue-400 hover:underline">📷</button>
+                              <button onClick={() => setPhotoPreview(l.checkOutPhoto)} className="text-blue-600 hover:underline">📷</button>
                             )}
                           </>
                         ) : "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-white">{fmtDuration(l.durationMinutes)}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{fmtDuration(l.durationMinutes)}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${l.status === "active" ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${l.status === "active" ? "bg-green-500/20 text-green-600" : "bg-gray-100 text-gray-600"}`}>
                         {l.status === "active" ? "Active" : "Done"}
                       </span>
                     </td>
@@ -320,12 +320,12 @@ export default function EmployeeDetailPage() {
                 <button
                   key={i}
                   onClick={() => setPhotoPreview(p.url)}
-                  className="group relative rounded-xl overflow-hidden bg-gray-900 border border-white/10 aspect-video hover:border-blue-500/50 transition-colors"
+                  className="group relative rounded-xl overflow-hidden bg-white border border-gray-200 aspect-video hover:border-blue-500/50 transition-colors"
                 >
                   <Image src={p.url} alt={p.type} fill className="object-cover group-hover:scale-105 transition-transform duration-200" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                    <p className="text-white text-xs font-medium">{p.type}</p>
-                    <p className="text-gray-300 text-xs">{fmtDateTime(p.time)}</p>
+                    <p className="text-gray-900 text-xs font-medium">{p.type}</p>
+                    <p className="text-gray-700 text-xs">{fmtDateTime(p.time)}</p>
                   </div>
                 </button>
               ))}
@@ -344,7 +344,7 @@ export default function EmployeeDetailPage() {
             <Image src={photoPreview} alt="Time clock photo" width={800} height={600} className="rounded-xl object-contain w-full" />
             <button
               onClick={() => setPhotoPreview(null)}
-              className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5 text-white hover:bg-black/80"
+              className="absolute top-2 right-2 bg-black/60 rounded-full p-1.5 text-gray-900 hover:bg-black/80"
             >
               <AlertCircle className="w-5 h-5" />
             </button>

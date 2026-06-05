@@ -34,6 +34,25 @@ import {
   Briefcase,
   Truck,
   Warehouse,
+  Package,
+  Factory,
+  Wrench,
+  ShieldAlert,
+  Globe,
+  MapPin,
+  ClipboardCheck,
+  DollarSign,
+  Tags,
+  Repeat,
+  Undo2,
+  FileMinus,
+  ReceiptText,
+  BookOpen,
+  BookText,
+  ScrollText,
+  Banknote,
+  CreditCard,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { NotificationBell } from "./notification-bell";
@@ -109,25 +128,59 @@ export function Sidebar({ user }: SidebarProps) {
         { name: "Customers", href: "/dashboard/customers", icon: Users2 },
         { name: "Estimates", href: "/dashboard/estimates", icon: FileText },
         { name: "Sales Orders", href: "/dashboard/sales-orders", icon: ClipboardList },
+        { name: "Returns / RMA", href: "/dashboard/sales-orders/returns", icon: Undo2 },
+        { name: "Price Lists", href: "/dashboard/sales-orders/price-lists", icon: Tags },
+        { name: "Recurring", href: "/dashboard/sales-orders/recurring", icon: Repeat },
         { name: "Invoices", href: "/dashboard/invoices", icon: Receipt },
       ],
     }] : []),
     ...(mgr ? [{
       id: "procurement", label: "Procurement", icon: Truck, items: [
         { name: "Vendors", href: "/dashboard/vendors", icon: Building2 },
+        { name: "Requisitions", href: "/dashboard/purchase-orders/requisitions", icon: ClipboardList },
         { name: "Purchase Orders", href: "/dashboard/purchase-orders", icon: ShoppingCart },
+        { name: "Returns / Debit Notes", href: "/dashboard/purchase-orders/returns", icon: Truck },
       ],
     }] : []),
     ...(mgr ? [{
       id: "inventory", label: "Inventory", icon: Boxes, items: [
-        { name: "Products", href: "/dashboard/inventory", icon: Boxes },
+        { name: "Product Mgmt", href: "/dashboard/products", icon: Package },
+        { name: "Stock", href: "/dashboard/inventory", icon: Boxes },
         { name: "Warehouses", href: "/dashboard/inventory/warehouses", icon: Warehouse },
+        { name: "Locations", href: "/dashboard/inventory/locations", icon: MapPin },
+        { name: "Lots / Batches", href: "/dashboard/inventory/lots", icon: Boxes },
+        { name: "Cycle Counts", href: "/dashboard/inventory/cycle-counts", icon: ClipboardCheck },
+        { name: "Damaged / Scrap", href: "/dashboard/inventory/stock-status", icon: Warehouse },
+        { name: "Valuation", href: "/dashboard/inventory/valuation", icon: DollarSign },
+      ],
+    }] : []),
+    ...(mgr ? [{
+      id: "production", label: "Production", icon: Factory, items: [
+        { name: "Work Orders", href: "/dashboard/production", icon: Factory },
+      ],
+    }] : []),
+    ...(mgr ? [{
+      id: "maintenance", label: "Maintenance", icon: Wrench, items: [
+        { name: "Work Orders", href: "/dashboard/maintenance", icon: Wrench },
+        { name: "Assets", href: "/dashboard/maintenance/assets", icon: Boxes },
       ],
     }] : []),
     ...(mgr ? [{
       id: "finance", label: "Finance", icon: Wallet, items: [
         { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },
+        { name: "Cash Advances", href: "/dashboard/expenses/advances", icon: Banknote },
+        { name: "Card Import", href: "/dashboard/expenses/card-import", icon: CreditCard },
+        { name: "Expense Policies", href: "/dashboard/expenses/policies", icon: ShieldCheck },
+        { name: "AP Bills", href: "/dashboard/invoices/ap-bills", icon: FileMinus },
+        { name: "Credit Notes", href: "/dashboard/invoices/credit-notes", icon: ReceiptText },
         { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+      ],
+    }] : []),
+    ...(mgr ? [{
+      id: "books", label: "Books", icon: BookOpen, items: [
+        { name: "Chart of Accounts", href: "/dashboard/books/accounts", icon: BookOpen },
+        { name: "Journal", href: "/dashboard/books/journal", icon: BookText },
+        { name: "Trial Balance", href: "/dashboard/books/trial-balance", icon: ScrollText },
       ],
     }] : []),
     {
@@ -144,6 +197,7 @@ export function Sidebar({ user }: SidebarProps) {
     {
       id: "quality", label: "Quality & Docs", icon: ClipboardList, items: [
         { name: "Inspections", href: "/dashboard/inspections", icon: ClipboardList },
+        { name: "Safety", href: "/dashboard/safety", icon: ShieldAlert },
         { name: "Documents", href: "/dashboard/sign", icon: FileSignature },
       ],
     },
@@ -158,6 +212,7 @@ export function Sidebar({ user }: SidebarProps) {
     ...(admin ? [{
       id: "admin", label: "Admin", icon: Shield, items: [
         { name: "Users", href: "/dashboard/users", icon: Users },
+        { name: "Localization", href: "/dashboard/settings/localization", icon: Globe },
       ],
     }] : []),
   ];

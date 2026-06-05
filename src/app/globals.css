@@ -1,19 +1,278 @@
 @import "tailwindcss";
+@import "../styles/vibe/vibe-tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Vibe-flavoured Tailwind theme.
+ *
+ * The app styles ~84 files with raw Tailwind colour utilities (bg-blue-600,
+ * text-gray-500, …). Rather than rewrite every file, we remap Tailwind's
+ * default colour ramps onto Vibe's palette below, so existing utilities adopt
+ * the Vibe look automatically. New code should prefer the semantic Vibe
+ * variables from src/styles/vibe/vibe-tokens.css (e.g. var(--primary-color)).
+ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-figtree), Figtree, Roboto, sans-serif;
+  --font-display: var(--font-poppins), Poppins, Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+@theme {
+  /*
+   * Neutral ramp — Vibe navy-tinted greys.
+   * The dashboard is a DARK theme (panels use bg-gray-900/950, text uses
+   * text-gray-200/400/500), so the dark end must stay genuinely dark for
+   * contrast — mirrors Tailwind's contrast curve with a cool Vibe-navy hue.
+   * Verified: text-gray-500 reads ~4:1+ on both gray-900/950 and white.
+   */
+  --color-gray-50: #f6f7fb;
+  --color-gray-100: #eaecf3;
+  --color-gray-200: #d6dae6;
+  --color-gray-300: #bcc1d4;
+  --color-gray-400: #969ab0;
+  --color-gray-500: #7a7e95;
+  --color-gray-600: #585c75;
+  --color-gray-700: #3a3e58;
+  --color-gray-800: #21243f;
+  --color-gray-900: #14172e;
+  --color-gray-950: #0b0d1f;
+
+  /* slate / zinc / neutral / stone alias the neutral ramp */
+  --color-slate-50: #f6f7fb;
+  --color-slate-100: #eaecf3;
+  --color-slate-200: #d6dae6;
+  --color-slate-300: #bcc1d4;
+  --color-slate-400: #969ab0;
+  --color-slate-500: #7a7e95;
+  --color-slate-600: #585c75;
+  --color-slate-700: #3a3e58;
+  --color-slate-800: #21243f;
+  --color-slate-900: #14172e;
+  --color-slate-950: #0b0d1f;
+  --color-zinc-50: #f6f7fb;
+  --color-zinc-100: #eaecf3;
+  --color-zinc-200: #d6dae6;
+  --color-zinc-300: #bcc1d4;
+  --color-zinc-400: #969ab0;
+  --color-zinc-500: #7a7e95;
+  --color-zinc-600: #585c75;
+  --color-zinc-700: #3a3e58;
+  --color-zinc-800: #21243f;
+  --color-zinc-900: #14172e;
+  --color-zinc-950: #0b0d1f;
+  --color-neutral-50: #f6f7fb;
+  --color-neutral-100: #eaecf3;
+  --color-neutral-200: #d6dae6;
+  --color-neutral-300: #bcc1d4;
+  --color-neutral-400: #969ab0;
+  --color-neutral-500: #7a7e95;
+  --color-neutral-600: #585c75;
+  --color-neutral-700: #3a3e58;
+  --color-neutral-800: #21243f;
+  --color-neutral-900: #14172e;
+  --color-neutral-950: #0b0d1f;
+  --color-stone-50: #f6f7fb;
+  --color-stone-100: #eaecf3;
+  --color-stone-200: #d6dae6;
+  --color-stone-300: #bcc1d4;
+  --color-stone-400: #969ab0;
+  --color-stone-500: #7a7e95;
+  --color-stone-600: #585c75;
+  --color-stone-700: #3a3e58;
+  --color-stone-800: #21243f;
+  --color-stone-900: #14172e;
+  --color-stone-950: #0b0d1f;
+
+  /* Blue → Vibe primary (#0073ea) */
+  --color-blue-50: #f0f7ff;
+  --color-blue-100: #cce5ff;
+  --color-blue-200: #aed4fc;
+  --color-blue-300: #80bdff;
+  --color-blue-400: #4d9bff;
+  --color-blue-500: #0085ff;
+  --color-blue-600: #0073ea;
+  --color-blue-700: #0060b9;
+  --color-blue-800: #004f99;
+  --color-blue-900: #003d77;
+  --color-blue-950: #002a52;
+  /* sky aliases blue */
+  --color-sky-50: #f0f7ff;
+  --color-sky-100: #cce5ff;
+  --color-sky-200: #aed4fc;
+  --color-sky-300: #80bdff;
+  --color-sky-400: #4d9bff;
+  --color-sky-500: #0085ff;
+  --color-sky-600: #0073ea;
+  --color-sky-700: #0060b9;
+  --color-sky-800: #004f99;
+  --color-sky-900: #003d77;
+  --color-sky-950: #002a52;
+
+  /* Red → Vibe negative (#d83a52) */
+  --color-red-50: #fdf2f4;
+  --color-red-100: #f9dde2;
+  --color-red-200: #f4c3cb;
+  --color-red-300: #ecb7bf;
+  --color-red-400: #e5798a;
+  --color-red-500: #d83a52;
+  --color-red-600: #c5364a;
+  --color-red-700: #b63546;
+  --color-red-800: #962b3a;
+  --color-red-900: #76222e;
+  --color-red-950: #4a151d;
+  /* rose aliases red */
+  --color-rose-50: #fdf2f4;
+  --color-rose-100: #f9dde2;
+  --color-rose-200: #f4c3cb;
+  --color-rose-300: #ecb7bf;
+  --color-rose-400: #e5798a;
+  --color-rose-500: #d83a52;
+  --color-rose-600: #c5364a;
+  --color-rose-700: #b63546;
+  --color-rose-800: #962b3a;
+  --color-rose-900: #76222e;
+  --color-rose-950: #4a151d;
+
+  /* Green → Vibe positive (#00854d) */
+  --color-green-50: #eff8f3;
+  --color-green-100: #d6efe0;
+  --color-green-200: #bbdbc9;
+  --color-green-300: #8fcaa8;
+  --color-green-400: #2bb377;
+  --color-green-500: #009a59;
+  --color-green-600: #00854d;
+  --color-green-700: #007038;
+  --color-green-800: #00592c;
+  --color-green-900: #004422;
+  --color-green-950: #002a15;
+  /* emerald aliases green */
+  --color-emerald-50: #eff8f3;
+  --color-emerald-100: #d6efe0;
+  --color-emerald-200: #bbdbc9;
+  --color-emerald-300: #8fcaa8;
+  --color-emerald-400: #2bb377;
+  --color-emerald-500: #009a59;
+  --color-emerald-600: #00854d;
+  --color-emerald-700: #007038;
+  --color-emerald-800: #00592c;
+  --color-emerald-900: #004422;
+  --color-emerald-950: #002a15;
+  /* teal → Vibe aquamarine (#4eccc6) */
+  --color-teal-50: #effbfa;
+  --color-teal-100: #d3f2f0;
+  --color-teal-200: #a6e5e2;
+  --color-teal-300: #79d8d4;
+  --color-teal-400: #4eccc6;
+  --color-teal-500: #38b3ad;
+  --color-teal-600: #469e9b;
+  --color-teal-700: #357580;
+  --color-teal-800: #2c5d63;
+  --color-teal-900: #234a4f;
+  --color-teal-950: #142d30;
+
+  /* Yellow → Vibe warning (#ffcb00) */
+  --color-yellow-50: #fffbeb;
+  --color-yellow-100: #fff3c4;
+  --color-yellow-200: #fceba1;
+  --color-yellow-300: #f2d973;
+  --color-yellow-400: #ffcb00;
+  --color-yellow-500: #f5c000;
+  --color-yellow-600: #eaaa15;
+  --color-yellow-700: #c98f00;
+  --color-yellow-800: #9e7000;
+  --color-yellow-900: #7a5600;
+  --color-yellow-950: #4d3600;
+  /* amber aliases yellow */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fff3c4;
+  --color-amber-200: #fceba1;
+  --color-amber-300: #f2d973;
+  --color-amber-400: #ffcb00;
+  --color-amber-500: #f5c000;
+  --color-amber-600: #eaaa15;
+  --color-amber-700: #c98f00;
+  --color-amber-800: #9e7000;
+  --color-amber-900: #7a5600;
+  --color-amber-950: #4d3600;
+
+  /* Orange → Vibe working_orange (#fdab3d) */
+  --color-orange-50: #fff6ec;
+  --color-orange-100: #fed59e;
+  --color-orange-200: #fdc77f;
+  --color-orange-300: #fdbb5e;
+  --color-orange-400: #fdab3d;
+  --color-orange-500: #f59a26;
+  --color-orange-600: #c0873c;
+  --color-orange-700: #9c6d2f;
+  --color-orange-800: #7a5524;
+  --color-orange-900: #5c3f1b;
+  --color-orange-950: #3a2810;
+
+  /* Purple → Vibe purple (#9d50dd) */
+  --color-purple-50: #f6effd;
+  --color-purple-100: #ead6f7;
+  --color-purple-200: #d0aeed;
+  --color-purple-300: #bb8fe6;
+  --color-purple-400: #aa6fe2;
+  --color-purple-500: #9d50dd;
+  --color-purple-600: #8a45c4;
+  --color-purple-700: #7d45b0;
+  --color-purple-800: #63368a;
+  --color-purple-900: #4a2867;
+  --color-purple-950: #2e1840;
+  /* violet aliases purple */
+  --color-violet-50: #f6effd;
+  --color-violet-100: #ead6f7;
+  --color-violet-200: #d0aeed;
+  --color-violet-300: #bb8fe6;
+  --color-violet-400: #aa6fe2;
+  --color-violet-500: #9d50dd;
+  --color-violet-600: #8a45c4;
+  --color-violet-700: #7d45b0;
+  --color-violet-800: #63368a;
+  --color-violet-900: #4a2867;
+  --color-violet-950: #2e1840;
+
+  /* Indigo → Vibe indigo (#5559df) */
+  --color-indigo-50: #eeeefc;
+  --color-indigo-100: #d8d9f7;
+  --color-indigo-200: #aaacef;
+  --color-indigo-300: #8a8de9;
+  --color-indigo-400: #6d71e3;
+  --color-indigo-500: #5559df;
+  --color-indigo-600: #4a4ec9;
+  --color-indigo-700: #4b4ead;
+  --color-indigo-800: #3a3d8a;
+  --color-indigo-900: #2c2e68;
+  --color-indigo-950: #1a1b40;
+}
+
+:root {
+  --background: var(--primary-background-color);
+  --foreground: var(--primary-text-color);
+  /* Map Tailwind's radius scale onto Vibe's radii */
+  --radius-sm: var(--border-radius-small);
+  --radius: var(--border-radius-small);
+  --radius-md: var(--border-radius-medium);
+  --radius-lg: var(--border-radius-medium);
+  --radius-xl: var(--border-radius-big);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Vibe focus ring for form controls that don't set their own (Zoho/monday feel) */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
 }

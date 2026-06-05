@@ -179,7 +179,7 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
     <div className="space-y-3">
       {/* Context banner */}
       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-100">
-        <RefreshCw className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+        <RefreshCw className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
         <span className="text-[11px] text-blue-700">
           When <strong>{triggerCol.name}</strong> changes to{" "}
           <span className="inline-flex items-center gap-1">
@@ -195,8 +195,8 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
       {/* Field change rows */}
       {fieldChanges.length === 0 ? (
         <div className="flex flex-col items-center py-5 border-2 border-dashed border-gray-200 rounded-xl gap-1">
-          <Hash className="h-5 w-5 text-gray-200" />
-          <p className="text-xs text-gray-400">No field changes yet.</p>
+          <Hash className="h-5 w-5 text-gray-900" />
+          <p className="text-xs text-gray-600">No field changes yet.</p>
           <button type="button" onClick={addRow}
             className="text-xs font-semibold text-blue-600 hover:text-blue-700 mt-0.5">
             + Add first change
@@ -210,7 +210,7 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
               <div key={idx} className="flex items-end gap-2 group/row">
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Set column</label>
+                    <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Set column</label>
                     <select
                       value={row.columnId}
                       onChange={e => updateRow(idx, { columnId: e.target.value, value: "" })}
@@ -222,7 +222,7 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">To value</label>
+                    <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">To value</label>
                     {targetCol ? (
                       <FieldValueInput col={targetCol} value={row.value} onChange={v => updateRow(idx, { value: v })} />
                     ) : (
@@ -231,7 +231,7 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
                   </div>
                 </div>
                 <button type="button" onClick={() => removeRow(idx)}
-                  className="p-1.5 rounded text-gray-200 hover:text-red-500 hover:bg-red-50 flex-shrink-0 mb-px opacity-0 group-hover/row:opacity-100 transition-all">
+                  className="p-1.5 rounded text-gray-900 hover:text-red-500 hover:bg-red-50 flex-shrink-0 mb-px opacity-0 group-hover/row:opacity-100 transition-all">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -340,7 +340,7 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
       <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 border-b border-gray-100">
         <button type="button" onClick={() => setCollapsed(p => !p)}
           className="flex items-center gap-2 flex-1 min-w-0 text-left">
-          <ChevronDown className={cn("h-3.5 w-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150", collapsed && "-rotate-90")} />
+          <ChevronDown className={cn("h-3.5 w-3.5 text-gray-600 flex-shrink-0 transition-transform duration-150", collapsed && "-rotate-90")} />
           {matchedLabel?.color && (
             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: matchedLabel.color }} />
           )}
@@ -357,14 +357,14 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
               &quot;{rule.whenValue}&quot;
             </span>
           ) : (
-            <span className="text-xs text-gray-400 italic">(any)</span>
+            <span className="text-xs text-gray-600 italic">(any)</span>
           )}
-          <span className="ml-auto text-[10px] text-gray-400 flex-shrink-0">
+          <span className="ml-auto text-[10px] text-gray-600 flex-shrink-0">
             {rule.fieldChanges.length} change{rule.fieldChanges.length !== 1 ? "s" : ""}
           </span>
         </button>
         <button type="button" onClick={onDelete}
-          className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 flex-shrink-0 transition-colors">
+          className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500 flex-shrink-0 transition-colors">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -374,7 +374,7 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
         <div className="px-3 py-3 space-y-2 bg-white">
           {rule.fieldChanges.length === 0 ? (
             <div className="flex flex-col items-center py-3 gap-1">
-              <p className="text-xs text-gray-400">No field changes yet.</p>
+              <p className="text-xs text-gray-600">No field changes yet.</p>
               <button type="button" onClick={addChange}
                 className="text-xs font-semibold text-blue-600 hover:text-blue-700">
                 + Add first change
@@ -387,7 +387,7 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
                 <div key={cIdx} className="flex items-end gap-2 group/chg">
                   <div className="flex-1 grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">
+                      <label className="block text-[10px] text-gray-600 font-semibold uppercase tracking-wide mb-1">
                         Set column
                       </label>
                       <select value={chg.columnId}
@@ -400,7 +400,7 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">
+                      <label className="block text-[10px] text-gray-600 font-semibold uppercase tracking-wide mb-1">
                         To value
                       </label>
                       {targetCol ? (
@@ -416,7 +416,7 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
                     </div>
                   </div>
                   <button type="button" onClick={() => removeChange(cIdx)}
-                    className="p-1.5 rounded text-gray-200 hover:text-red-500 hover:bg-red-50 flex-shrink-0 mb-px opacity-0 group-hover/chg:opacity-100 transition-all">
+                    className="p-1.5 rounded text-gray-900 hover:text-red-500 hover:bg-red-50 flex-shrink-0 mb-px opacity-0 group-hover/chg:opacity-100 transition-all">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -484,7 +484,7 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
       {lockedToTrigger ? (
         sourceCol ? (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
-            <RefreshCw className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />
+            <RefreshCw className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
             <p className="text-[11px] text-blue-700">
               Triggered by <strong>{sourceCol.name}</strong> changing — define what happens for each value below.
             </p>
@@ -504,7 +504,7 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
             ))}
           </select>
           {sourceCol && (
-            <p className="text-[11px] text-gray-400 mt-1">
+            <p className="text-[11px] text-gray-600 mt-1">
               When <strong>{sourceCol.name}</strong> changes to a specific value, apply the matching field changes below.
             </p>
           )}
@@ -516,10 +516,10 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
           {/* Existing per-value rules */}
           {valueRules.length === 0 && (
             <div className="flex flex-col items-center py-6 border-2 border-dashed border-gray-200 rounded-xl gap-1">
-              <Hash className="h-5 w-5 text-gray-200" />
-              <p className="text-xs text-gray-400">No rules yet.</p>
+              <Hash className="h-5 w-5 text-gray-900" />
+              <p className="text-xs text-gray-600">No rules yet.</p>
               {labels.length > 0 && (
-                <p className="text-[11px] text-gray-400">Click an option below to add a rule.</p>
+                <p className="text-[11px] text-gray-600">Click an option below to add a rule.</p>
               )}
             </div>
           )}
@@ -541,7 +541,7 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
           {labels.length > 0 ? (
             unusedLabels.length > 0 ? (
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Add rule for option</p>
+                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Add rule for option</p>
                 <div className="flex flex-wrap gap-1.5">
                   {unusedLabels.map(l => (
                     <button key={l.id} type="button" onClick={() => addRuleForValue(l.text)}
@@ -555,7 +555,7 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-gray-400 italic text-center py-1">
+              <p className="text-[11px] text-gray-600 italic text-center py-1">
                 All options have rules defined.
               </p>
             )
@@ -736,7 +736,7 @@ function RecipeCard({ auto, onToggle, onDelete, expanded, onExpand, columns, mem
         <button onClick={onToggle} title={auto.isActive ? "Pause" : "Enable"} className="flex-shrink-0 transition-transform hover:scale-110">
           {auto.isActive
             ? <ToggleRight className="h-6 w-6 text-blue-600" />
-            : <ToggleLeft className="h-6 w-6 text-gray-300" />}
+            : <ToggleLeft className="h-6 w-6 text-gray-700" />}
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{draft.name || auto.name}</p>
@@ -744,20 +744,20 @@ function RecipeCard({ auto, onToggle, onDelete, expanded, onExpand, columns, mem
             <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md", trigger.color)}>
               <TIcon className="h-2.5 w-2.5" />{trigger.label}
             </span>
-            <ChevronRight className="h-3 w-3 text-gray-300 flex-shrink-0" />
+            <ChevronRight className="h-3 w-3 text-gray-700 flex-shrink-0" />
             <span className={cn("inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-md", action.color)}>
               <AIcon className="h-2.5 w-2.5" />{action.label}
             </span>
           </div>
         </div>
         <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 border",
-          auto.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-400 border-gray-200")}>
+          auto.isActive ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-600 border-gray-200")}>
           {auto.isActive ? "Active" : "Paused"}
         </span>
-        <button onClick={onExpand} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 flex-shrink-0 transition-colors">
+        <button onClick={onExpand} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 flex-shrink-0 transition-colors">
           <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", expanded && "rotate-180")} />
         </button>
-        <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 flex-shrink-0 transition-colors">
+        <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-700 hover:text-red-500 flex-shrink-0 transition-colors">
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
@@ -826,13 +826,13 @@ function RecipeCard({ auto, onToggle, onDelete, expanded, onExpand, columns, mem
 
           {/* Run history */}
           <div className="pt-2 border-t border-gray-100">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Run history</p>
+            <p className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide mb-2">Run history</p>
             {logsLoading ? (
-              <div className="flex items-center gap-2 py-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 py-2 text-xs text-gray-600">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading…
               </div>
             ) : logs.length === 0 ? (
-              <p className="text-xs text-gray-400 italic py-1">No runs yet — this automation hasn&apos;t fired.</p>
+              <p className="text-xs text-gray-600 italic py-1">No runs yet — this automation hasn&apos;t fired.</p>
             ) : (
               <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
                 {logs.map(log => (
@@ -842,7 +842,7 @@ function RecipeCard({ auto, onToggle, onDelete, expanded, onExpand, columns, mem
                   )}>
                     {log.status === "success"
                       ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0 mt-0.5" />
-                      : <Circle className="h-3.5 w-3.5 text-red-400 flex-shrink-0 mt-0.5" />}
+                      : <Circle className="h-3.5 w-3.5 text-red-600 flex-shrink-0 mt-0.5" />}
                     <div className="min-w-0 flex-1">
                       <span className={log.status === "success" ? "text-green-700 font-medium" : "text-red-700 font-medium"}>
                         {log.status === "success" ? "Success" : "Error"}
@@ -851,7 +851,7 @@ function RecipeCard({ auto, onToggle, onDelete, expanded, onExpand, columns, mem
                         <span className="text-red-500 ml-1">— {(log.details as { error: string }).error}</span>
                       )}
                     </div>
-                    <span className="text-gray-400 flex-shrink-0 whitespace-nowrap">{timeAgo(log.triggeredAt)}</span>
+                    <span className="text-gray-600 flex-shrink-0 whitespace-nowrap">{timeAgo(log.triggeredAt)}</span>
                   </div>
                 ))}
               </div>
@@ -946,18 +946,18 @@ export default function AutomationsPage() {
           </Link>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center">
-              <Bot className="h-4 w-4 text-white" />
+              <Bot className="h-4 w-4 text-gray-900" />
             </div>
             <div>
               <h1 className="text-base font-bold text-gray-900 leading-none">Automations</h1>
-              <p className="text-[11px] text-gray-400 mt-0.5">Automate repetitive work on this board</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">Automate repetitive work on this board</p>
             </div>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {automations.length > 0 && (
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />{activeCount} active</span>
-                <span className="flex items-center gap-1"><Circle className="h-3.5 w-3.5 text-gray-300" />{automations.length - activeCount} paused</span>
+                <span className="flex items-center gap-1"><Circle className="h-3.5 w-3.5 text-gray-700" />{automations.length - activeCount} paused</span>
               </div>
             )}
             <button onClick={() => setShowCreate(true)}
@@ -979,7 +979,7 @@ export default function AutomationsPage() {
                   <Zap className="h-4 w-4 text-blue-600" />
                   <h2 className="text-sm font-bold text-gray-900">New Automation Recipe</h2>
                 </div>
-                <button onClick={() => setShowCreate(false)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cancel</button>
+                <button onClick={() => setShowCreate(false)} className="text-xs text-gray-600 hover:text-gray-600 transition-colors">Cancel</button>
               </div>
               <div className="px-6 pt-4 pb-3">
                 <label className={labelCls}>Automation name</label>
@@ -1008,8 +1008,8 @@ export default function AutomationsPage() {
           {/* Loading */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-              <p className="text-sm text-gray-400">Loading automations…</p>
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <p className="text-sm text-gray-600">Loading automations…</p>
             </div>
           ) : automations.length === 0 && !showCreate ? (
             /* Empty state */
@@ -1018,7 +1018,7 @@ export default function AutomationsPage() {
                 <Bot className="h-8 w-8 text-blue-500" />
               </div>
               <h3 className="text-base font-bold text-gray-900 mb-1">No automations yet</h3>
-              <p className="text-sm text-gray-400 mb-6 max-w-xs mx-auto">Set up rules to automate repetitive tasks and keep your team in sync.</p>
+              <p className="text-sm text-gray-600 mb-6 max-w-xs mx-auto">Set up rules to automate repetitive tasks and keep your team in sync.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto mb-6">
                 {RECIPE_EXAMPLES.map(ex => {
                   const t = getTrigger(ex.trigger); const a = getAction(ex.action);
@@ -1028,7 +1028,7 @@ export default function AutomationsPage() {
                       className="text-left p-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all group">
                       <div className="flex items-center gap-1.5 mb-1.5">
                         <span className={cn("flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", t.color)}><TI className="h-2.5 w-2.5" />{t.label}</span>
-                        <ChevronRight className="h-3 w-3 text-gray-300" />
+                        <ChevronRight className="h-3 w-3 text-gray-700" />
                         <span className={cn("flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded", a.color)}><AI className="h-2.5 w-2.5" />{a.label}</span>
                       </div>
                       <p className="text-xs text-gray-600 group-hover:text-blue-700">{ex.label}</p>

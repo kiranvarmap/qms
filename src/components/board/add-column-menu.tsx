@@ -74,7 +74,7 @@ export function AddColumnMenu({ onAdd }: AddColumnMenuProps) {
     <>
       <button
         ref={btnRef}
-        className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 text-gray-400"
+        className="flex items-center justify-center w-8 h-8 rounded hover:bg-gray-200 text-gray-600"
         onClick={handleOpen}
         title="Add column"
       >
@@ -109,7 +109,7 @@ export function AddColumnMenu({ onAdd }: AddColumnMenuProps) {
                           <div className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
                             {ct.label}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-gray-600">
                             {ct.description}
                           </div>
                         </div>

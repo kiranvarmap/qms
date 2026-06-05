@@ -17,14 +17,14 @@ interface PoRow {
 }
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-600/40 text-gray-300",
-  pending_approval: "bg-yellow-500/20 text-yellow-400",
-  approved: "bg-blue-500/20 text-blue-400",
-  sent: "bg-indigo-500/20 text-indigo-400",
-  partially_received: "bg-amber-500/20 text-amber-400",
-  received: "bg-green-500/20 text-green-400",
-  closed: "bg-gray-600/40 text-gray-400",
-  cancelled: "bg-red-500/20 text-red-400",
+  draft: "bg-gray-600/40 text-gray-700",
+  pending_approval: "bg-yellow-500/20 text-yellow-600",
+  approved: "bg-blue-500/20 text-blue-600",
+  sent: "bg-indigo-500/20 text-indigo-600",
+  partially_received: "bg-amber-500/20 text-amber-600",
+  received: "bg-green-500/20 text-green-600",
+  closed: "bg-gray-600/40 text-gray-600",
+  cancelled: "bg-red-500/20 text-red-600",
 };
 
 function money(minor: number, currency: string) {
@@ -63,8 +63,8 @@ export default function PurchaseOrdersPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <ShoppingCart className="h-6 w-6 text-blue-400" />
-          <h1 className="text-xl font-semibold text-white">Purchase Orders</h1>
+          <ShoppingCart className="h-6 w-6 text-blue-600" />
+          <h1 className="text-xl font-semibold text-gray-900">Purchase Orders</h1>
         </div>
         <Link
           href={workspaceId ? `/dashboard/purchase-orders/new?workspaceId=${workspaceId}` : "#"}
@@ -77,16 +77,16 @@ export default function PurchaseOrdersPage() {
       <select
         value={workspaceId}
         onChange={(e) => setWorkspaceId(e.target.value)}
-        className="mb-4 bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200"
+        className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
       >
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
       </select>
 
-      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b border-white/10">
+            <tr className="text-left text-gray-500 border-b border-gray-200">
               <th className="px-4 py-3 font-medium">PO #</th>
               <th className="px-4 py-3 font-medium">Vendor</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -100,20 +100,20 @@ export default function PurchaseOrdersPage() {
             ) : rows.length === 0 ? (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No purchase orders yet.</td></tr>
             ) : rows.map((po) => (
-              <tr key={po.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+              <tr key={po.id} className="border-b border-gray-200 hover:bg-gray-50">
                 <td className="px-4 py-3">
-                  <Link href={`/dashboard/purchase-orders/${po.id}`} className="text-blue-400 hover:underline font-medium">
+                  <Link href={`/dashboard/purchase-orders/${po.id}`} className="text-blue-600 hover:underline font-medium">
                     {po.docNumber}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-gray-300">{po.vendorName ?? "—"}</td>
+                <td className="px-4 py-3 text-gray-700">{po.vendorName ?? "—"}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[po.status] ?? ""}`}>
                     {po.status.replace(/_/g, " ")}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right text-gray-200">{money(po.totalMinor, po.currency)}</td>
-                <td className="px-4 py-3 text-gray-400">
+                <td className="px-4 py-3 text-right text-gray-900">{money(po.totalMinor, po.currency)}</td>
+                <td className="px-4 py-3 text-gray-600">
                   {po.expectedDate ? new Date(po.expectedDate).toLocaleDateString() : "—"}
                 </td>
               </tr>

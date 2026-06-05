@@ -5,9 +5,9 @@ import { FolderKanban, Plus, ChevronDown, ChevronRight, Pencil, Trash2, X, Check
 import type { EmpProject, EmpTask, Workshop } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-green-500/20 text-green-400",
-  completed: "bg-blue-500/20 text-blue-400",
-  on_hold: "bg-yellow-500/20 text-yellow-400",
+  active: "bg-green-500/20 text-green-600",
+  completed: "bg-blue-500/20 text-blue-600",
+  on_hold: "bg-yellow-500/20 text-yellow-600",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -184,14 +184,14 @@ export default function EmpProjectsPage() {
   };
 
   return (
-    <div className="flex-1 min-h-screen bg-gray-950 p-6">
+    <div className="flex-1 min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <FolderKanban className="w-7 h-7 text-purple-400" />
+          <FolderKanban className="w-7 h-7 text-purple-600" />
           <div>
-            <h1 className="text-2xl font-bold text-white">Projects & Tasks</h1>
-            <p className="text-gray-400 text-sm">{projects.length} projects for employee time tracking</p>
+            <h1 className="text-2xl font-bold text-gray-900">Projects & Tasks</h1>
+            <p className="text-gray-600 text-sm">{projects.length} projects for employee time tracking</p>
           </div>
         </div>
         <button
@@ -212,21 +212,21 @@ export default function EmpProjectsPage() {
       ) : (
         <div className="space-y-3">
           {projects.map((p) => (
-            <div key={p.id} className="bg-gray-900 rounded-xl border border-white/10 overflow-hidden">
+            <div key={p.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               {/* Project row */}
               <div className="flex items-center gap-3 px-4 py-4">
                 <button
                   onClick={() => toggleExpand(p.id)}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   {expanded[p.id] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
                 <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                  <FolderKanban className="w-4 h-4 text-purple-400" />
+                  <FolderKanban className="w-4 h-4 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white font-medium">{p.name}</span>
+                    <span className="text-gray-900 font-medium">{p.name}</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>
                       {STATUS_LABELS[p.status]}
                     </span>
@@ -239,14 +239,14 @@ export default function EmpProjectsPage() {
                 <div className="flex items-center gap-1 ml-auto">
                   <button
                     onClick={() => { openNewTask(p.id); if (!expanded[p.id]) toggleExpand(p.id); }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white text-xs transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 text-xs transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" /> Task
                   </button>
-                  <button onClick={() => openEditProject(p)} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                  <button onClick={() => openEditProject(p)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors">
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
-                  <button onClick={() => setDeleteTarget({ type: "project", id: p.id })} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors">
+                  <button onClick={() => setDeleteTarget({ type: "project", id: p.id })} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-600 transition-colors">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -254,34 +254,34 @@ export default function EmpProjectsPage() {
 
               {/* Tasks list */}
               {expanded[p.id] && (
-                <div className="border-t border-white/10 bg-gray-950/40">
+                <div className="border-t border-gray-200 bg-gray-50/40">
                   {!tasks[p.id] ? (
                     <div className="px-12 py-4 text-gray-500 text-sm">Loading tasks…</div>
                   ) : tasks[p.id].length === 0 ? (
                     <div className="px-12 py-4 text-gray-500 text-sm flex items-center gap-2">
                       <ClipboardList className="w-4 h-4 opacity-40" />
                       No tasks yet.
-                      <button onClick={() => openNewTask(p.id)} className="text-blue-400 hover:underline">Add one</button>
+                      <button onClick={() => openNewTask(p.id)} className="text-blue-600 hover:underline">Add one</button>
                     </div>
                   ) : (
                     tasks[p.id].map((task, i) => (
                       <div
                         key={task.id}
-                        className={`flex items-center gap-3 px-12 py-3 ${i < tasks[p.id].length - 1 ? "border-b border-white/5" : ""}`}
+                        className={`flex items-center gap-3 px-12 py-3 ${i < tasks[p.id].length - 1 ? "border-b border-gray-200" : ""}`}
                       >
                         <div className="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-gray-200 text-sm">{task.name}</span>
+                          <span className="text-gray-900 text-sm">{task.name}</span>
                           {task.estimatedMinutes && (
                             <span className="ml-2 text-gray-500 text-xs">~{Math.floor(task.estimatedMinutes / 60)}h {task.estimatedMinutes % 60}m est.</span>
                           )}
                         </div>
                         <span className={`px-1.5 py-0.5 rounded text-xs ${STATUS_COLORS[task.status]}`}>{STATUS_LABELS[task.status]}</span>
                         <div className="flex gap-1">
-                          <button onClick={() => openEditTask(task)} className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
+                          <button onClick={() => openEditTask(task)} className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors">
                             <Pencil className="w-3 h-3" />
                           </button>
-                          <button onClick={() => setDeleteTarget({ type: "task", id: task.id })} className="p-1 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors">
+                          <button onClick={() => setDeleteTarget({ type: "task", id: task.id })} className="p-1 rounded hover:bg-red-500/10 text-gray-500 hover:text-red-600 transition-colors">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
@@ -298,55 +298,55 @@ export default function EmpProjectsPage() {
       {/* Project Modal */}
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-900 rounded-2xl border border-white/10 w-full max-w-lg shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold">{editProject ? "Edit Project" : "New Project"}</h2>
-              <button onClick={() => setShowProjectModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-gray-900 font-semibold">{editProject ? "Edit Project" : "New Project"}</h2>
+              <button onClick={() => setShowProjectModal(false)}><X className="w-5 h-5 text-gray-600" /></button>
             </div>
             <div className="p-6 space-y-4">
               {projectError && (
-                <div className="flex items-center gap-2 text-red-400 bg-red-500/10 rounded-lg px-3 py-2 text-sm">
+                <div className="flex items-center gap-2 text-red-600 bg-red-500/10 rounded-lg px-3 py-2 text-sm">
                   <AlertCircle className="w-4 h-4" /> {projectError}
                 </div>
               )}
               <div>
-                <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Project Name *</label>
-                <input value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} placeholder="e.g. Product Line 5 Rework" className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Project Name *</label>
+                <input value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} placeholder="e.g. Product Line 5 Rework" className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Description</label>
-                <textarea value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} rows={2} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600" placeholder="What is this project about..." />
+                <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Description</label>
+                <textarea value={projectForm.description} onChange={(e) => setProjectForm({ ...projectForm, description: e.target.value })} rows={2} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600" placeholder="What is this project about..." />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Workshop</label>
-                  <select value={projectForm.workshopId} onChange={(e) => setProjectForm({ ...projectForm, workshopId: e.target.value })} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Workshop</label>
+                  <select value={projectForm.workshopId} onChange={(e) => setProjectForm({ ...projectForm, workshopId: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="">— None —</option>
                     {workshops.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Status</label>
-                  <select value={projectForm.status} onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Status</label>
+                  <select value={projectForm.status} onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="active">Active</option>
                     <option value="completed">Completed</option>
                     <option value="on_hold">On Hold</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Start Date</label>
-                  <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm({ ...projectForm, startDate: e.target.value })} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Start Date</label>
+                  <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm({ ...projectForm, startDate: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">End Date</label>
-                  <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm({ ...projectForm, endDate: e.target.value })} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">End Date</label>
+                  <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm({ ...projectForm, endDate: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-white/10">
-              <button onClick={() => setShowProjectModal(false)} className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+              <button onClick={() => setShowProjectModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 text-sm">Cancel</button>
               <button onClick={saveProject} disabled={savingProject} className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium flex items-center gap-2">
-                {savingProject ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Check className="w-4 h-4" />}
+                {savingProject ? <span className="animate-spin w-4 h-4 border-2 border-gray-200 border-t-transparent rounded-full" /> : <Check className="w-4 h-4" />}
                 {editProject ? "Save Changes" : "Create Project"}
               </button>
             </div>
@@ -357,34 +357,34 @@ export default function EmpProjectsPage() {
       {/* Task Modal */}
       {showTaskModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-900 rounded-2xl border border-white/10 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-              <h2 className="text-white font-semibold">{editTask ? "Edit Task" : "New Task"}</h2>
-              <button onClick={() => setShowTaskModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h2 className="text-gray-900 font-semibold">{editTask ? "Edit Task" : "New Task"}</h2>
+              <button onClick={() => setShowTaskModal(false)}><X className="w-5 h-5 text-gray-600" /></button>
             </div>
             <div className="p-6 space-y-4">
               {taskError && (
-                <div className="flex items-center gap-2 text-red-400 bg-red-500/10 rounded-lg px-3 py-2 text-sm">
+                <div className="flex items-center gap-2 text-red-600 bg-red-500/10 rounded-lg px-3 py-2 text-sm">
                   <AlertCircle className="w-4 h-4" /> {taskError}
                 </div>
               )}
               <div>
-                <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Task Name *</label>
-                <input value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="e.g. Welding Phase 1" className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Task Name *</label>
+                <input value={taskForm.name} onChange={(e) => setTaskForm({ ...taskForm, name: e.target.value })} placeholder="e.g. Welding Phase 1" className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Description</label>
-                <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600" />
+                <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Description</label>
+                <textarea value={taskForm.description} onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })} rows={2} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-600" />
               </div>
               <div>
-                <label className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1.5 block">Estimated Time (minutes)</label>
-                <input type="number" value={taskForm.estimatedMinutes} onChange={(e) => setTaskForm({ ...taskForm, estimatedMinutes: e.target.value })} placeholder="e.g. 120 = 2 hours" className="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Estimated Time (minutes)</label>
+                <input type="number" value={taskForm.estimatedMinutes} onChange={(e) => setTaskForm({ ...taskForm, estimatedMinutes: e.target.value })} placeholder="e.g. 120 = 2 hours" className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-white/10">
-              <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm">Cancel</button>
+            <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200">
+              <button onClick={() => setShowTaskModal(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 text-sm">Cancel</button>
               <button onClick={saveTask} disabled={savingTask} className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium flex items-center gap-2">
-                {savingTask ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Check className="w-4 h-4" />}
+                {savingTask ? <span className="animate-spin w-4 h-4 border-2 border-gray-200 border-t-transparent rounded-full" /> : <Check className="w-4 h-4" />}
                 {editTask ? "Save Task" : "Add Task"}
               </button>
             </div>
@@ -395,14 +395,14 @@ export default function EmpProjectsPage() {
       {/* Delete confirm */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-gray-900 rounded-2xl border border-red-500/20 p-6 w-full max-w-sm text-center">
-            <Trash2 className="w-10 h-10 text-red-400 mx-auto mb-3" />
-            <h3 className="text-white font-semibold mb-1">Delete {deleteTarget.type === "project" ? "Project" : "Task"}?</h3>
-            <p className="text-gray-400 text-sm mb-5">
+          <div className="bg-white rounded-2xl border border-red-500/20 p-6 w-full max-w-sm text-center">
+            <Trash2 className="w-10 h-10 text-red-600 mx-auto mb-3" />
+            <h3 className="text-gray-900 font-semibold mb-1">Delete {deleteTarget.type === "project" ? "Project" : "Task"}?</h3>
+            <p className="text-gray-600 text-sm mb-5">
               {deleteTarget.type === "project" ? "All tasks in this project will also be deleted." : "This action cannot be undone."}
             </p>
             <div className="flex gap-3 justify-center">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-lg bg-gray-800 text-white text-sm">Cancel</button>
+              <button onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 text-sm">Cancel</button>
               <button onClick={handleDelete} className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium">Delete</button>
             </div>
           </div>

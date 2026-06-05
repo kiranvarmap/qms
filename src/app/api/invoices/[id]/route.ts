@@ -27,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const [lines, paymentRows, [customer]] = await Promise.all([
       db.select().from(invoiceLineItems).where(eq(invoiceLineItems.invoiceId, id)).orderBy(asc(invoiceLineItems.position)),
       db.select().from(payments).where(eq(payments.invoiceId, id)).orderBy(desc(payments.receivedDate)),
-      db.select().from(customers).where(eq(customers.id, inv.customerId)).limit(1),
+      db.select().from(customers).where(eq(customers.id, inv.customerId ?? "")).limit(1),
     ]);
 
     return ok({ ...inv, customer: customer ?? null, lines, payments: paymentRows });

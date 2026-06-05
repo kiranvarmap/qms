@@ -58,7 +58,7 @@ export function ModuleLauncher({ role }: { role?: string }) {
     <div className="space-y-5">
       {groups.map((g) => (
         <div key={g.label}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">{g.label}</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">{g.label}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {g.tiles.map((t) => (
               <Link

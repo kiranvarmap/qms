@@ -103,7 +103,7 @@ export default function WorkTimeReportPage() {
       </div>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">Loading…</p>
+        <p className="text-gray-600 text-sm">Loading…</p>
       ) : tree.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-gray-500">
           No work-linked time logs yet. Clock in with a Workspace → Board → Task selected to see roll-ups here.
@@ -116,7 +116,7 @@ export default function WorkTimeReportPage() {
             return (
               <div key={wKey}>
                 <button onClick={() => toggle(wKey)} className="w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-50 text-left">
-                  {wOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                  {wOpen ? <ChevronDown className="w-4 h-4 text-gray-600" /> : <ChevronRight className="w-4 h-4 text-gray-600" />}
                   <span className="font-medium text-gray-900">{w.name}</span>
                   <span className="ml-auto text-sm text-gray-500">{w.sessions} sessions</span>
                   <span className="w-24 text-right font-medium text-gray-900">{fmt(w.minutes)}</span>
@@ -127,7 +127,7 @@ export default function WorkTimeReportPage() {
                   return (
                     <div key={bKey} className="bg-gray-50/50">
                       <button onClick={() => toggle(bKey)} className="w-full flex items-center gap-2 pl-10 pr-4 py-2.5 hover:bg-gray-100 text-left">
-                        {bOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                        {bOpen ? <ChevronDown className="w-4 h-4 text-gray-600" /> : <ChevronRight className="w-4 h-4 text-gray-600" />}
                         <span className="text-gray-800">{b.name}</span>
                         <span className="ml-auto text-sm text-gray-500">{b.sessions} sessions</span>
                         <span className="w-24 text-right text-gray-800">{fmt(b.minutes)}</span>
@@ -135,7 +135,7 @@ export default function WorkTimeReportPage() {
                       {bOpen && Array.from(b.tasks.values()).map((t) => (
                         <div key={`t:${t.itemId}`} className="flex items-center gap-2 pl-16 pr-4 py-2 text-sm">
                           <span className="text-gray-600">{t.name}</span>
-                          <span className="ml-auto text-gray-400">{t.sessions} sessions</span>
+                          <span className="ml-auto text-gray-600">{t.sessions} sessions</span>
                           <span className="w-24 text-right text-gray-700">{fmt(t.minutes)}</span>
                         </div>
                       ))}

@@ -78,31 +78,31 @@ export default function NewInvoicePage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <Link href="/dashboard/invoices" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 mb-4">
+      <Link href="/dashboard/invoices" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 mb-4">
         <ArrowLeft className="h-4 w-4" /> Invoices
       </Link>
-      <h1 className="text-xl font-semibold text-white mb-6">New Invoice</h1>
+      <h1 className="text-xl font-semibold text-gray-900 mb-6">New Invoice</h1>
 
-      {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
+      {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         <label className="block">
           <span className="text-xs text-gray-500">Customer *</span>
-          <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="mt-1 w-full bg-gray-950 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200">
+          <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
             <option value="">Select…</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
         <label className="block">
           <span className="text-xs text-gray-500">Due date</span>
-          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1 w-full bg-gray-950 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200" />
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" />
         </label>
       </div>
 
-      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden mb-4">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b border-white/10">
+            <tr className="text-left text-gray-500 border-b border-gray-200">
               <th className="px-3 py-2 font-medium">Description</th>
               <th className="px-3 py-2 font-medium w-20">Qty</th>
               <th className="px-3 py-2 font-medium w-28">Unit price</th>
@@ -112,17 +112,17 @@ export default function NewInvoicePage() {
           </thead>
           <tbody>
             {lines.map((l, i) => (
-              <tr key={i} className="border-b border-white/5">
-                <td className="px-3 py-2"><input value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} placeholder="Item or service" className="w-full bg-transparent text-gray-200 outline-none" /></td>
-                <td className="px-3 py-2"><input type="number" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} className="w-full bg-transparent text-gray-200 outline-none" /></td>
-                <td className="px-3 py-2"><input type="number" step="0.01" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} className="w-full bg-transparent text-gray-200 outline-none" /></td>
+              <tr key={i} className="border-b border-gray-200">
+                <td className="px-3 py-2"><input value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} placeholder="Item or service" className="w-full bg-transparent text-gray-900 outline-none" /></td>
+                <td className="px-3 py-2"><input type="number" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} className="w-full bg-transparent text-gray-900 outline-none" /></td>
+                <td className="px-3 py-2"><input type="number" step="0.01" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} className="w-full bg-transparent text-gray-900 outline-none" /></td>
                 <td className="px-3 py-2">
-                  <select value={l.taxRateId} onChange={(e) => setLine(i, { taxRateId: e.target.value })} className="w-full bg-transparent text-gray-300 outline-none">
-                    <option value="" className="bg-gray-900">None</option>
-                    {taxRates.map((t) => <option key={t.id} value={t.id} className="bg-gray-900">{t.name} ({(t.rateBasisPoints / 100).toFixed(2)}%)</option>)}
+                  <select value={l.taxRateId} onChange={(e) => setLine(i, { taxRateId: e.target.value })} className="w-full bg-transparent text-gray-700 outline-none">
+                    <option value="" className="bg-white">None</option>
+                    {taxRates.map((t) => <option key={t.id} value={t.id} className="bg-white">{t.name} ({(t.rateBasisPoints / 100).toFixed(2)}%)</option>)}
                   </select>
                 </td>
-                <td className="px-3 py-2 text-right"><button onClick={() => removeLine(i)} className="p-1 text-gray-500 hover:text-red-400"><Trash2 className="h-4 w-4" /></button></td>
+                <td className="px-3 py-2 text-right"><button onClick={() => removeLine(i)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
               </tr>
             ))}
           </tbody>
@@ -130,17 +130,17 @@ export default function NewInvoicePage() {
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <button onClick={addLine} className="inline-flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"><Plus className="h-4 w-4" /> Add line</button>
-        <div className="text-sm text-gray-400">Total: <span className="text-gray-100 font-medium">${grandTotal.toFixed(2)}</span></div>
+        <button onClick={addLine} className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-600"><Plus className="h-4 w-4" /> Add line</button>
+        <div className="text-sm text-gray-600">Total: <span className="text-gray-900 font-medium">${grandTotal.toFixed(2)}</span></div>
       </div>
 
       <label className="block mb-6">
         <span className="text-xs text-gray-500">Notes</span>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1 w-full bg-gray-950 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200" />
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" />
       </label>
 
       <div className="flex justify-end gap-2">
-        <Link href="/dashboard/invoices" className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</Link>
+        <Link href="/dashboard/invoices" className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</Link>
         <button onClick={save} disabled={saving || !workspaceId} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md">{saving ? "Creating…" : "Create draft"}</button>
       </div>
     </div>

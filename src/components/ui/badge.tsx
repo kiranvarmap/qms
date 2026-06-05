@@ -2,17 +2,24 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+// Vibe-styled badge/label: pill shape, Vibe selected/semantic colors.
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-blue-100 text-blue-800",
-        secondary: "border-transparent bg-gray-100 text-gray-800",
-        destructive: "border-transparent bg-red-100 text-red-800",
-        success: "border-transparent bg-green-100 text-green-800",
-        warning: "border-transparent bg-yellow-100 text-yellow-800",
-        outline: "text-gray-800 border-gray-300",
+        default:
+          "border-transparent bg-[var(--primary-selected-color)] text-[var(--primary-color)]",
+        secondary:
+          "border-transparent bg-[var(--ui-background-color)] text-[var(--primary-text-color)]",
+        destructive:
+          "border-transparent bg-[var(--negative-color-selected)] text-[var(--negative-color)]",
+        success:
+          "border-transparent bg-[var(--positive-color-selected)] text-[var(--positive-color)]",
+        warning:
+          "border-transparent bg-[var(--warning-color-selected)] text-[var(--primary-text-color)]",
+        outline:
+          "text-[var(--primary-text-color)] border-[var(--ui-border-color)]",
       },
     },
     defaultVariants: {

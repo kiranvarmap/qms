@@ -22,7 +22,7 @@ import { dispatchInline } from "@/lib/events/dispatcher";
 
 type Executor = Pick<typeof db, "insert">;
 
-export type ApprovalSubjectType = "leave_request" | "purchase_order" | "expense" | "invoice";
+export type ApprovalSubjectType = "leave_request" | "purchase_order" | "expense" | "invoice" | "vendor";
 
 export interface ApprovalStepInput {
   approverEmployeeId?: string | null;

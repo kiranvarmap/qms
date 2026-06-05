@@ -156,6 +156,13 @@ export const workspaces = pgTable("workspaces", {
   // (see lib/money.ts). fiscalYearStart is 1–12 (month the FY begins).
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   fiscalYearStart: integer("fiscal_year_start").default(1).notNull(),
+  // ── Localization profile (BRD 00 §12) ────────────────────────────
+  // ISO 3166-1 alpha-2 country drives the tax regime, party tax-ID label,
+  // statutory document set, and formatting via the country pack
+  // (src/lib/localization.ts). locale = BCP-47 (e.g. en-US).
+  country: varchar("country", { length: 2 }).default("US").notNull(),
+  locale: varchar("locale", { length: 10 }).default("en-US").notNull(),
+  timezone: varchar("timezone", { length: 64 }).default("UTC").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -1180,6 +1187,10 @@ export const vendors = pgTable("vendors", {
   accountManagerEmployeeId: uuid("account_manager_employee_id").references(() => employees.id, { onDelete: "set null" }),
   notes: text("notes"),
   status: partyStatusEnum("status").default("active").notNull(),
+  // Vendor full BRD: onboarding approval state + preferred flag + auto-hold.
+  approvalState: varchar("approval_state", { length: 20 }).default("approved").notNull(),
+  isPreferred: boolean("is_preferred").default(false).notNull(),
+  onHold: boolean("on_hold").default(false).notNull(),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
@@ -1199,6 +1210,83 @@ export const vendorContacts = pgTable("vendor_contacts", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ════════════════════════════════════════════════════════════════════
+// VENDOR — full BRD: structured addresses, compliance documents (+expiry),
+// bank accounts, performance scorecards, and a vendor item catalog.
+// ════════════════════════════════════════════════════════════════════
+
+export const vendorAddressKindEnum = pgEnum("vendor_address_kind", ["billing", "shipping", "remit"]);
+export const vendorDocStatusEnum = pgEnum("vendor_doc_status", ["valid", "expiring", "expired"]);
+
+export const vendorAddresses = pgTable("vendor_addresses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  kind: vendorAddressKindEnum("kind").default("billing").notNull(),
+  line1: varchar("line1", { length: 255 }),
+  line2: varchar("line2", { length: 255 }),
+  city: varchar("city", { length: 120 }),
+  state: varchar("state", { length: 120 }),
+  country: varchar("country", { length: 2 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+});
+
+export const vendorDocuments = pgTable("vendor_documents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  docType: varchar("doc_type", { length: 120 }).notNull(),
+  number: varchar("number", { length: 120 }),
+  issuedDate: timestamp("issued_date", { mode: "date" }),
+  expiryDate: timestamp("expiry_date", { mode: "date" }),
+  fileUrl: text("file_url"),
+  isMandatory: boolean("is_mandatory").default(false).notNull(),
+  status: vendorDocStatusEnum("status").default("valid").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const vendorBankAccounts = pgTable("vendor_bank_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  accountName: varchar("account_name", { length: 255 }),
+  accountNumber: varchar("account_number", { length: 60 }),
+  bankName: varchar("bank_name", { length: 255 }),
+  branch: varchar("branch", { length: 255 }),
+  routing: varchar("routing", { length: 60 }), // IFSC / SWIFT / ABA
+  isVerified: boolean("is_verified").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// Periodic performance scorecard (on-time %, quality reject %, price variance %).
+export const vendorPerformance = pgTable("vendor_performance", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  periodStart: timestamp("period_start", { mode: "date" }),
+  periodEnd: timestamp("period_end", { mode: "date" }),
+  onTimePct: real("on_time_pct").default(0).notNull(),
+  qualityRejectPct: real("quality_reject_pct").default(0).notNull(),
+  priceVariancePct: real("price_variance_pct").default(0).notNull(),
+  rating: real("rating").default(0).notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// Vendor item catalog — what a vendor supplies, their SKU, price, lead time.
+export const vendorItems = pgTable("vendor_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  vendorSku: varchar("vendor_sku", { length: 120 }),
+  description: varchar("description", { length: 255 }),
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+  leadTimeDays: integer("lead_time_days").default(0).notNull(),
+  isApproved: boolean("is_approved").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Customers / Bill-to parties (Plan §2.1 / §6) ───────────────────
 export const customers = pgTable("customers", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1213,6 +1301,9 @@ export const customers = pgTable("customers", {
   billingAddress: jsonb("billing_address").default("{}").notNull(),
   shippingAddress: jsonb("shipping_address").default("{}").notNull(),
   paymentTermsDays: integer("payment_terms_days").default(30).notNull(),
+  // Sales full BRD: credit limit (minor units; 0 = no limit) + price list.
+  creditLimitMinor: integer("credit_limit_minor").default(0).notNull(),
+  priceListId: uuid("price_list_id").references((): AnyPgColumn => priceLists.id, { onDelete: "set null" }),
   accountManagerEmployeeId: uuid("account_manager_employee_id").references(() => employees.id, { onDelete: "set null" }),
   // Optional link to the project board this customer's work lives on.
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
@@ -1370,6 +1461,11 @@ export const purchaseOrders = pgTable("purchase_orders", {
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   expectedDate: timestamp("expected_date", { mode: "date" }),
   notes: text("notes"),
+  // Purchasing full BRD: PO type (standard/blanket/contract), over-receipt
+  // tolerance %, and 3-way match status.
+  poType: varchar("po_type", { length: 20 }).default("standard").notNull(),
+  overReceiptTolerancePct: real("over_receipt_tolerance_pct").default(0).notNull(),
+  matchStatus: varchar("match_status", { length: 20 }).default("unmatched").notNull(),
   // ── Scope ladder (Plan B.4) — links the PO to a project board/item ──
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
@@ -1431,6 +1527,74 @@ export const goodsReceiptLines = pgTable("goods_receipt_lines", {
 });
 
 // ════════════════════════════════════════════════════════════════════
+// PURCHASING — full BRD: requisitions, returns/debit notes, landed cost.
+// ════════════════════════════════════════════════════════════════════
+
+export const requisitionStatusEnum = pgEnum("requisition_status", ["draft", "submitted", "approved", "rejected", "converted"]);
+export const purchaseReturnStatusEnum = pgEnum("purchase_return_status", ["draft", "posted", "cancelled"]);
+
+export const purchaseRequisitions = pgTable("purchase_requisitions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  status: requisitionStatusEnum("status").default("draft").notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  neededBy: timestamp("needed_by", { mode: "date" }),
+  notes: text("notes"),
+  requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+  approverId: uuid("approver_id").references(() => users.id, { onDelete: "set null" }),
+  convertedPoId: uuid("converted_po_id").references((): AnyPgColumn => purchaseOrders.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("requisitions_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const requisitionLines = pgTable("requisition_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  requisitionId: uuid("requisition_id").notNull().references(() => purchaseRequisitions.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }).notNull(),
+  quantity: real("quantity").default(1).notNull(),
+  estUnitCostMinor: integer("est_unit_cost_minor").default(0).notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// Allocated landed costs (freight, duty, …) added onto a PO's item cost.
+export const poLandedCosts = pgTable("po_landed_costs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  purchaseOrderId: uuid("purchase_order_id").notNull().references(() => purchaseOrders.id, { onDelete: "cascade" }),
+  costType: varchar("cost_type", { length: 40 }).default("freight").notNull(),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  note: varchar("note", { length: 255 }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// Return-to-vendor / debit note — relieves stock when posted.
+export const purchaseReturns = pgTable("purchase_returns", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
+  vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  status: purchaseReturnStatusEnum("status").default("draft").notNull(),
+  reason: varchar("reason", { length: 255 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  postedAt: timestamp("posted_at", { mode: "date" }),
+}, (t) => [unique("purchase_returns_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const purchaseReturnLines = pgTable("purchase_return_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  purchaseReturnId: uuid("purchase_return_id").notNull().references(() => purchaseReturns.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }),
+  quantity: real("quantity").default(1).notNull(),
+  unitCostMinor: integer("unit_cost_minor").default(0).notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
 // BUSINESS-OPS — Phase 3: Inventory (Plan §4)
 // Products + warehouses + an immutable stock-movement ledger. Stock is NEVER
 // a bare counter: every change is a `stock_movements` row whose deltas roll
@@ -1440,6 +1604,16 @@ export const goodsReceiptLines = pgTable("goods_receipt_lines", {
 // ════════════════════════════════════════════════════════════════════
 
 export const productTypeEnum = pgEnum("product_type", ["good", "service"]);
+
+// Engineering lifecycle for a product (Product Management BRD).
+export const productLifecycleEnum = pgEnum("product_lifecycle", [
+  "draft",
+  "active",
+  "obsolete",
+]);
+
+// Inventory valuation method (full BRD): standard cost, weighted average, FIFO.
+export const valuationMethodEnum = pgEnum("valuation_method", ["standard", "average", "fifo"]);
 
 export const stockMovementTypeEnum = pgEnum("stock_movement_type", [
   "receipt",
@@ -1469,6 +1643,17 @@ export const products = pgTable("products", {
   // Services don't carry stock; the ledger/levels ignore non-tracked products.
   trackInventory: boolean("track_inventory").default(true).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  // Inventory full-BRD attributes: barcode, lot/serial tracking, shelf life,
+  // and per-product valuation method.
+  barcode: varchar("barcode", { length: 120 }),
+  tracksLots: boolean("tracks_lots").default(false).notNull(),
+  tracksSerials: boolean("tracks_serials").default(false).notNull(),
+  shelfLifeDays: integer("shelf_life_days").default(0).notNull(),
+  valuationMethod: valuationMethodEnum("valuation_method").default("average").notNull(),
+  // Engineering lifecycle (Product Management BRD): draft → active → obsolete.
+  lifecycleStatus: productLifecycleEnum("lifecycle_status").default("active").notNull(),
+  // Current released engineering revision label (e.g. "A"); null until released.
+  currentRevision: varchar("current_revision", { length: 40 }),
   // Optional link to the project board this product belongs to.
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
@@ -1506,6 +1691,9 @@ export const stockLevels = pgTable("stock_levels", {
     .references(() => warehouses.id, { onDelete: "cascade" }),
   onHand: real("on_hand").default(0).notNull(),
   committed: real("committed").default(0).notNull(),
+  // Separate "unavailable" buckets (not part of onHand): full BRD §damaged/quarantine.
+  damaged: real("damaged").default(0).notNull(),
+  quarantine: real("quarantine").default(0).notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 }, (t) => [unique("stock_levels_product_warehouse_uq").on(t.productId, t.warehouseId)]);
 
@@ -1528,12 +1716,416 @@ export const stockMovements = pgTable("stock_movements", {
   quantity: real("quantity").notNull(),
   onHandDelta: real("on_hand_delta").default(0).notNull(),
   committedDelta: real("committed_delta").default(0).notNull(),
+  // Optional lot/location dimensions (full BRD lot & bin tracking).
+  lotId: uuid("lot_id").references((): AnyPgColumn => lots.id, { onDelete: "set null" }),
+  locationId: uuid("location_id").references((): AnyPgColumn => locations.id, { onDelete: "set null" }),
   // Source artifact: 'goods_receipt' | 'sales_order' | 'shipment' | 'adjustment' | 'transfer'
   refType: varchar("ref_type", { length: 40 }),
   refId: uuid("ref_id"),
   note: text("note"),
   actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// INVENTORY — full BRD: bins/locations, lot & serial tracking, expiry,
+// cycle counting, and FIFO valuation layers. Additive to the stock ledger
+// above (damaged/quarantine live as buckets on stock_levels).
+// ════════════════════════════════════════════════════════════════════
+
+export const locationKindEnum = pgEnum("location_kind", ["zone", "aisle", "rack", "shelf", "bin"]);
+export const lotStatusEnum = pgEnum("lot_status", ["available", "quarantine", "expired", "scrapped"]);
+export const serialStatusEnum = pgEnum("serial_status", ["in_stock", "shipped", "scrapped", "quarantine"]);
+export const cycleCountStatusEnum = pgEnum("cycle_count_status", ["open", "counted", "posted", "cancelled"]);
+
+// Storage locations within a warehouse (zone → aisle → rack → shelf → bin).
+export const locations = pgTable("locations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id").notNull().references(() => warehouses.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 60 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  kind: locationKindEnum("kind").default("bin").notNull(),
+  parentLocationId: uuid("parent_location_id").references((): AnyPgColumn => locations.id, { onDelete: "set null" }),
+  isBlocked: boolean("is_blocked").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("locations_wh_code_uq").on(t.warehouseId, t.code)]);
+
+// Lot / batch with expiry (full BRD lot tracking + FEFO).
+export const lots = pgTable("lots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  lotNumber: varchar("lot_number", { length: 120 }).notNull(),
+  supplierLotNumber: varchar("supplier_lot_number", { length: 120 }),
+  mfgDate: timestamp("mfg_date", { mode: "date" }),
+  expiryDate: timestamp("expiry_date", { mode: "date" }),
+  receivedDate: timestamp("received_date", { mode: "date" }).defaultNow().notNull(),
+  status: lotStatusEnum("status").default("available").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("lots_product_number_uq").on(t.productId, t.lotNumber)]);
+
+// Serial-numbered units (full BRD serial tracking).
+export const serials = pgTable("serials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  serialNumber: varchar("serial_number", { length: 120 }).notNull(),
+  lotId: uuid("lot_id").references(() => lots.id, { onDelete: "set null" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  status: serialStatusEnum("status").default("in_stock").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("serials_product_number_uq").on(t.productId, t.serialNumber)]);
+
+// FIFO valuation layers — one per receipt, consumed oldest-first on issue.
+export const valuationLayers = pgTable("valuation_layers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id").notNull().references(() => warehouses.id, { onDelete: "cascade" }),
+  qtyRemaining: real("qty_remaining").default(0).notNull(),
+  unitCostMinor: integer("unit_cost_minor").default(0).notNull(),
+  receivedAt: timestamp("received_at", { mode: "date" }).defaultNow().notNull(),
+  refType: varchar("ref_type", { length: 40 }),
+  refId: uuid("ref_id"),
+});
+
+// Cycle count session + lines (system vs counted → variance → adjustment).
+export const cycleCounts = pgTable("cycle_counts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  status: cycleCountStatusEnum("status").default("open").notNull(),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  postedAt: timestamp("posted_at", { mode: "date" }),
+});
+
+export const cycleCountLines = pgTable("cycle_count_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  cycleCountId: uuid("cycle_count_id").notNull().references(() => cycleCounts.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  locationId: uuid("location_id").references(() => locations.id, { onDelete: "set null" }),
+  systemQty: real("system_qty").default(0).notNull(),
+  countedQty: real("counted_qty"),
+  position: integer("position").default(0).notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// PRODUCT MANAGEMENT (BRD 0X) — engineering data on top of `products`:
+// Bills of Materials, revisions, specifications, and engineering change
+// requests (ECR). The `products` row stays the master; these add the
+// "what it's made of / how it changed" layer that Production consumes.
+// ════════════════════════════════════════════════════════════════════
+
+export const bomStatusEnum = pgEnum("bom_status", ["draft", "active", "archived"]);
+
+export const productRevisionStatusEnum = pgEnum("product_revision_status", [
+  "draft",
+  "released",
+  "superseded",
+]);
+
+export const ecrStatusEnum = pgEnum("ecr_status", [
+  "draft",
+  "submitted",
+  "approved",
+  "rejected",
+  "implemented",
+]);
+
+// Bill of Materials header — one per product version. Components are bomLines.
+export const boms = pgTable("boms", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 40 }).default("v1").notNull(),
+  name: varchar("name", { length: 255 }),
+  status: bomStatusEnum("status").default("draft").notNull(),
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("boms_product_version_uq").on(t.productId, t.version)]);
+
+// One component line of a BOM. `componentProductId` references another product
+// (raw material / sub-assembly); `description` is the always-set fallback.
+export const bomLines = pgTable("bom_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bomId: uuid("bom_id")
+    .notNull()
+    .references(() => boms.id, { onDelete: "cascade" }),
+  componentProductId: uuid("component_product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 255 }),
+  quantity: real("quantity").default(1).notNull(),
+  unit: varchar("unit", { length: 40 }).default("unit").notNull(),
+  scrapPct: real("scrap_pct").default(0).notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// Engineering revision of a product (rev A, B, …). The spec snapshot captures
+// the product's specs at release time for traceability.
+export const productRevisions = pgTable("product_revisions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  revision: varchar("revision", { length: 40 }).notNull(),
+  changeSummary: text("change_summary"),
+  status: productRevisionStatusEnum("status").default("draft").notNull(),
+  specSnapshot: jsonb("spec_snapshot").$type<Record<string, unknown>>().default({}).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  releasedAt: timestamp("released_at", { mode: "date" }),
+}, (t) => [unique("product_revisions_uq").on(t.productId, t.revision)]);
+
+// Normalized product specifications (key/value), e.g. "Material" = "SS 304".
+export const productSpecifications = pgTable("product_specifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  key: varchar("key", { length: 120 }).notNull(),
+  value: varchar("value", { length: 500 }),
+  unit: varchar("unit", { length: 40 }),
+  position: integer("position").default(0).notNull(),
+});
+
+// Engineering Change Request — governs a proposed change to a product/BOM.
+export const engineeringChangeRequests = pgTable("engineering_change_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  number: varchar("number", { length: 60 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  priority: varchar("priority", { length: 20 }).default("normal").notNull(),
+  status: ecrStatusEnum("status").default("draft").notNull(),
+  requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+  approverId: uuid("approver_id").references(() => users.id, { onDelete: "set null" }),
+  decisionNotes: text("decision_notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  decidedAt: timestamp("decided_at", { mode: "date" }),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("ecr_ws_number_uq").on(t.workspaceId, t.number)]);
+
+// ════════════════════════════════════════════════════════════════════
+// PRODUCTION / MANUFACTURING (BRD 11) — work orders that consume BOM
+// components from inventory and receive finished goods back in. Reuses
+// applyStockMovement() so stock invariants and stock.* events are shared.
+// ════════════════════════════════════════════════════════════════════
+
+export const workOrderStatusEnum = pgEnum("work_order_status", [
+  "planned",
+  "released",
+  "in_progress",
+  "completed",
+  "cancelled",
+]);
+
+export const workOrders = pgTable("work_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  number: varchar("number", { length: 60 }).notNull(),
+  // Finished-good product being manufactured.
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  // The BOM exploded into materials (snapshot copied to work_order_materials).
+  bomId: uuid("bom_id").references(() => boms.id, { onDelete: "set null" }),
+  // Warehouse components are drawn from and finished goods received into.
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  status: workOrderStatusEnum("status").default("planned").notNull(),
+  qtyPlanned: real("qty_planned").default(1).notNull(),
+  qtyProduced: real("qty_produced").default(0).notNull(),
+  qtyScrapped: real("qty_scrapped").default(0).notNull(),
+  dueDate: timestamp("due_date", { mode: "date" }),
+  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  releasedAt: timestamp("released_at", { mode: "date" }),
+  completedAt: timestamp("completed_at", { mode: "date" }),
+}, (t) => [unique("work_orders_ws_number_uq").on(t.workspaceId, t.number)]);
+
+// Components a work order needs — snapshot from the BOM at creation, scaled by
+// the planned quantity. Consumed from stock when the work order completes.
+export const workOrderMaterials = pgTable("work_order_materials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  componentProductId: uuid("component_product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 255 }),
+  qtyRequired: real("qty_required").default(0).notNull(),
+  qtyIssued: real("qty_issued").default(0).notNull(),
+  unit: varchar("unit", { length: 40 }).default("unit").notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// MAINTENANCE (BRD 12) — asset register + preventive/corrective work orders.
+// Spare-part consumption reuses applyStockMovement(); asset "down" status is
+// the interlock signal Production consumes.
+// ════════════════════════════════════════════════════════════════════
+
+export const assetStatusEnum = pgEnum("asset_status", ["up", "down", "maintenance", "retired"]);
+export const maintenanceTypeEnum = pgEnum("maintenance_type", ["corrective", "preventive"]);
+export const maintenanceOrderStatusEnum = pgEnum("maintenance_order_status", [
+  "open",
+  "in_progress",
+  "on_hold",
+  "completed",
+  "cancelled",
+]);
+
+export const assets = pgTable("assets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 60 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 120 }),
+  parentAssetId: uuid("parent_asset_id").references((): AnyPgColumn => assets.id, { onDelete: "set null" }),
+  location: varchar("location", { length: 255 }),
+  status: assetStatusEnum("status").default("up").notNull(),
+  criticality: varchar("criticality", { length: 20 }).default("medium").notNull(),
+  purchaseDate: timestamp("purchase_date", { mode: "date" }),
+  warrantyUntil: timestamp("warranty_until", { mode: "date" }),
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("assets_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// Preventive-maintenance schedule that generates maintenance orders when due.
+export const pmSchedules = pgTable("pm_schedules", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  assetId: uuid("asset_id")
+    .notNull()
+    .references(() => assets.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  basis: varchar("basis", { length: 20 }).default("time").notNull(),
+  intervalDays: integer("interval_days").default(0).notNull(),
+  checklist: text("checklist"),
+  nextDue: timestamp("next_due", { mode: "date" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const maintenanceOrders = pgTable("maintenance_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  number: varchar("number", { length: 60 }).notNull(),
+  assetId: uuid("asset_id")
+    .notNull()
+    .references(() => assets.id, { onDelete: "cascade" }),
+  type: maintenanceTypeEnum("type").default("corrective").notNull(),
+  status: maintenanceOrderStatusEnum("status").default("open").notNull(),
+  priority: varchar("priority", { length: 20 }).default("normal").notNull(),
+  fault: text("fault"),
+  assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+  scheduledDate: timestamp("scheduled_date", { mode: "date" }),
+  downtimeHours: real("downtime_hours").default(0).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { mode: "date" }),
+}, (t) => [unique("maintenance_orders_ws_number_uq").on(t.workspaceId, t.number)]);
+
+// Spare parts consumed by a maintenance order (drawn from inventory on complete).
+export const maintenanceParts = pgTable("maintenance_parts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  maintenanceOrderId: uuid("maintenance_order_id")
+    .notNull()
+    .references(() => maintenanceOrders.id, { onDelete: "cascade" }),
+  partProductId: uuid("part_product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 255 }),
+  qtyUsed: real("qty_used").default(1).notNull(),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  position: integer("position").default(0).notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// SAFETY / EHS (BRD 13) — incident & near-miss reporting with corrective
+// actions. Reuses the same "action → closure" pattern as the quality CAPA
+// loop; incidents can reference an asset (Maintenance) or employee.
+// ════════════════════════════════════════════════════════════════════
+
+export const incidentTypeEnum = pgEnum("incident_type", [
+  "injury",
+  "near_miss",
+  "property",
+  "environmental",
+]);
+export const incidentSeverityEnum = pgEnum("incident_severity", ["low", "medium", "high", "critical"]);
+export const incidentStatusEnum = pgEnum("incident_status", [
+  "reported",
+  "investigating",
+  "actions_open",
+  "closed",
+]);
+export const safetyActionStatusEnum = pgEnum("safety_action_status", ["open", "done"]);
+
+export const incidents = pgTable("incidents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  number: varchar("number", { length: 60 }).notNull(),
+  type: incidentTypeEnum("type").default("near_miss").notNull(),
+  severity: incidentSeverityEnum("severity").default("low").notNull(),
+  status: incidentStatusEnum("status").default("reported").notNull(),
+  occurredAt: timestamp("occurred_at", { mode: "date" }),
+  location: varchar("location", { length: 255 }),
+  description: text("description"),
+  assetId: uuid("asset_id").references(() => assets.id, { onDelete: "set null" }),
+  reportedBy: uuid("reported_by").references(() => users.id, { onDelete: "set null" }),
+  investigatorId: uuid("investigator_id").references(() => users.id, { onDelete: "set null" }),
+  rootCause: text("root_cause"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  closedAt: timestamp("closed_at", { mode: "date" }),
+}, (t) => [unique("incidents_ws_number_uq").on(t.workspaceId, t.number)]);
+
+// Corrective/preventive action raised from an incident (mirrors quality CAPA).
+export const safetyActions = pgTable("safety_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  incidentId: uuid("incident_id")
+    .notNull()
+    .references(() => incidents.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+  dueDate: timestamp("due_date", { mode: "date" }),
+  status: safetyActionStatusEnum("status").default("open").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { mode: "date" }),
 });
 
 // ════════════════════════════════════════════════════════════════════
@@ -1665,6 +2257,8 @@ export const salesOrders = pgTable("sales_orders", {
   totalMinor: integer("total_minor").default(0).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   notes: text("notes"),
+  // Sales full BRD: drop-ship sales orders fulfil via a linked PO, not stock.
+  isDropShip: boolean("is_drop_ship").default(false).notNull(),
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
   itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
@@ -1691,6 +2285,67 @@ export const salesOrderLineItems = pgTable("sales_order_line_items", {
   amountMinor: integer("amount_minor").default(0).notNull(),
   lineTaxMinor: integer("line_tax_minor").default(0).notNull(),
   position: real("position").default(0).notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// SALES — full BRD: price lists, returns/RMA, recurring orders.
+// ════════════════════════════════════════════════════════════════════
+
+export const salesReturnStatusEnum = pgEnum("sales_return_status", ["draft", "posted", "cancelled"]);
+
+export const priceLists = pgTable("price_lists", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const priceListItems = pgTable("price_list_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  priceListId: uuid("price_list_id").notNull().references(() => priceLists.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+}, (t) => [unique("price_list_items_uq").on(t.priceListId, t.productId)]);
+
+export const salesReturns = pgTable("sales_returns", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  status: salesReturnStatusEnum("status").default("draft").notNull(),
+  reason: varchar("reason", { length: 255 }),
+  restock: boolean("restock").default(true).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  postedAt: timestamp("posted_at", { mode: "date" }),
+}, (t) => [unique("sales_returns_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const salesReturnLines = pgTable("sales_return_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  salesReturnId: uuid("sales_return_id").notNull().references(() => salesReturns.id, { onDelete: "cascade" }),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 500 }),
+  quantity: real("quantity").default(1).notNull(),
+  unitPriceMinor: integer("unit_price_minor").default(0).notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// Recurring order template — generates a draft sales order on a cadence.
+export const recurringOrders = pgTable("recurring_orders", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  cadence: varchar("cadence", { length: 20 }).default("monthly").notNull(),
+  nextRunDate: timestamp("next_run_date", { mode: "date" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  template: jsonb("template").$type<{ lines: { productId?: string; description: string; quantity: number; unitPrice: number }[] }>().default({ lines: [] }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const shipments = pgTable("shipments", {
@@ -1748,9 +2403,11 @@ export const invoices = pgTable("invoices", {
   workspaceId: uuid("workspace_id")
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id, { onDelete: "restrict" }),
+  // AR invoice → customerId; AP bill → vendorId (kind = 'ar' | 'ap').
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "restrict" }),
+  kind: varchar("kind", { length: 2 }).default("ar").notNull(),
+  vendorId: uuid("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  purchaseOrderId: uuid("purchase_order_id").references(() => purchaseOrders.id, { onDelete: "set null" }),
   docNumber: varchar("doc_number", { length: 50 }).notNull(),
   status: invoiceStatusEnum("status").default("draft").notNull(),
   salesOrderId: uuid("sales_order_id").references(() => salesOrders.id, { onDelete: "set null" }),
@@ -1760,6 +2417,9 @@ export const invoices = pgTable("invoices", {
   taxMinor: integer("tax_minor").default(0).notNull(),
   totalMinor: integer("total_minor").default(0).notNull(),
   amountPaidMinor: integer("amount_paid_minor").default(0).notNull(),
+  // Full BRD: write-off + multi-currency FX rate (to workspace base currency).
+  writeOffMinor: integer("write_off_minor").default(0).notNull(),
+  fxRate: real("fx_rate").default(1).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   notes: text("notes"),
   // Default-deny portal exposure; flipped true on send.
@@ -1773,6 +2433,86 @@ export const invoices = pgTable("invoices", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 }, (t) => [unique("invoices_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+// ════════════════════════════════════════════════════════════════════
+// INVOICING & BOOKS — full BRD: credit notes, recurring invoices, dunning,
+// and double-entry accounting (chart of accounts + journals → trial balance).
+// ════════════════════════════════════════════════════════════════════
+
+export const accountTypeEnum = pgEnum("account_type", ["asset", "liability", "equity", "income", "expense"]);
+export const journalStatusEnum = pgEnum("journal_status", ["draft", "posted"]);
+export const creditNoteStatusEnum = pgEnum("credit_note_status", ["draft", "issued", "applied"]);
+
+export const creditNotes = pgTable("credit_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+  status: creditNoteStatusEnum("status").default("draft").notNull(),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  reason: varchar("reason", { length: 255 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  appliedAt: timestamp("applied_at", { mode: "date" }),
+}, (t) => [unique("credit_notes_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+// Chart of accounts (named ledgerAccounts to avoid the NextAuth `accounts` table).
+export const ledgerAccounts = pgTable("ledger_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 20 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: accountTypeEnum("type").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("ledger_accounts_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// Double-entry journal entries (header + balanced lines).
+export const journalEntries = pgTable("journal_entries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  entryDate: timestamp("entry_date", { mode: "date" }).defaultNow().notNull(),
+  memo: varchar("memo", { length: 500 }),
+  status: journalStatusEnum("status").default("draft").notNull(),
+  sourceType: varchar("source_type", { length: 40 }),
+  sourceId: uuid("source_id"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  postedAt: timestamp("posted_at", { mode: "date" }),
+}, (t) => [unique("journal_entries_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+export const journalLines = pgTable("journal_lines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  journalEntryId: uuid("journal_entry_id").notNull().references(() => journalEntries.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
+  debitMinor: integer("debit_minor").default(0).notNull(),
+  creditMinor: integer("credit_minor").default(0).notNull(),
+  memo: varchar("memo", { length: 255 }),
+  position: integer("position").default(0).notNull(),
+});
+
+export const recurringInvoices = pgTable("recurring_invoices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  cadence: varchar("cadence", { length: 20 }).default("monthly").notNull(),
+  nextRunDate: timestamp("next_run_date", { mode: "date" }),
+  isActive: boolean("is_active").default(true).notNull(),
+  template: jsonb("template").$type<{ lines: { description: string; quantity: number; unitPrice: number }[] }>().default({ lines: [] }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const dunningLog = pgTable("dunning_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  level: integer("level").default(1).notNull(),
+  channel: varchar("channel", { length: 20 }).default("email").notNull(),
+  sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 export const invoiceLineItems = pgTable("invoice_line_items", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1860,8 +2600,38 @@ export const expenseCategories = pgTable("expense_categories", {
     .references(() => workspaces.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 120 }).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  // Policy engine (full BRD): per-category spend limit + receipt threshold.
+  maxAmountMinor: integer("max_amount_minor").default(0).notNull(),
+  receiptRequiredAboveMinor: integer("receipt_required_above_minor").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 }, (t) => [unique("expense_categories_ws_name_uq").on(t.workspaceId, t.name)]);
+
+// Cash advances — requested, approved, then settled against expenses.
+export const expenseAdvances = pgTable("expense_advances", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  docNumber: varchar("doc_number", { length: 50 }).notNull(),
+  employeeId: uuid("employee_id").notNull().references(() => employees.id, { onDelete: "restrict" }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  settledMinor: integer("settled_minor").default(0).notNull(),
+  status: varchar("status", { length: 20 }).default("requested").notNull(),
+  note: varchar("note", { length: 255 }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("expense_advances_ws_docnum_uq").on(t.workspaceId, t.docNumber)]);
+
+// Corporate-card transactions imported for matching to expenses.
+export const cardTransactions = pgTable("card_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  postedDate: timestamp("posted_date", { mode: "date" }),
+  description: varchar("description", { length: 255 }),
+  amountMinor: integer("amount_minor").default(0).notNull(),
+  last4: varchar("last4", { length: 4 }),
+  status: varchar("status", { length: 20 }).default("unmatched").notNull(),
+  matchedExpenseId: uuid("matched_expense_id"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 export const expenses = pgTable("expenses", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -1880,6 +2650,18 @@ export const expenses = pgTable("expenses", {
   description: text("description"),
   receiptFilePath: text("receipt_file_path"),
   status: expenseStatusEnum("status").default("draft").notNull(),
+  // Expenses full BRD: type (general/mileage/per-diem), policy violation flag,
+  // cost-centre, billable re-invoice link, advance settlement, card match.
+  kind: varchar("kind", { length: 20 }).default("general").notNull(),
+  mileageDistance: real("mileage_distance").default(0).notNull(),
+  mileageRateMinor: integer("mileage_rate_minor").default(0).notNull(),
+  costCentre: varchar("cost_centre", { length: 120 }),
+  billable: boolean("billable").default(false).notNull(),
+  billedInvoiceId: uuid("billed_invoice_id").references((): AnyPgColumn => invoices.id, { onDelete: "set null" }),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+  policyViolation: boolean("policy_violation").default(false).notNull(),
+  advanceId: uuid("advance_id").references(() => expenseAdvances.id, { onDelete: "set null" }),
+  cardTransactionId: uuid("card_transaction_id").references(() => cardTransactions.id, { onDelete: "set null" }),
   // Billable expenses link to a project board/item (roll up into 360°).
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),

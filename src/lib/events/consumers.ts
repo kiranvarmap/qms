@@ -33,6 +33,7 @@ import {
   poLineItems,
   stockMovements,
   expenses,
+  vendors,
   leaveRequests,
   leaveBalances,
   certifications,
@@ -227,6 +228,23 @@ async function runApprovalSubjectSync(evt: OutboxRow): Promise<void> {
       actorUserId: evt.actorUserId,
       payload: { docNumber: po.docNumber, vendorId: po.vendorId, boardId: po.boardId, itemId: po.itemId },
     });
+  } else if (subjectType === "vendor") {
+    const [v] = await db.select().from(vendors).where(eq(vendors.id, subjectId)).limit(1);
+    if (!v || v.approvalState !== "pending") return; // idempotent guard
+    await db
+      .update(vendors)
+      .set({ approvalState: approved ? "approved" : "rejected", status: approved ? "active" : "inactive", updatedAt: new Date() })
+      .where(eq(vendors.id, subjectId));
+    if (approved) {
+      await emitEventStandalone({
+        workspaceId: v.workspaceId,
+        eventType: "vendor.created",
+        aggregateType: "vendor",
+        aggregateId: v.id,
+        actorUserId: evt.actorUserId,
+        payload: { code: v.code, name: v.name },
+      });
+    }
   } else if (subjectType === "expense") {
     const [exp] = await db.select().from(expenses).where(eq(expenses.id, subjectId)).limit(1);
     if (!exp || exp.status !== "submitted") return; // idempotent guard

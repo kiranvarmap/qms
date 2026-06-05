@@ -116,7 +116,7 @@ export default function WorkspacesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -217,7 +217,7 @@ export default function WorkspacesPage() {
       {workspaces.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <FolderKanban className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <FolderKanban className="mx-auto h-12 w-12 text-gray-700 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">
               No workspaces yet
             </h3>
@@ -284,7 +284,7 @@ export default function WorkspacesPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-900 font-bold text-lg"
                       style={{ backgroundColor: ws.color }}
                     >
                       {ws.name.charAt(0).toUpperCase()}

@@ -71,7 +71,57 @@ export type EventType =
   | "course.assigned"
   | "course.completed"
   | "certification.issued"
-  | "certification.expiring";
+  | "certification.expiring"
+  // ── Product management (BRD 0X) ────────────────────────────────────
+  | "product.created"
+  | "product.updated"
+  | "product.lifecycle_changed"
+  | "bom.created"
+  | "bom.updated"
+  | "product.revision_created"
+  | "product.revision_released"
+  | "ecr.submitted"
+  | "ecr.approved"
+  | "ecr.rejected"
+  | "ecr.implemented"
+  // ── Production / manufacturing (BRD 11) ────────────────────────────
+  | "workorder.released"
+  | "workorder.completed"
+  | "workorder.cancelled"
+  // ── Maintenance (BRD 12) ───────────────────────────────────────────
+  | "asset.created"
+  | "asset.status_changed"
+  | "maintenance.scheduled"
+  | "maintenance.started"
+  | "maintenance.completed"
+  // ── Safety / EHS (BRD 13) ──────────────────────────────────────────
+  | "incident.reported"
+  | "incident.investigation_started"
+  | "incident.closed"
+  // ── Sales full BRD ─────────────────────────────────────────────────
+  | "salesreturn.posted"
+  | "order.recurring_generated"
+  // ── Invoicing & Books full BRD ─────────────────────────────────────
+  | "creditnote.issued"
+  | "creditnote.applied"
+  | "invoice.written_off"
+  | "journal.posted"
+  | "dunning.sent"
+  // ── Purchasing full BRD ────────────────────────────────────────────
+  | "requisition.submitted"
+  | "requisition.approved"
+  | "requisition.rejected"
+  | "requisition.converted"
+  | "po.returned"
+  // ── Inventory full BRD ─────────────────────────────────────────────
+  | "stock.damaged"
+  | "stock.quarantined"
+  | "stock.quarantine_released"
+  | "stock.scrapped"
+  | "cyclecount.posted"
+  | "lot.created"
+  | "lot.expiring"
+  | "serial.created";
 
 export type AggregateType =
   // ── Core (existing) ────────────────────────────────────────────────
@@ -98,7 +148,34 @@ export type AggregateType =
   | "portal_contact"
   | "course"
   | "enrollment"
-  | "certification_record";
+  | "certification_record"
+  // ── Product management (BRD 0X) ────────────────────────────────────
+  | "bom"
+  | "product_revision"
+  | "engineering_change_request"
+  // ── Production / manufacturing (BRD 11) ────────────────────────────
+  | "work_order"
+  // ── Maintenance (BRD 12) ───────────────────────────────────────────
+  | "asset"
+  | "maintenance_order"
+  // ── Safety / EHS (BRD 13) ──────────────────────────────────────────
+  | "incident"
+  // ── Inventory full BRD ─────────────────────────────────────────────
+  | "lot"
+  | "serial"
+  | "location"
+  | "cycle_count"
+  // ── Purchasing full BRD ────────────────────────────────────────────
+  | "purchase_requisition"
+  | "purchase_return"
+  // ── Sales full BRD ─────────────────────────────────────────────────
+  | "sales_return"
+  | "recurring_order"
+  | "price_list"
+  // ── Invoicing & Books full BRD ─────────────────────────────────────
+  | "credit_note"
+  | "journal_entry"
+  | "account";
 
 /** The shape a producer hands to `emitEvent()`. */
 export interface DomainEventInput {

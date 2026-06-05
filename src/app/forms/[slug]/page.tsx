@@ -263,7 +263,7 @@ export default function PublicFormPage() {
   const progress = requiredCount > 0 ? Math.round((filledRequired / requiredCount) * 100) : 100;
 
   return (
-    <div className="min-h-screen bg-[#f0f2f8] py-10 px-4">
+    <div className="min-h-screen bg-[var(--allgrey-background-color)] py-10 px-4">
       <div className="max-w-lg mx-auto">
         <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/60 overflow-hidden">
 

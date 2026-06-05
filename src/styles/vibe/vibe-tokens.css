@@ -1,0 +1,271 @@
+/*
+ * Vibe Design System — full token set
+ * Source: @vibe/style@4.0.0 (monday.com Vibe), https://vibe.monday.com
+ * Mirrored locally so the complete design system is available for reuse
+ * anywhere in the app (semantic colors, theme palette, spacing, radii,
+ * typography, motion). Import this file once (it is imported from
+ * src/app/globals.css) and reference the variables below directly, e.g.
+ *
+ *   color: var(--primary-text-color);
+ *   background: var(--primary-color);
+ *   border-radius: var(--border-radius-medium);
+ *   gap: var(--space-16);
+ *   font: var(--font-text2-normal);
+ *
+ * Theming: light is the default (:root). Add the `dark-app-theme` class to a
+ * wrapper element to opt into the dark theme. `light-app-theme` /
+ * `default-app-theme` are equivalent to the defaults.
+ *
+ * Do not hand-edit values — re-pull from @vibe/style if upgrading Vibe.
+ */
+
+/* ── Structural tokens (theme-independent) ─────────────────────────────── */
+:root {
+  /* Spacing scale (px) */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-80: 80px;
+
+  /* Border radius */
+  --border-radius-small: 4px;
+  --border-radius-medium: 8px;
+  --border-radius-big: 16px;
+
+  /* Borders */
+  --border-width: 1px;
+  --border-style: solid;
+
+  /* Motion */
+  --motion-productive-short: 70ms;
+  --motion-productive-medium: 100ms;
+  --motion-productive-long: 150ms;
+  --motion-expressive-short: 250ms;
+  --motion-expressive-long: 400ms;
+  --motion-timing-enter: cubic-bezier(0, 0, 0.35, 1);
+  --motion-timing-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-timing-transition: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-timing-emphasize: cubic-bezier(0, 0, 0.2, 1.4);
+  --expand-animation-timing: var(--motion-timing-enter);
+
+  /* Component opacity */
+  --disabled-component-opacity: 0.4;
+
+  /* Typography — font families */
+  --font-family: Figtree, Roboto, "Noto Sans Hebrew", "Noto Kufi Arabic", "Noto Sans JP", sans-serif;
+  --title-font-family: Poppins, Roboto, "Noto Sans Hebrew", "Noto Kufi Arabic", "Noto Sans JP", sans-serif;
+  --h1-font-family: var(--title-font-family);
+  --font-smoothing-webkit: antialiased;
+  --font-smoothing-moz: grayscale;
+
+  /* Font weights */
+  --font-weight-very-light: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-bold: 500;
+
+  /* Font sizes */
+  --font-size-10: 14px;
+  --font-size-20: 14px;
+  --font-size-30: 16px;
+  --font-size-40: 18px;
+  --font-size-50: 24px;
+  --font-size-60: 30px;
+  --font-size-h1: var(--font-size-60);
+  --font-size-h2: var(--font-size-50);
+  --font-size-h3: var(--font-size-50);
+  --font-size-h4: var(--font-size-40);
+  --font-size-h5: var(--font-size-30);
+  --font-size-general-label: var(--font-size-20);
+  --font-size-paragraph: var(--font-size-30);
+  --font-size-subtext: var(--font-size-10);
+
+  /* Line heights */
+  --font-line-height-10: 18px;
+  --font-line-height-20: 24px;
+  --font-line-height-30: 24px;
+  --font-line-height-40: 24px;
+  --font-line-height-50: 32px;
+  --font-line-height-60: 42px;
+  --font-line-height-h1: var(--font-line-height-60);
+  --font-line-height-h2: var(--font-line-height-50);
+  --font-line-height-h3: var(--font-line-height-50);
+  --font-line-height-h4: var(--font-line-height-40);
+  --font-line-height-h5: var(--font-line-height-30);
+  --font-line-height-general-label: var(--font-line-height-20);
+  --font-line-height-paragraph: var(--font-line-height-30);
+  --font-line-height-subtext: var(--font-line-height-10);
+
+  /* Composite font shorthands */
+  --font-h1: var(--font-weight-bold) var(--font-size-h1) / var(--font-line-height-h1) var(--title-font-family);
+  --font-h2: var(--font-weight-bold) var(--font-size-h2) / var(--font-line-height-h2) var(--title-font-family);
+  --font-h3: var(--font-weight-light) var(--font-size-h3) / var(--font-line-height-h3) var(--title-font-family);
+  --font-h4: var(--font-weight-bold) var(--font-size-h4) / var(--font-line-height-h4) var(--title-font-family);
+  --font-h5: var(--font-weight-bold) var(--font-size-h5) / var(--font-line-height-h5) var(--font-family);
+  --font-general-label: var(--font-weight-normal) var(--font-size-general-label) / var(--font-line-height-general-label) var(--font-family);
+  --font-paragraph: var(--font-weight-normal) var(--font-size-paragraph) / var(--font-line-height-paragraph) var(--font-family);
+  --font-subtext: var(--font-weight-normal) var(--font-size-subtext) / var(--font-line-height-subtext) var(--font-family);
+
+  --font-h1-bold: 700 32px/40px var(--title-font-family);
+  --font-h1-medium: 600 32px/40px var(--title-font-family);
+  --font-h1-normal: 500 32px/40px var(--title-font-family);
+  --font-h1-light: 300 32px/40px var(--title-font-family);
+  --font-h2-bold: 700 24px/30px var(--title-font-family);
+  --font-h2-medium: 600 24px/30px var(--title-font-family);
+  --font-h2-normal: 500 24px/30px var(--title-font-family);
+  --font-h2-light: 300 24px/30px var(--title-font-family);
+  --font-h3-bold: 700 18px/24px var(--title-font-family);
+  --font-h3-medium: 600 18px/24px var(--title-font-family);
+  --font-h3-normal: 500 18px/24px var(--title-font-family);
+  --font-h3-light: 300 18px/24px var(--title-font-family);
+  --font-text1-bold: 700 16px/22px var(--font-family);
+  --font-text1-medium: 600 16px/22px var(--font-family);
+  --font-text1-normal: 400 16px/22px var(--font-family);
+  --font-text2-bold: 700 14px/20px var(--font-family);
+  --font-text2-medium: 600 14px/20px var(--font-family);
+  --font-text2-normal: 400 14px/20px var(--font-family);
+  --font-text3-bold: 700 12px/16px var(--font-family);
+  --font-text3-medium: 600 12px/16px var(--font-family);
+  --font-text3-normal: 400 12px/16px var(--font-family);
+
+  /* Letter spacing */
+  --letter-spacing-h1-bold: -0.5px;
+  --letter-spacing-h1-normal: -0.5px;
+  --letter-spacing-h1-light: -0.5px;
+  --letter-spacing-h2-bold: -0.1px;
+  --letter-spacing-h2-normal: -0.1px;
+  --letter-spacing-h2-light: -0.1px;
+  --letter-spacing-h3-bold: -0.1px;
+  --letter-spacing-h3-normal: -0.1px;
+  --letter-spacing-h3-light: -0.1px;
+}
+
+/* ── Light theme (default) ─────────────────────────────────────────────── */
+:root,
+.light-app-theme,
+.default-app-theme {
+  --primary-color: #0073ea;
+  --primary-hover-color: #0060b9;
+  --primary-selected-color: #cce5ff;
+  --primary-selected-hover-color: #aed4fc;
+  --primary-highlighted-color: #f0f7ff;
+  --primary-surface-color: #eceff8;
+
+  --primary-text-color: #323338;
+  --secondary-text-color: #676879;
+  --text-color-on-inverted: #ffffff;
+  --text-color-on-primary: #ffffff;
+  --disabled-text-color: rgba(50, 51, 56, var(--disabled-component-opacity));
+  --inverted-color-background: #323338;
+
+  --fixed-dark-color: #323338;
+  --fixed-light-color: #ffffff;
+
+  --primary-background-color: #ffffff;
+  --primary-background-hover-color: rgba(103, 104, 121, 0.1);
+  --secondary-background-color: #ffffff;
+  --allgrey-background-color: #f6f7fb;
+  --grey-background-color: #f6f7fb;
+  --backdrop-color: rgba(41, 47, 76, 0.7);
+  --ui-border-color: #c3c6d4;
+  --ui-background-color: #e7e9ef;
+  --ui-background-hover-color: #d8d9e0;
+  --layout-border-color: #d0d4e4;
+
+  --placeholder-color: #676879;
+  --icon-color: #676879;
+  --disabled-background-color: #ecedf5;
+  --link-color: #1f76c2;
+
+  --brand-color: #0073ea;
+  --brand-hover-color: #0060b9;
+  --brand-selected-color: #cce5ff;
+  --brand-selected-hover-color: #aed4fc;
+  --text-color-on-brand: #ffffff;
+
+  --positive-color: #00854d;
+  --positive-color-hover: #007038;
+  --positive-color-selected: #bbdbc9;
+  --positive-color-selected-hover: #b5cec0;
+  --negative-color: #d83a52;
+  --negative-color-hover: #b63546;
+  --negative-color-selected: #f4c3cb;
+  --negative-color-selected-hover: #ecb7bf;
+  --warning-color: #ffcb00;
+  --warning-color-hover: #eaaa15;
+  --warning-color-selected: #fceba1;
+  --warning-color-selected-hover: #f2d973;
+
+  --box-shadow-xs: 0px 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --box-shadow-small: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  --box-shadow-medium: 0px 6px 20px rgba(0, 0, 0, 0.2);
+  --box-shadow-large: 0px 15px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Dark theme (opt-in via .dark-app-theme) ───────────────────────────── */
+.dark-app-theme {
+  --primary-color: #0073ea;
+  --primary-hover-color: #0060b9;
+  --primary-selected-color: #133774;
+  --primary-selected-hover-color: #0d2e65;
+  --primary-highlighted-color: #0d2753;
+  --primary-surface-color: #181b34;
+
+  --primary-text-color: #d5d8df;
+  --secondary-text-color: #9699a6;
+  --text-color-on-inverted: #323338;
+  --text-color-on-primary: #ffffff;
+  --disabled-text-color: rgba(213, 216, 223, var(--disabled-component-opacity));
+  --inverted-color-background: #ffffff;
+
+  --fixed-dark-color: #323338;
+  --fixed-light-color: #ffffff;
+
+  --primary-background-color: #181b34;
+  --primary-background-hover-color: rgba(103, 104, 121, 0.3);
+  --secondary-background-color: #30324e;
+  --allgrey-background-color: #30324e;
+  --grey-background-color: #181b34;
+  --backdrop-color: rgba(41, 47, 76, 0.7);
+  --ui-border-color: #797e93;
+  --ui-background-color: #434660;
+  --ui-background-hover-color: #35384d;
+  --layout-border-color: #4b4e69;
+
+  --placeholder-color: #c3c6d4;
+  --icon-color: #c3c6d4;
+  --disabled-background-color: #3c3f59;
+  --link-color: #69a7ef;
+
+  --brand-color: #0073ea;
+  --brand-hover-color: #0060b9;
+  --brand-selected-color: #133774;
+  --brand-selected-hover-color: #0d2e65;
+  --text-color-on-brand: #ffffff;
+
+  --positive-color: #00854d;
+  --positive-color-hover: #007038;
+  --positive-color-selected: #025231;
+  --positive-color-selected-hover: #194733;
+  --negative-color: #d83a52;
+  --negative-color-hover: #b63546;
+  --negative-color-selected: #642830;
+  --negative-color-selected-hover: #5a2027;
+  --warning-color: #ffcb00;
+  --warning-color-hover: #eaaa15;
+  --warning-color-selected: #503e02;
+  --warning-color-selected-hover: #402f00;
+
+  --box-shadow-xs: 0px 4px 6px -4px rgba(9, 11, 25, 0.5);
+  --box-shadow-small: 0px 4px 8px rgba(9, 11, 25, 0.5);
+  --box-shadow-medium: 0px 6px 20px rgba(9, 11, 25, 0.5);
+  --box-shadow-large: 0px 15px 50px rgba(9, 11, 25, 0.5);
+}

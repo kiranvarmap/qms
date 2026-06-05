@@ -33,14 +33,14 @@ interface PO {
 interface Warehouse { id: string; name: string }
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-600/40 text-gray-300",
-  pending_approval: "bg-yellow-500/20 text-yellow-400",
-  approved: "bg-blue-500/20 text-blue-400",
-  sent: "bg-indigo-500/20 text-indigo-400",
-  partially_received: "bg-amber-500/20 text-amber-400",
-  received: "bg-green-500/20 text-green-400",
-  closed: "bg-gray-600/40 text-gray-400",
-  cancelled: "bg-red-500/20 text-red-400",
+  draft: "bg-gray-600/40 text-gray-700",
+  pending_approval: "bg-yellow-500/20 text-yellow-600",
+  approved: "bg-blue-500/20 text-blue-600",
+  sent: "bg-indigo-500/20 text-indigo-600",
+  partially_received: "bg-amber-500/20 text-amber-600",
+  received: "bg-green-500/20 text-green-600",
+  closed: "bg-gray-600/40 text-gray-600",
+  cancelled: "bg-red-500/20 text-red-600",
 };
 
 function money(minor: number, currency = "USD") {
@@ -103,19 +103,19 @@ export default function PurchaseOrderDetailPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <Link href="/dashboard/purchase-orders" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 mb-4">
+      <Link href="/dashboard/purchase-orders" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 mb-4">
         <ArrowLeft className="h-4 w-4" /> Purchase Orders
       </Link>
 
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-white">{po.docNumber}</h1>
+            <h1 className="text-xl font-semibold text-gray-900">{po.docNumber}</h1>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[po.status] ?? ""}`}>
               {po.status.replace(/_/g, " ")}
             </span>
           </div>
-          <p className="text-sm text-gray-400 mt-1">{po.vendor?.name ?? "—"}</p>
+          <p className="text-sm text-gray-600 mt-1">{po.vendor?.name ?? "—"}</p>
         </div>
         <div className="flex items-center gap-2">
           {po.status === "draft" && (
@@ -137,15 +137,15 @@ export default function PurchaseOrderDetailPage() {
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-2 text-sm text-red-400 bg-red-500/10 rounded-md px-3 py-2">
+        <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2">
           <AlertCircle className="h-4 w-4" /> {error}
         </div>
       )}
 
-      <div className="bg-gray-900 border border-white/10 rounded-lg overflow-hidden mb-4">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-gray-500 border-b border-white/10">
+            <tr className="text-left text-gray-500 border-b border-gray-200">
               <th className="px-4 py-2.5 font-medium">Description</th>
               <th className="px-4 py-2.5 font-medium text-right">Qty</th>
               <th className="px-4 py-2.5 font-medium text-right">Received</th>
@@ -155,12 +155,12 @@ export default function PurchaseOrderDetailPage() {
           </thead>
           <tbody>
             {po.lines.map((l) => (
-              <tr key={l.id} className="border-b border-white/5">
-                <td className="px-4 py-2.5 text-gray-200">{l.description}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400">{l.quantity}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400">{l.qtyReceived}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400">{money(l.unitCostMinor, po.currency)}</td>
-                <td className="px-4 py-2.5 text-right text-gray-200">{money(l.amountMinor + l.lineTaxMinor, po.currency)}</td>
+              <tr key={l.id} className="border-b border-gray-200">
+                <td className="px-4 py-2.5 text-gray-900">{l.description}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600">{l.quantity}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600">{l.qtyReceived}</td>
+                <td className="px-4 py-2.5 text-right text-gray-600">{money(l.unitCostMinor, po.currency)}</td>
+                <td className="px-4 py-2.5 text-right text-gray-900">{money(l.amountMinor + l.lineTaxMinor, po.currency)}</td>
               </tr>
             ))}
           </tbody>
@@ -169,19 +169,19 @@ export default function PurchaseOrderDetailPage() {
 
       <div className="flex justify-end mb-8">
         <div className="w-56 text-sm space-y-1">
-          <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>{money(po.subtotalMinor, po.currency)}</span></div>
-          <div className="flex justify-between text-gray-400"><span>Tax</span><span>{money(po.taxMinor, po.currency)}</span></div>
-          <div className="flex justify-between text-gray-100 font-medium border-t border-white/10 pt-1"><span>Total</span><span>{money(po.totalMinor, po.currency)}</span></div>
+          <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{money(po.subtotalMinor, po.currency)}</span></div>
+          <div className="flex justify-between text-gray-600"><span>Tax</span><span>{money(po.taxMinor, po.currency)}</span></div>
+          <div className="flex justify-between text-gray-900 font-medium border-t border-gray-200 pt-1"><span>Total</span><span>{money(po.totalMinor, po.currency)}</span></div>
         </div>
       </div>
 
       {po.receipts.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-300 mb-2">Goods Receipts</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-2">Goods Receipts</h2>
           <div className="space-y-1">
             {po.receipts.map((r) => (
-              <div key={r.id} className="bg-gray-900 border border-white/10 rounded-md px-3 py-2 text-sm flex justify-between">
-                <span className="text-gray-200">{r.docNumber}</span>
+              <div key={r.id} className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm flex justify-between">
+                <span className="text-gray-900">{r.docNumber}</span>
                 <span className="text-gray-500">{new Date(r.receivedAt).toLocaleString()}</span>
               </div>
             ))}
@@ -191,14 +191,14 @@ export default function PurchaseOrderDetailPage() {
 
       {showReceive && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowReceive(false)}>
-          <div className="bg-gray-900 border border-white/10 rounded-lg w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-gray-200 rounded-lg w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Receive Goods</h2>
-              <button onClick={() => setShowReceive(false)} className="text-gray-500 hover:text-gray-300"><X className="h-5 w-5" /></button>
+              <h2 className="text-lg font-semibold text-gray-900">Receive Goods</h2>
+              <button onClick={() => setShowReceive(false)} className="text-gray-500 hover:text-gray-700"><X className="h-5 w-5" /></button>
             </div>
             <label className="block mb-3">
               <span className="text-xs text-gray-500">Receive into warehouse</span>
-              <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full bg-gray-950 border border-white/10 rounded-md px-3 py-2 text-sm text-gray-200">
+              <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
                 <option value="">— none (no stock update) —</option>
                 {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
@@ -207,7 +207,7 @@ export default function PurchaseOrderDetailPage() {
               {po.lines.filter((l) => l.qtyReceived < l.quantity).map((l) => (
                 <div key={l.id} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm text-gray-200 truncate">{l.description}</div>
+                    <div className="text-sm text-gray-900 truncate">{l.description}</div>
                     <div className="text-xs text-gray-500">{l.qtyReceived} / {l.quantity} received</div>
                   </div>
                   <input
@@ -217,13 +217,13 @@ export default function PurchaseOrderDetailPage() {
                     placeholder="0"
                     value={receiveQty[l.id] ?? ""}
                     onChange={(e) => setReceiveQty((q) => ({ ...q, [l.id]: e.target.value }))}
-                    className="w-24 bg-gray-950 border border-white/10 rounded-md px-2 py-1.5 text-sm text-gray-200"
+                    className="w-24 bg-gray-50 border border-gray-200 rounded-md px-2 py-1.5 text-sm text-gray-900"
                   />
                 </div>
               ))}
             </div>
             <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setShowReceive(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200">Cancel</button>
+              <button onClick={() => setShowReceive(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
               <button onClick={submitReceive} disabled={busy} className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium rounded-md">
                 {busy ? "Saving…" : "Confirm receipt"}
               </button>

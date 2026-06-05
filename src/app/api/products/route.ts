@@ -74,6 +74,7 @@ export async function POST(req: Request) {
         reorderLevel: input.reorderLevel ?? 0,
         // Services never carry stock.
         trackInventory: input.type === "service" ? false : input.trackInventory ?? true,
+        lifecycleStatus: input.lifecycleStatus ?? "active",
         boardId: input.boardId || null,
         createdBy: session.user.id,
       })

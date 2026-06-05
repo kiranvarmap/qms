@@ -5,13 +5,15 @@ import { eq, inArray } from "drizzle-orm";
 import { apiHandler, ok, unauthorized, notFound, forbidden, conflict, badRequest } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { applyStockMovement } from "@/lib/services/inventory";
+import { creditCheck } from "@/lib/services/sales-extended";
 import { emitEvent } from "@/lib/events/outbox";
 import { dispatchInline } from "@/lib/events/dispatcher";
 
 // POST /api/sales-orders/[id]/approve — approve and RESERVE stock (Plan §6.3):
 // each tracked line raises `committed` (available drops) without touching
-// on-hand. On-hand only leaves at shipment.
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+// on-hand. On-hand only leaves at shipment. Pass ?override=true to bypass a
+// customer credit-limit breach (Sales full BRD).
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return apiHandler(async () => {
     const session = await auth();
     if (!session) return unauthorized();
@@ -23,6 +25,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       return forbidden();
     if (so.status !== "draft" && so.status !== "pending_approval")
       return conflict("Only draft sales orders can be approved");
+
+    // Credit-limit check (skippable with ?override=true).
+    if (new URL(req.url).searchParams.get("override") !== "true") {
+      const credit = await creditCheck(so.workspaceId, so.customerId, so.totalMinor);
+      if (!credit.ok)
+        return conflict(`Credit limit exceeded: outstanding ${(credit.outstanding / 100).toFixed(2)} + order ${(so.totalMinor / 100).toFixed(2)} > limit ${(credit.limit / 100).toFixed(2)}. Approve with override to proceed.`);
+    }
 
     const lines = await db.select().from(salesOrderLineItems).where(eq(salesOrderLineItems.salesOrderId, id));
     const productIds = lines.map((l) => l.productId).filter(Boolean) as string[];

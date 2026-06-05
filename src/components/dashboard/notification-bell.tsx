@@ -102,10 +102,10 @@ export function NotificationBell() {
             {!n.isRead && <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />}
           </div>
           {n.body && <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{n.body}</p>}
-          <p className="text-[10px] text-gray-300 mt-1">{formatRelative(n.createdAt)}</p>
+          <p className="text-[10px] text-gray-700 mt-1">{formatRelative(n.createdAt)}</p>
         </Link>
         <button onClick={() => deleteNotification(n.id)}
-          className="hidden group-hover:flex p-1 rounded hover:bg-gray-200 text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
+          className="hidden group-hover:flex p-1 rounded hover:bg-gray-200 text-gray-700 hover:text-gray-500 flex-shrink-0 transition-colors">
           <Trash2 className="h-3 w-3" />
         </button>
       </div>
@@ -115,7 +115,7 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={panelRef}>
       <button onClick={() => setOpen(!open)}
-        className="relative flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md text-gray-400 hover:bg-white/5 hover:text-gray-200 transition-colors w-full">
+        className="relative flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors w-full">
         <Bell className="h-4 w-4 flex-shrink-0" />
         <span>Notifications</span>
         {unreadCount > 0 && (
@@ -145,23 +145,23 @@ export function NotificationBell() {
           <div className="max-h-96 overflow-y-auto">
             {loading && notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <Loader2 className="h-5 w-5 animate-spin text-gray-300" />
-                <p className="text-xs text-gray-400">Loading…</p>
+                <Loader2 className="h-5 w-5 animate-spin text-gray-700" />
+                <p className="text-xs text-gray-600">Loading…</p>
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-12 text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Bell className="h-6 w-6 text-gray-300" />
+                  <Bell className="h-6 w-6 text-gray-700" />
                 </div>
                 <p className="text-sm font-medium text-gray-500">You are all caught up!</p>
-                <p className="text-xs text-gray-400 mt-0.5">No new notifications</p>
+                <p className="text-xs text-gray-600 mt-0.5">No new notifications</p>
               </div>
             ) : (
               <>
                 {todayNotes.length > 0 && (
                   <>
                     <div className="px-4 py-2 bg-gray-50/40 border-b border-gray-100">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Today</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">Today</p>
                     </div>
                     {todayNotes.map(renderNote)}
                   </>
@@ -169,7 +169,7 @@ export function NotificationBell() {
                 {olderNotes.length > 0 && (
                   <>
                     <div className="px-4 py-2 bg-gray-50/40 border-b border-gray-100">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Earlier</p>
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">Earlier</p>
                     </div>
                     {olderNotes.map(renderNote)}
                   </>
