@@ -83,6 +83,14 @@ export async function POST(req: Request) {
           status: "draft",
           warehouseId: input.warehouseId || null,
           notes: input.notes || null,
+          reference: input.reference || null,
+          subject: input.subject || null,
+          salespersonEmployeeId: input.salespersonEmployeeId || null,
+          projectId: input.projectId || null,
+          adjustmentLabel: "Adjustment",
+          customerNotes: input.customerNotes || null,
+          termsConditions: input.termsConditions || null,
+          attachments: input.attachments ?? [],
           boardId: scope.boardId,
           groupId: scope.groupId,
           itemId: scope.itemId,
@@ -90,7 +98,14 @@ export async function POST(req: Request) {
           createdBy: session.user.id,
         })
         .returning();
-      await writeSalesOrderLinesAndTotals(tx, input.workspaceId, row.id, input.lines);
+      await writeSalesOrderLinesAndTotals(tx, input.workspaceId, row.id, input.lines, {
+        discountType: input.discountType,
+        discountValue: input.discountValue,
+        withholdingType: input.withholdingType ?? null,
+        withholdingTaxRateId: input.withholdingTaxRateId ?? null,
+        adjustment: input.adjustment,
+        roundOff: input.roundOff,
+      });
       return row;
     });
 

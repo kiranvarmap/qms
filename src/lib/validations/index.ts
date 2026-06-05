@@ -108,25 +108,74 @@ export const createSignDocumentSchema = z.object({
 
 const addressSchema = z
   .object({
+    attention:  z.string().max(255).optional(),
     line1:      z.string().max(255).optional(),
     line2:      z.string().max(255).optional(),
     city:       z.string().max(120).optional(),
     state:      z.string().max(120).optional(),
     postalCode: z.string().max(40).optional(),
     country:    z.string().max(120).optional(),
+    phone:      z.string().max(50).optional(),
+    fax:        z.string().max(50).optional(),
   })
   .partial();
 
 // ── Vendors ───────────────────────────────────────────────────────────
+export const vendorContactSchema = z.object({
+  salutation: z.string().max(20).trim().optional(),
+  firstName:  z.string().max(120).trim().optional(),
+  lastName:   z.string().max(120).trim().optional(),
+  email:      z.string().max(255).trim().optional(),
+  workPhone:  z.string().max(50).trim().optional(),
+  mobile:     z.string().max(50).trim().optional(),
+  isPrimary:  z.boolean().optional(),
+});
+
+export const vendorBankInputSchema = z.object({
+  accountName:   z.string().max(255).trim().optional(),
+  accountNumber: z.string().max(60).trim().optional(),
+  bankName:      z.string().max(255).trim().optional(),
+  branch:        z.string().max(255).trim().optional(),
+  routing:       z.string().max(60).trim().optional(), // IFSC / SWIFT / ABA
+});
+
 export const createVendorSchema = z.object({
   workspaceId:              uuidSchema,
-  name:                     nameSchema,
+  // Identity (Zoho parity — mirrors customers)
+  vendorType:               z.enum(["business", "individual"]).default("business"),
+  salutation:               z.string().max(20).trim().optional(),
+  firstName:                z.string().max(120).trim().optional(),
+  lastName:                 z.string().max(120).trim().optional(),
+  companyName:              z.string().max(255).trim().optional(),
+  displayName:              z.string().min(1, "Display name is required").max(255).trim(),
+  name:                     nameSchema.optional(),
   code:                     z.string().max(50).trim().optional(),
   email:                    emailSchema.optional(),
+  workPhone:                z.string().max(50).trim().optional(),
+  mobile:                   z.string().max(50).trim().optional(),
   phone:                    z.string().max(50).trim().optional(),
+  vendorLanguage:           z.string().max(20).trim().optional(),
+  // Other details — tax
+  gstTreatment:             z.string().max(40).trim().optional(),
+  placeOfSupply:            z.string().max(10).trim().optional(),
+  gstin:                    z.string().max(20).trim().optional(),
+  pan:                      z.string().max(20).trim().optional(),
   taxId:                    z.string().max(100).trim().optional(),
-  address:                  addressSchema.optional(),
+  taxPreference:            z.enum(["taxable", "tax_exempt"]).default("taxable"),
+  currency:                 z.string().length(3).toUpperCase().optional(),
+  openingBalance:           z.coerce.number().min(0).optional(),
+  paymentTermsLabel:        z.string().max(40).trim().optional(),
   paymentTermsDays:         z.coerce.number().int().min(0).max(365).optional(),
+  // Addresses
+  address:                  addressSchema.optional(),
+  billingAddress:           addressSchema.optional(),
+  shippingAddress:          addressSchema.optional(),
+  // Relations / meta
+  contacts:                 z.array(vendorContactSchema).default([]),
+  bankAccounts:             z.array(vendorBankInputSchema).default([]),
+  customFields:             z.record(z.string(), z.any()).optional(),
+  reportingTags:            z.record(z.string(), z.string()).optional(),
+  documents:                z.array(z.object({ name: z.string(), url: z.string() })).optional(),
   accountManagerEmployeeId: uuidSchema.optional(),
   notes:                    z.string().max(2000).trim().optional(),
 });
@@ -136,16 +185,50 @@ export const updateVendorSchema = createVendorSchema
   .extend({ status: z.enum(["active", "inactive"]).optional() });
 
 // ── Customers ─────────────────────────────────────────────────────────
+export const customerContactSchema = z.object({
+  salutation: z.string().max(20).trim().optional(),
+  firstName:  z.string().max(120).trim().optional(),
+  lastName:   z.string().max(120).trim().optional(),
+  email:      z.string().max(255).trim().optional(),
+  workPhone:  z.string().max(50).trim().optional(),
+  mobile:     z.string().max(50).trim().optional(),
+  isPrimary:  z.boolean().optional(),
+});
+
 export const createCustomerSchema = z.object({
   workspaceId:              uuidSchema,
-  name:                     nameSchema,
+  // Identity
+  customerType:             z.enum(["business", "individual"]).default("business"),
+  salutation:               z.string().max(20).trim().optional(),
+  firstName:                z.string().max(120).trim().optional(),
+  lastName:                 z.string().max(120).trim().optional(),
+  companyName:              z.string().max(255).trim().optional(),
+  displayName:              z.string().min(1, "Display name is required").max(255).trim(),
   code:                     z.string().max(50).trim().optional(),
   email:                    emailSchema.optional(),
-  phone:                    z.string().max(50).trim().optional(),
+  workPhone:                z.string().max(50).trim().optional(),
+  mobile:                   z.string().max(50).trim().optional(),
+  customerLanguage:         z.string().max(20).trim().optional(),
+  // Other details — tax
+  gstTreatment:             z.string().max(40).trim().optional(),
+  placeOfSupply:            z.string().max(10).trim().optional(),
+  gstin:                    z.string().max(20).trim().optional(),
+  pan:                      z.string().max(20).trim().optional(),
   taxId:                    z.string().max(100).trim().optional(),
+  taxPreference:            z.enum(["taxable", "tax_exempt"]).default("taxable"),
+  currency:                 z.string().length(3).toUpperCase().optional(),
+  openingBalance:           z.coerce.number().min(0).optional(),
+  paymentTermsLabel:        z.string().max(40).trim().optional(),
+  paymentTermsDays:         z.coerce.number().int().min(0).max(365).optional(),
+  enablePortal:             z.boolean().optional(),
+  // Addresses
   billingAddress:           addressSchema.optional(),
   shippingAddress:          addressSchema.optional(),
-  paymentTermsDays:         z.coerce.number().int().min(0).max(365).optional(),
+  // Relations / meta
+  contacts:                 z.array(customerContactSchema).default([]),
+  customFields:             z.record(z.string(), z.any()).optional(),
+  reportingTags:            z.record(z.string(), z.string()).optional(),
+  documents:                z.array(z.object({ name: z.string(), url: z.string() })).optional(),
   accountManagerEmployeeId: uuidSchema.optional(),
   boardId:                  uuidSchema.optional(),
   notes:                    z.string().max(2000).trim().optional(),
@@ -187,12 +270,28 @@ export const poLineSchema = z.object({
 export const createPurchaseOrderSchema = z.object({
   workspaceId:  uuidSchema,
   vendorId:     uuidSchema,
-  expectedDate: z.string().datetime({ offset: true }).optional(),
+  expectedDate: z.string().datetime({ offset: true }).optional(), // Delivery Date
+  orderDate:    z.string().datetime({ offset: true }).optional(), // Date
   notes:        z.string().max(2000).trim().optional(),
   boardId:      uuidSchema.optional(),
   groupId:      uuidSchema.optional(),
   itemId:       uuidSchema.optional(),
   lines:        z.array(poLineSchema).min(1, "At least one line item"),
+  // Zoho PO parity
+  reference:            z.string().max(255).trim().optional(),
+  paymentTermsLabel:    z.string().max(40).trim().optional(),
+  shipmentPreference:   z.string().max(255).trim().optional(),
+  reverseCharge:        z.boolean().default(false),
+  deliveryAddressType:  z.enum(["organization", "customer"]).default("organization"),
+  deliveryCustomerId:   uuidSchema.optional(),
+  deliveryAddress:      addressSchema.optional(),
+  discountType:         z.enum(["percent", "amount"]).optional(),
+  discountValue:        z.coerce.number().min(0).optional(),
+  withholdingType:      z.enum(["tds", "tcs"]).nullable().optional(),
+  withholdingTaxRateId: uuidSchema.nullable().optional(),
+  adjustment:           z.coerce.number().optional(),
+  termsConditions:      z.string().max(4000).trim().optional(),
+  attachments:          z.array(z.object({ name: z.string(), url: z.string() })).optional(),
 });
 
 export const updatePurchaseOrderSchema = z.object({
@@ -277,6 +376,22 @@ export const estimateLineSchema = z.object({
   taxRateId:   uuidSchema.optional(),
 });
 
+export const estimateAdjustmentsSchema = {
+  reference:            z.string().max(100).trim().optional(),
+  subject:              z.string().max(500).trim().optional(),
+  salespersonEmployeeId: uuidSchema.optional(),
+  projectId:            uuidSchema.optional(),
+  discountType:         z.enum(["percent", "amount"]).optional(),
+  discountValue:        z.coerce.number().min(0).optional(),
+  withholdingType:      z.enum(["tds", "tcs"]).nullable().optional(),
+  withholdingTaxRateId: uuidSchema.nullable().optional(),
+  adjustment:           z.coerce.number().optional(),
+  roundOff:             z.coerce.number().optional(),
+  customerNotes:        z.string().max(2000).trim().optional(),
+  termsConditions:      z.string().max(4000).trim().optional(),
+  attachments:          z.array(z.object({ name: z.string(), url: z.string() })).optional(),
+};
+
 export const createEstimateSchema = z.object({
   workspaceId: uuidSchema,
   customerId:  uuidSchema,
@@ -286,6 +401,7 @@ export const createEstimateSchema = z.object({
   groupId:     uuidSchema.optional(),
   itemId:      uuidSchema.optional(),
   lines:       z.array(estimateLineSchema).min(1, "At least one line item"),
+  ...estimateAdjustmentsSchema,
 });
 
 export const updateEstimateSchema = z.object({
@@ -317,6 +433,7 @@ export const createSalesOrderSchema = z.object({
   groupId:     uuidSchema.optional(),
   itemId:      uuidSchema.optional(),
   lines:       z.array(salesOrderLineSchema).min(1, "At least one line item"),
+  ...estimateAdjustmentsSchema,
 });
 
 export const updateSalesOrderSchema = z.object({
@@ -350,12 +467,14 @@ export const invoiceLineSchema = z.object({
 export const createInvoiceSchema = z.object({
   workspaceId: uuidSchema,
   customerId:  uuidSchema,
+  issueDate:   z.string().datetime({ offset: true }).optional(),
   dueDate:     z.string().datetime({ offset: true }).optional(),
   notes:       z.string().max(2000).trim().optional(),
   boardId:     uuidSchema.optional(),
   groupId:     uuidSchema.optional(),
   itemId:      uuidSchema.optional(),
   lines:       z.array(invoiceLineSchema).min(1, "At least one line item"),
+  ...estimateAdjustmentsSchema,
 });
 
 export const updateInvoiceSchema = z.object({
@@ -391,6 +510,7 @@ export const createExpenseSchema = z.object({
   categoryId:      uuidSchema.optional(),
   vendorId:        uuidSchema.optional(),
   amount:          z.coerce.number().min(0).optional(), // major units (computed for mileage)
+  currency:        z.string().length(3).toUpperCase().optional(),
   spentAt:         z.string().datetime({ offset: true }).optional(),
   description:     z.string().max(2000).trim().optional(),
   receiptFilePath: z.string().max(1000).optional(),
@@ -404,6 +524,19 @@ export const createExpenseSchema = z.object({
   costCentre:      z.string().max(120).trim().optional(),
   billable:        z.boolean().default(false),
   customerId:      uuidSchema.optional(),
+  // Zoho "Record Expense" parity
+  expenseAccountId:     uuidSchema.optional(),
+  paidThroughAccountId: uuidSchema.optional(),
+  expenseType:          z.enum(["goods", "services"]).default("goods"),
+  sacCode:              z.string().max(60).trim().optional(),
+  gstTreatment:         z.string().max(40).trim().optional(),
+  sourceOfSupply:       z.string().max(10).trim().optional(),
+  destinationOfSupply:  z.string().max(10).trim().optional(),
+  reverseCharge:        z.boolean().default(false),
+  taxRateId:            uuidSchema.optional(),
+  taxInclusive:         z.boolean().default(false),
+  invoiceNumber:        z.string().max(120).trim().optional(),
+  reportingTags:        z.record(z.string(), z.string()).optional(),
 });
 
 // Expenses full BRD — policy, advances, corporate card.

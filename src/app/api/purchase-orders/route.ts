@@ -85,7 +85,18 @@ export async function POST(req: Request) {
           docNumber,
           status: "draft",
           expectedDate: input.expectedDate ? new Date(input.expectedDate) : null,
+          orderDate: input.orderDate ? new Date(input.orderDate) : new Date(),
           notes: input.notes || null,
+          reference: input.reference || null,
+          paymentTermsLabel: input.paymentTermsLabel || "due_on_receipt",
+          shipmentPreference: input.shipmentPreference || null,
+          reverseCharge: input.reverseCharge ?? false,
+          deliveryAddressType: input.deliveryAddressType ?? "organization",
+          deliveryCustomerId: input.deliveryCustomerId || null,
+          deliveryAddress: input.deliveryAddress ?? {},
+          adjustmentLabel: "Adjustment",
+          termsConditions: input.termsConditions || null,
+          attachments: input.attachments ?? [],
           boardId: scope.boardId,
           groupId: scope.groupId,
           itemId: scope.itemId,
@@ -93,7 +104,13 @@ export async function POST(req: Request) {
           createdBy: session.user.id,
         })
         .returning();
-      await writePoLinesAndTotals(tx, input.workspaceId, row.id, input.lines);
+      await writePoLinesAndTotals(tx, input.workspaceId, row.id, input.lines, {
+        discountType: input.discountType,
+        discountValue: input.discountValue,
+        withholdingType: input.withholdingType ?? null,
+        withholdingTaxRateId: input.withholdingTaxRateId ?? null,
+        adjustment: input.adjustment,
+      });
       return row;
     });
 

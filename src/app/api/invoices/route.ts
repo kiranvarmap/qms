@@ -85,8 +85,17 @@ export async function POST(req: Request) {
           customerId: input.customerId,
           docNumber,
           status: "draft",
+          issueDate: input.issueDate ? new Date(input.issueDate) : undefined,
           dueDate: input.dueDate ? new Date(input.dueDate) : null,
           notes: input.notes || null,
+          reference: input.reference || null,
+          subject: input.subject || null,
+          salespersonEmployeeId: input.salespersonEmployeeId || null,
+          projectId: input.projectId || null,
+          adjustmentLabel: "Adjustment",
+          customerNotes: input.customerNotes || null,
+          termsConditions: input.termsConditions || null,
+          attachments: input.attachments ?? [],
           boardId: scope.boardId,
           groupId: scope.groupId,
           itemId: scope.itemId,
@@ -94,7 +103,14 @@ export async function POST(req: Request) {
           createdBy: session.user.id,
         })
         .returning();
-      await writeInvoiceLinesAndTotals(tx, input.workspaceId, row.id, input.lines);
+      await writeInvoiceLinesAndTotals(tx, input.workspaceId, row.id, input.lines, {
+        discountType: input.discountType,
+        discountValue: input.discountValue,
+        withholdingType: input.withholdingType ?? null,
+        withholdingTaxRateId: input.withholdingTaxRateId ?? null,
+        adjustment: input.adjustment,
+        roundOff: input.roundOff,
+      });
       await emitEvent(tx, {
         workspaceId: input.workspaceId,
         eventType: "invoice.created",

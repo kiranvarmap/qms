@@ -1183,6 +1183,30 @@ export const vendors = pgTable("vendors", {
   address: jsonb("address").default("{}").notNull(),
   // Net payment terms in days (e.g. 30 = Net-30). Used for bill due dates.
   paymentTermsDays: integer("payment_terms_days").default(30).notNull(),
+  // ── Enterprise vendor fields (Zoho parity — mirrors customers) ────
+  vendorType: varchar("vendor_type", { length: 20 }).default("business").notNull(),
+  salutation: varchar("salutation", { length: 20 }),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
+  companyName: varchar("company_name", { length: 255 }),
+  displayName: varchar("display_name", { length: 255 }),
+  workPhone: varchar("work_phone", { length: 50 }),
+  mobile: varchar("mobile", { length: 50 }),
+  vendorLanguage: varchar("vendor_language", { length: 20 }).default("English").notNull(),
+  // Tax block (country-driven; India GST set surfaces when workspace country=IN)
+  gstTreatment: varchar("gst_treatment", { length: 40 }),
+  placeOfSupply: varchar("place_of_supply", { length: 10 }),
+  gstin: varchar("gstin", { length: 20 }),
+  pan: varchar("pan", { length: 20 }),
+  taxPreference: varchar("tax_preference", { length: 20 }).default("taxable").notNull(),
+  currency: varchar("currency", { length: 3 }).default("INR").notNull(),
+  openingBalanceMinor: integer("opening_balance_minor").default(0).notNull(),
+  paymentTermsLabel: varchar("payment_terms_label", { length: 40 }).default("due_on_receipt").notNull(),
+  billingAddress: jsonb("billing_address").default("{}").notNull(),
+  shippingAddress: jsonb("shipping_address").default("{}").notNull(),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().default({}).notNull(),
+  reportingTags: jsonb("reporting_tags").$type<Record<string, string>>().default({}).notNull(),
+  documentsMeta: jsonb("documents_meta").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // Internal owner of the relationship.
   accountManagerEmployeeId: uuid("account_manager_employee_id").references(() => employees.id, { onDelete: "set null" }),
   notes: text("notes"),
@@ -1202,11 +1226,17 @@ export const vendorContacts = pgTable("vendor_contacts", {
   vendorId: uuid("vendor_id")
     .notNull()
     .references(() => vendors.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }),
+  salutation: varchar("salutation", { length: 20 }),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
+  workPhone: varchar("work_phone", { length: 50 }),
+  mobile: varchar("mobile", { length: 50 }),
   title: varchar("title", { length: 100 }),
   isPrimary: boolean("is_primary").default(false).notNull(),
+  position: integer("position").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
@@ -1301,6 +1331,29 @@ export const customers = pgTable("customers", {
   billingAddress: jsonb("billing_address").default("{}").notNull(),
   shippingAddress: jsonb("shipping_address").default("{}").notNull(),
   paymentTermsDays: integer("payment_terms_days").default(30).notNull(),
+  // ── Enterprise customer fields (Zoho parity) ─────────────────────
+  customerType: varchar("customer_type", { length: 20 }).default("business").notNull(),
+  salutation: varchar("salutation", { length: 20 }),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
+  companyName: varchar("company_name", { length: 255 }),
+  displayName: varchar("display_name", { length: 255 }),
+  workPhone: varchar("work_phone", { length: 50 }),
+  mobile: varchar("mobile", { length: 50 }),
+  customerLanguage: varchar("customer_language", { length: 20 }).default("English").notNull(),
+  // Tax block (country-driven; India GST set surfaces when workspace country=IN)
+  gstTreatment: varchar("gst_treatment", { length: 40 }),
+  placeOfSupply: varchar("place_of_supply", { length: 10 }),
+  gstin: varchar("gstin", { length: 20 }),
+  pan: varchar("pan", { length: 20 }),
+  taxPreference: varchar("tax_preference", { length: 20 }).default("taxable").notNull(),
+  currency: varchar("currency", { length: 3 }).default("INR").notNull(),
+  openingBalanceMinor: integer("opening_balance_minor").default(0).notNull(),
+  paymentTermsLabel: varchar("payment_terms_label", { length: 40 }).default("due_on_receipt").notNull(),
+  enablePortal: boolean("enable_portal").default(false).notNull(),
+  customFields: jsonb("custom_fields").$type<Record<string, unknown>>().default({}).notNull(),
+  reportingTags: jsonb("reporting_tags").$type<Record<string, string>>().default({}).notNull(),
+  documents: jsonb("documents").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // Sales full BRD: credit limit (minor units; 0 = no limit) + price list.
   creditLimitMinor: integer("credit_limit_minor").default(0).notNull(),
   priceListId: uuid("price_list_id").references((): AnyPgColumn => priceLists.id, { onDelete: "set null" }),
@@ -1313,6 +1366,22 @@ export const customers = pgTable("customers", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 }, (t) => [unique("customers_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// Customer contact persons (Zoho "Contact Persons" tab).
+export const customerContacts = pgTable("customer_contacts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  salutation: varchar("salutation", { length: 20 }),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
+  email: varchar("email", { length: 255 }),
+  workPhone: varchar("work_phone", { length: 50 }),
+  mobile: varchar("mobile", { length: 50 }),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  position: integer("position").default(0).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 // ── Document numbering (Plan §2.2) ─────────────────────────────────
 // Generalizes ncrSequences into one table keyed by (workspace, docType,
@@ -1459,8 +1528,28 @@ export const purchaseOrders = pgTable("purchase_orders", {
   taxMinor: integer("tax_minor").default(0).notNull(),
   totalMinor: integer("total_minor").default(0).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
-  expectedDate: timestamp("expected_date", { mode: "date" }),
+  expectedDate: timestamp("expected_date", { mode: "date" }), // = Zoho "Delivery Date"
   notes: text("notes"),
+  // ── Zoho "New Purchase Order" parity ─────────────────────────────
+  reference: varchar("reference", { length: 255 }),
+  orderDate: timestamp("order_date", { mode: "date" }), // = Zoho "Date"
+  paymentTermsLabel: varchar("payment_terms_label", { length: 40 }).default("due_on_receipt").notNull(),
+  shipmentPreference: varchar("shipment_preference", { length: 255 }),
+  reverseCharge: boolean("reverse_charge").default(false).notNull(),
+  deliveryAddressType: varchar("delivery_address_type", { length: 20 }).default("organization").notNull(), // organization | customer
+  deliveryCustomerId: uuid("delivery_customer_id").references((): AnyPgColumn => customers.id, { onDelete: "set null" }),
+  deliveryAddress: jsonb("delivery_address").default("{}").notNull(),
+  discountType: varchar("discount_type", { length: 10 }).default("percent").notNull(),
+  discountValue: real("discount_value").default(0).notNull(),
+  discountMinor: integer("discount_minor").default(0).notNull(),
+  withholdingType: varchar("withholding_type", { length: 10 }), // tds | tcs
+  withholdingTaxRateId: uuid("withholding_tax_rate_id").references((): AnyPgColumn => taxRates.id, { onDelete: "set null" }),
+  withholdingMinor: integer("withholding_minor").default(0).notNull(),
+  adjustmentLabel: varchar("adjustment_label", { length: 60 }).default("Adjustment").notNull(),
+  adjustmentMinor: integer("adjustment_minor").default(0).notNull(),
+  roundOffMinor: integer("round_off_minor").default(0).notNull(),
+  termsConditions: text("terms_conditions"),
+  attachments: jsonb("attachments").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // Purchasing full BRD: PO type (standard/blanket/contract), over-receipt
   // tolerance %, and 3-way match status.
   poType: varchar("po_type", { length: 20 }).default("standard").notNull(),
@@ -2162,6 +2251,23 @@ export const estimates = pgTable("estimates", {
   totalMinor: integer("total_minor").default(0).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   notes: text("notes"),
+  // ── Enterprise quote fields (Zoho parity) ────────────────────────
+  reference: varchar("reference", { length: 100 }),
+  subject: varchar("subject", { length: 500 }),
+  salespersonEmployeeId: uuid("salesperson_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  projectId: uuid("project_id").references(() => empProjects.id, { onDelete: "set null" }),
+  discountType: varchar("discount_type", { length: 10 }).default("percent").notNull(),
+  discountValue: real("discount_value").default(0).notNull(),
+  discountMinor: integer("discount_minor").default(0).notNull(),
+  withholdingType: varchar("withholding_type", { length: 4 }), // tds | tcs | null
+  withholdingTaxRateId: uuid("withholding_tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  withholdingMinor: integer("withholding_minor").default(0).notNull(),
+  adjustmentLabel: varchar("adjustment_label", { length: 60 }),
+  adjustmentMinor: integer("adjustment_minor").default(0).notNull(),
+  roundOffMinor: integer("round_off_minor").default(0).notNull(),
+  customerNotes: text("customer_notes"),
+  termsConditions: text("terms_conditions"),
+  attachments: jsonb("attachments").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // ── Scope ladder (Plan B.4) — links the estimate to a project board/item ──
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
@@ -2257,6 +2363,23 @@ export const salesOrders = pgTable("sales_orders", {
   totalMinor: integer("total_minor").default(0).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   notes: text("notes"),
+  // ── Enterprise sales-order fields (shared with quotes) ───────────
+  reference: varchar("reference", { length: 100 }),
+  subject: varchar("subject", { length: 500 }),
+  salespersonEmployeeId: uuid("salesperson_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  projectId: uuid("project_id").references(() => empProjects.id, { onDelete: "set null" }),
+  discountType: varchar("discount_type", { length: 10 }).default("percent").notNull(),
+  discountValue: real("discount_value").default(0).notNull(),
+  discountMinor: integer("discount_minor").default(0).notNull(),
+  withholdingType: varchar("withholding_type", { length: 4 }),
+  withholdingTaxRateId: uuid("withholding_tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  withholdingMinor: integer("withholding_minor").default(0).notNull(),
+  adjustmentLabel: varchar("adjustment_label", { length: 60 }),
+  adjustmentMinor: integer("adjustment_minor").default(0).notNull(),
+  roundOffMinor: integer("round_off_minor").default(0).notNull(),
+  customerNotes: text("customer_notes"),
+  termsConditions: text("terms_conditions"),
+  attachments: jsonb("attachments").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // Sales full BRD: drop-ship sales orders fulfil via a linked PO, not stock.
   isDropShip: boolean("is_drop_ship").default(false).notNull(),
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
@@ -2422,6 +2545,23 @@ export const invoices = pgTable("invoices", {
   fxRate: real("fx_rate").default(1).notNull(),
   currency: varchar("currency", { length: 3 }).default("USD").notNull(),
   notes: text("notes"),
+  // ── Enterprise invoice fields (shared with quotes) ───────────────
+  reference: varchar("reference", { length: 100 }),
+  subject: varchar("subject", { length: 500 }),
+  salespersonEmployeeId: uuid("salesperson_employee_id").references(() => employees.id, { onDelete: "set null" }),
+  projectId: uuid("project_id").references(() => empProjects.id, { onDelete: "set null" }),
+  discountType: varchar("discount_type", { length: 10 }).default("percent").notNull(),
+  discountValue: real("discount_value").default(0).notNull(),
+  discountMinor: integer("discount_minor").default(0).notNull(),
+  withholdingType: varchar("withholding_type", { length: 4 }),
+  withholdingTaxRateId: uuid("withholding_tax_rate_id").references(() => taxRates.id, { onDelete: "set null" }),
+  withholdingMinor: integer("withholding_minor").default(0).notNull(),
+  adjustmentLabel: varchar("adjustment_label", { length: 60 }),
+  adjustmentMinor: integer("adjustment_minor").default(0).notNull(),
+  roundOffMinor: integer("round_off_minor").default(0).notNull(),
+  customerNotes: text("customer_notes"),
+  termsConditions: text("terms_conditions"),
+  attachments: jsonb("attachments").$type<{ name: string; url: string }[]>().default([]).notNull(),
   // Default-deny portal exposure; flipped true on send.
   customerVisible: boolean("customer_visible").default(false).notNull(),
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
@@ -2659,6 +2799,19 @@ export const expenses = pgTable("expenses", {
   billable: boolean("billable").default(false).notNull(),
   billedInvoiceId: uuid("billed_invoice_id").references((): AnyPgColumn => invoices.id, { onDelete: "set null" }),
   customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+  // ── Zoho "Record Expense" parity fields ──────────────────────────
+  expenseAccountId: uuid("expense_account_id").references((): AnyPgColumn => ledgerAccounts.id, { onDelete: "set null" }),
+  paidThroughAccountId: uuid("paid_through_account_id").references((): AnyPgColumn => ledgerAccounts.id, { onDelete: "set null" }),
+  expenseType: varchar("expense_type", { length: 20 }).default("goods").notNull(), // goods | services
+  sacCode: varchar("sac_code", { length: 60 }), // HSN / SAC
+  gstTreatment: varchar("gst_treatment", { length: 40 }),
+  sourceOfSupply: varchar("source_of_supply", { length: 10 }),
+  destinationOfSupply: varchar("destination_of_supply", { length: 10 }),
+  reverseCharge: boolean("reverse_charge").default(false).notNull(),
+  taxRateId: uuid("tax_rate_id").references((): AnyPgColumn => taxRates.id, { onDelete: "set null" }),
+  taxInclusive: boolean("tax_inclusive").default(false).notNull(), // Amount Is: inclusive vs exclusive
+  invoiceNumber: varchar("invoice_number", { length: 120 }), // vendor's invoice/bill ref
+  reportingTags: jsonb("reporting_tags").$type<Record<string, string>>().default({}).notNull(),
   policyViolation: boolean("policy_violation").default(false).notNull(),
   advanceId: uuid("advance_id").references(() => expenseAdvances.id, { onDelete: "set null" }),
   cardTransactionId: uuid("card_transaction_id").references(() => cardTransactions.id, { onDelete: "set null" }),

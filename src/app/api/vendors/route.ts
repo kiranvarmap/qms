@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { createVendorSchema } from "@/lib/validations";
+import { createVendor } from "@/lib/services/vendor";
 import { emitEvent } from "@/lib/events/outbox";
 import { dispatchInline } from "@/lib/events/dispatcher";
 
@@ -40,22 +41,7 @@ export async function POST(req: Request) {
     if (!(await hasModuleAccess(input.workspaceId, session.user.id, "canAccessVendors", session.user.role)))
       return forbidden();
 
-    const [vendor] = await db
-      .insert(vendors)
-      .values({
-        workspaceId: input.workspaceId,
-        name: input.name,
-        code: input.code || null,
-        email: input.email || null,
-        phone: input.phone || null,
-        taxId: input.taxId || null,
-        address: input.address ?? {},
-        paymentTermsDays: input.paymentTermsDays ?? 30,
-        accountManagerEmployeeId: input.accountManagerEmployeeId || null,
-        notes: input.notes || null,
-        createdBy: session.user.id,
-      })
-      .returning();
+    const vendor = await createVendor(input.workspaceId, input, session.user.id);
 
     await emitEvent(db, {
       workspaceId: input.workspaceId,

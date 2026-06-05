@@ -21,14 +21,26 @@ export interface EstimateLineInput {
   taxRateId?: string;
 }
 
+/** Header-level money adjustments (Zoho parity). All "value"/major-unit inputs. */
+export interface EstimateAdjustments {
+  discountType?: "percent" | "amount";
+  discountValue?: number;            // percent (0-100) or major-unit amount
+  withholdingType?: "tds" | "tcs" | null;
+  withholdingTaxRateId?: string | null;
+  adjustment?: number;               // signed, major units
+  roundOff?: number;                 // signed, major units
+}
+
 /** Replace an estimate's lines and recompute its stored totals (minor units). */
 export async function writeEstimateLinesAndTotals(
   tx: Tx,
   workspaceId: string,
   estimateId: string,
-  lines: EstimateLineInput[]
+  lines: EstimateLineInput[],
+  adj: EstimateAdjustments = {}
 ): Promise<{ subtotalMinor: number; taxMinor: number; totalMinor: number }> {
   const taxIds = [...new Set(lines.map((l) => l.taxRateId).filter(Boolean) as string[])];
+  if (adj.withholdingTaxRateId) taxIds.push(adj.withholdingTaxRateId);
   const rateMap = new Map<string, number>();
   if (taxIds.length > 0) {
     const rows = await tx.select().from(taxRates).where(inArray(taxRates.id, taxIds));
@@ -63,11 +75,32 @@ export async function writeEstimateLinesAndTotals(
 
   const subtotalMinor = sumMinor(nets);
   const taxMinor = sumMinor(taxes);
-  const totalMinor = subtotalMinor + taxMinor;
+
+  // Header adjustments: discount → withholding (TDS−/TCS+) → adjustment → round off.
+  const discountType = adj.discountType ?? "percent";
+  const discountValue = adj.discountValue ?? 0;
+  const discountMinor = discountType === "amount"
+    ? toMinor(discountValue)
+    : Math.round((subtotalMinor * discountValue) / 100);
+  const baseMinor = subtotalMinor - discountMinor;
+  const whBp = adj.withholdingTaxRateId ? rateMap.get(adj.withholdingTaxRateId) ?? 0 : 0;
+  const withholdingMinor = adj.withholdingType ? taxOf(baseMinor, whBp) : 0;
+  const adjustmentMinor = adj.adjustment ? toMinor(adj.adjustment) : 0;
+  const roundOffMinor = adj.roundOff ? toMinor(adj.roundOff) : 0;
+  const whSign = adj.withholdingType === "tcs" ? 1 : adj.withholdingType === "tds" ? -1 : 0;
+  const totalMinor = baseMinor + taxMinor + whSign * withholdingMinor + adjustmentMinor + roundOffMinor;
 
   await tx
     .update(estimates)
-    .set({ subtotalMinor, taxMinor, totalMinor, updatedAt: new Date() })
+    .set({
+      subtotalMinor, taxMinor, totalMinor,
+      discountType, discountValue, discountMinor,
+      withholdingType: adj.withholdingType ?? null,
+      withholdingTaxRateId: adj.withholdingTaxRateId ?? null,
+      withholdingMinor,
+      adjustmentMinor, roundOffMinor,
+      updatedAt: new Date(),
+    })
     .where(eq(estimates.id, estimateId));
 
   return { subtotalMinor, taxMinor, totalMinor };

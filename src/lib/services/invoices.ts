@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import { invoiceLineItems, invoices, taxRates } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { toMinor, taxOf, sumMinor } from "@/lib/money";
+import type { EstimateAdjustments } from "./estimates";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -29,9 +30,11 @@ export async function writeInvoiceLinesAndTotals(
   tx: Tx,
   workspaceId: string,
   invoiceId: string,
-  lines: InvoiceLineInput[]
+  lines: InvoiceLineInput[],
+  adj: EstimateAdjustments = {}
 ): Promise<{ subtotalMinor: number; taxMinor: number; totalMinor: number }> {
   const taxIds = [...new Set(lines.map((l) => l.taxRateId).filter(Boolean) as string[])];
+  if (adj.withholdingTaxRateId) taxIds.push(adj.withholdingTaxRateId);
   const rateMap = new Map<string, number>();
   if (taxIds.length > 0) {
     const rows = await tx.select().from(taxRates).where(inArray(taxRates.id, taxIds));
@@ -68,11 +71,25 @@ export async function writeInvoiceLinesAndTotals(
 
   const subtotalMinor = sumMinor(nets);
   const taxMinor = sumMinor(taxes);
-  const totalMinor = subtotalMinor + taxMinor;
+
+  const discountType = adj.discountType ?? "percent";
+  const discountValue = adj.discountValue ?? 0;
+  const discountMinor = discountType === "amount" ? toMinor(discountValue) : Math.round((subtotalMinor * discountValue) / 100);
+  const baseMinor = subtotalMinor - discountMinor;
+  const whBp = adj.withholdingTaxRateId ? rateMap.get(adj.withholdingTaxRateId) ?? 0 : 0;
+  const withholdingMinor = adj.withholdingType ? taxOf(baseMinor, whBp) : 0;
+  const adjustmentMinor = adj.adjustment ? toMinor(adj.adjustment) : 0;
+  const roundOffMinor = adj.roundOff ? toMinor(adj.roundOff) : 0;
+  const whSign = adj.withholdingType === "tcs" ? 1 : adj.withholdingType === "tds" ? -1 : 0;
+  const totalMinor = baseMinor + taxMinor + whSign * withholdingMinor + adjustmentMinor + roundOffMinor;
 
   await tx
     .update(invoices)
-    .set({ subtotalMinor, taxMinor, totalMinor, updatedAt: new Date() })
+    .set({
+      subtotalMinor, taxMinor, totalMinor, discountType, discountValue, discountMinor,
+      withholdingType: adj.withholdingType ?? null, withholdingTaxRateId: adj.withholdingTaxRateId ?? null,
+      withholdingMinor, adjustmentMinor, roundOffMinor, updatedAt: new Date(),
+    })
     .where(eq(invoices.id, invoiceId));
 
   return { subtotalMinor, taxMinor, totalMinor };

@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { createCustomerSchema } from "@/lib/validations";
+import { createCustomer } from "@/lib/services/customer";
 
 // GET /api/customers?workspaceId=...&status=active — list a workspace's customers
 export async function GET(req: Request) {
@@ -38,25 +39,7 @@ export async function POST(req: Request) {
     if (!(await hasModuleAccess(input.workspaceId, session.user.id, "canAccessInvoicing", session.user.role)))
       return forbidden();
 
-    const [customer] = await db
-      .insert(customers)
-      .values({
-        workspaceId: input.workspaceId,
-        name: input.name,
-        code: input.code || null,
-        email: input.email || null,
-        phone: input.phone || null,
-        taxId: input.taxId || null,
-        billingAddress: input.billingAddress ?? {},
-        shippingAddress: input.shippingAddress ?? {},
-        paymentTermsDays: input.paymentTermsDays ?? 30,
-        accountManagerEmployeeId: input.accountManagerEmployeeId || null,
-        boardId: input.boardId || null,
-        notes: input.notes || null,
-        createdBy: session.user.id,
-      })
-      .returning();
-
+    const customer = await createCustomer(input.workspaceId, input, session.user.id);
     return created(customer);
   }, { route: "POST /api/customers" });
 }

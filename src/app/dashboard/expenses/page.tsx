@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Wallet, Send, DollarSign, X, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Plus, Wallet, Send, DollarSign } from "lucide-react";
 
 interface Workspace { id: string; name: string }
-interface Category { id: string; name: string }
-interface Vendor { id: string; name: string }
 interface Expense {
   id: string; docNumber: string; status: string; amountMinor: number; currency: string;
   spentAt: string; description: string | null; employeeName: string | null; categoryName: string | null;
@@ -23,20 +22,11 @@ function money(minor: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(minor / 100);
 }
 
-const emptyForm = { categoryId: "", vendorId: "", amount: "", spentAt: "", description: "" };
-
 export default function ExpensesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [rows, setRows] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState(emptyForm);
-  const [newCategory, setNewCategory] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/workspaces")
@@ -52,46 +42,12 @@ export default function ExpensesPage() {
   const load = useCallback(async () => {
     if (!workspaceId) return;
     setLoading(true);
-    const [e, c, v] = await Promise.all([
-      fetch(`/api/expenses?workspaceId=${workspaceId}`).then((r) => r.json()).catch(() => ({})),
-      fetch(`/api/expense-categories?workspaceId=${workspaceId}`).then((r) => r.json()).catch(() => ({})),
-      fetch(`/api/vendors?workspaceId=${workspaceId}&status=active`).then((r) => r.json()).catch(() => ({})),
-    ]);
+    const e = await fetch(`/api/expenses?workspaceId=${workspaceId}`).then((r) => r.json()).catch(() => ({}));
     setRows(Array.isArray(e.data) ? e.data : []);
-    setCategories(Array.isArray(c.data) ? c.data : []);
-    setVendors(Array.isArray(v.data) ? v.data : []);
     setLoading(false);
   }, [workspaceId]);
 
   useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
-
-  const addCategory = async () => {
-    if (!newCategory.trim()) return;
-    const res = await fetch("/api/expense-categories", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspaceId, name: newCategory.trim() }),
-    });
-    if (res.ok) { const c = await res.json(); setCategories((cs) => [...cs, c]); setForm((f) => ({ ...f, categoryId: c.id })); setNewCategory(""); }
-  };
-
-  const create = async () => {
-    if (!form.amount || Number(form.amount) <= 0) { setError("Enter a valid amount"); return; }
-    setSaving(true); setError("");
-    const res = await fetch("/api/expenses", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workspaceId,
-        categoryId: form.categoryId || undefined,
-        vendorId: form.vendorId || undefined,
-        amount: Number(form.amount),
-        spentAt: form.spentAt ? new Date(form.spentAt).toISOString() : undefined,
-        description: form.description.trim() || undefined,
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) { const er = await res.json().catch(() => ({})); setError(er.error || "Failed"); return; }
-    setShowCreate(false); setForm(emptyForm); load();
-  };
 
   const act = async (expenseId: string, action: "submit" | "reimburse") => {
     const body = action === "reimburse" ? { method: "bank_transfer" } : {};
@@ -108,9 +64,12 @@ export default function ExpensesPage() {
           <Wallet className="h-6 w-6 text-blue-600" />
           <h1 className="text-xl font-semibold text-gray-900">Expenses</h1>
         </div>
-        <button onClick={() => { setForm(emptyForm); setError(""); setShowCreate(true); }} disabled={!workspaceId} className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md">
+        <Link
+          href={workspaceId ? `/dashboard/expenses/new?workspaceId=${workspaceId}` : "/dashboard/expenses/new"}
+          className={`flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md ${!workspaceId ? "pointer-events-none opacity-50" : ""}`}
+        >
           <Plus className="h-4 w-4" /> New Expense
-        </button>
+        </Link>
       </div>
 
       <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
@@ -151,47 +110,6 @@ export default function ExpensesPage() {
           </tbody>
         </table>
       </div>
-
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
-          <div className="bg-white border border-gray-200 rounded-lg w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">New Expense</h2>
-              <button onClick={() => setShowCreate(false)} className="text-gray-500 hover:text-gray-700"><X className="h-5 w-5" /></button>
-            </div>
-            {error && <div className="mb-3 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
-            <div className="space-y-3">
-              <label className="block">
-                <span className="text-xs text-gray-500">Category</span>
-                <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
-                  <option value="">None</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-              <div className="flex gap-2">
-                <input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="New category…" className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-gray-900" />
-                <button onClick={addCategory} className="px-3 py-1.5 border border-gray-200 text-gray-700 hover:text-gray-900 text-sm rounded-md">Add</button>
-              </div>
-              <label className="block">
-                <span className="text-xs text-gray-500">Vendor (optional)</span>
-                <select value={form.vendorId} onChange={(e) => setForm({ ...form, vendorId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
-                  <option value="">None</option>
-                  {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-                </select>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block"><span className="text-xs text-gray-500">Amount</span><input type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-                <label className="block"><span className="text-xs text-gray-500">Date</span><input type="date" value={form.spentAt} onChange={(e) => setForm({ ...form, spentAt: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-              </div>
-              <label className="block"><span className="text-xs text-gray-500">Description</span><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
-              <button onClick={create} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md">{saving ? "Saving…" : "Create"}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

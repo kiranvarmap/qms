@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { Plus, Search, Building2, Pencil, Trash2, X, AlertCircle } from "lucide-react";
 
 interface Workspace { id: string; name: string; color: string }
@@ -60,7 +61,6 @@ export default function VendorsPage() {
 
   useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
 
-  const openCreate = () => { setEditTarget(null); setForm(emptyForm); setError(""); setShowModal(true); };
   const openEdit = (v: Vendor) => {
     setEditTarget(v);
     setForm({
@@ -109,13 +109,12 @@ export default function VendorsPage() {
           <Building2 className="h-6 w-6 text-blue-600" />
           <h1 className="text-xl font-semibold text-gray-900">Vendors</h1>
         </div>
-        <button
-          onClick={openCreate}
-          disabled={!workspaceId}
-          className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md transition-colors"
+        <Link
+          href={workspaceId ? `/dashboard/vendors/new?workspaceId=${workspaceId}` : "/dashboard/vendors/new"}
+          className={`flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors ${!workspaceId ? "pointer-events-none opacity-50" : ""}`}
         >
           <Plus className="h-4 w-4" /> New Vendor
-        </button>
+        </Link>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
