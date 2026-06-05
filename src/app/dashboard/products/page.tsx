@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Package, X, AlertCircle, GitPullRequestArrow } from "lucide-react";
+import ImportExport from "@/components/ImportExport";
 
 interface Workspace { id: string; name: string }
 interface Product {
@@ -80,6 +81,7 @@ export default function ProductsPage() {
           <h1 className="text-xl font-semibold text-gray-900">Products</h1>
         </div>
         <div className="flex items-center gap-2">
+          <ImportExport entity="products" workspaceId={workspaceId} onImported={load} />
           <Link href="/dashboard/products/ecr" className="inline-flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-md">
             <GitPullRequestArrow className="h-4 w-4" /> Change Requests
           </Link>

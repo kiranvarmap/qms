@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, ShoppingCart } from "lucide-react";
+import ImportExport from "@/components/ImportExport";
 
 interface Workspace { id: string; name: string }
 interface PoRow {
@@ -66,12 +67,15 @@ export default function PurchaseOrdersPage() {
           <ShoppingCart className="h-6 w-6 text-blue-600" />
           <h1 className="text-xl font-semibold text-gray-900">Purchase Orders</h1>
         </div>
-        <Link
-          href={workspaceId ? `/dashboard/purchase-orders/new?workspaceId=${workspaceId}` : "#"}
-          className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors"
-        >
-          <Plus className="h-4 w-4" /> New PO
-        </Link>
+        <div className="flex items-center gap-2">
+          <ImportExport entity="purchase-orders" workspaceId={workspaceId} canImport={false} />
+          <Link
+            href={workspaceId ? `/dashboard/purchase-orders/new?workspaceId=${workspaceId}` : "#"}
+            className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors"
+          >
+            <Plus className="h-4 w-4" /> New PO
+          </Link>
+        </div>
       </div>
 
       <select
