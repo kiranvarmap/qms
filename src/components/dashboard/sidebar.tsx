@@ -21,6 +21,10 @@ import {
   BarChart3,
   FileSignature,
   Settings2,
+  GitBranch,
+  CalendarRange,
+  Gauge,
+  AlertTriangle,
   Building2,
   Inbox,
   ShoppingCart,
@@ -157,6 +161,13 @@ export function Sidebar({ user }: SidebarProps) {
     ...(mgr ? [{
       id: "production", label: "Production", icon: Factory, items: [
         { name: "Work Orders", href: "/dashboard/production", icon: Factory },
+        { name: "Process Templates", href: "/dashboard/production-planning/templates", icon: GitBranch },
+        { name: "Work Centers", href: "/dashboard/production-planning/work-centers", icon: Factory },
+        { name: "Skills", href: "/dashboard/production-planning/skills", icon: Wrench },
+        { name: "Timeline", href: "/dashboard/production-planning/timeline", icon: CalendarRange },
+        { name: "Capacity", href: "/dashboard/production-planning/capacity", icon: Gauge },
+        { name: "Bottlenecks", href: "/dashboard/production-planning/bottlenecks", icon: AlertTriangle },
+        { name: "Material Needs", href: "/dashboard/production-planning/materials", icon: Boxes },
       ],
     }] : []),
     ...(mgr ? [{

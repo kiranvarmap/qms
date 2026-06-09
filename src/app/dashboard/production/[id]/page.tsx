@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Factory, Play, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Factory, Play, CheckCircle2, Gauge } from "lucide-react";
 
 interface WorkOrder { id: string; number: string; productId: string; status: string; qtyPlanned: number; qtyProduced: number; qtyScrapped: number; dueDate: string | null; }
 interface Material { id: string; description: string | null; qtyRequired: number; qtyIssued: number; unit: string; }
@@ -76,6 +76,7 @@ export default function WorkOrderDetail() {
             <p className="text-sm text-gray-500 mt-1">Planned {wo.qtyPlanned} · Produced {wo.qtyProduced} · Scrapped {wo.qtyScrapped}{wo.dueDate ? ` · Due ${new Date(wo.dueDate).toLocaleDateString()}` : ""}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Link href={`/dashboard/production/${wo.id}/plan`} className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm rounded-md"><Gauge className="h-4 w-4" /> Feasibility</Link>
             {wo.status === "planned" && (
               <button onClick={release} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-md"><Play className="h-4 w-4" /> Release</button>
             )}

@@ -28,6 +28,12 @@ export interface WorkOrderInput {
   dueDate?: string;
   boardId?: string;
   notes?: string;
+  // ── Production Planning (BRD 13) ──
+  priority?: "low" | "normal" | "high" | "urgent";
+  processTemplateId?: string;
+  salesOrderId?: string;
+  customerId?: string;
+  specialInstructions?: string;
 }
 
 export function listWorkOrders(workspaceId: string) {
@@ -69,6 +75,11 @@ export async function createWorkOrder(workspaceId: string, input: WorkOrderInput
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         boardId: input.boardId || null,
         notes: input.notes || null,
+        priority: input.priority || "normal",
+        processTemplateId: input.processTemplateId || null,
+        salesOrderId: input.salesOrderId || null,
+        customerId: input.customerId || null,
+        specialInstructions: input.specialInstructions || null,
         createdBy: userId,
       })
       .returning();

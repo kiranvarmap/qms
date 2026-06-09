@@ -29,6 +29,14 @@ export async function POST(req: Request) {
     if (!(await hasModuleAccess(input.workspaceId, session.user.id, "canAccessInventory", session.user.role)))
       return forbidden();
 
-    return created(await createWorkOrder(input.workspaceId, input, session.user.id));
+    const wo = await createWorkOrder(input.workspaceId, input, session.user.id);
+    // Run a feasibility plan immediately so the job lands with a status, but
+    // never let a planning hiccup block the creation itself (BRD 13).
+    try {
+      const { planAndPersist } = await import("@/lib/services/planning-engine");
+      await planAndPersist(input.workspaceId, wo.id, session.user.id);
+    } catch { /* planning is best-effort on create */ }
+
+    return created(wo);
   }, { route: "POST /api/work-orders" });
 }

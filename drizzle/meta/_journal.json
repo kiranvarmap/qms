@@ -211,6 +211,13 @@
       "when": 1780659860443,
       "tag": "0029_striped_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1780984731858,
+      "tag": "0030_complex_lady_ursula",
+      "breakpoints": true
     }
   ]
 }

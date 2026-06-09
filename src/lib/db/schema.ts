@@ -2026,6 +2026,28 @@ export const workOrderStatusEnum = pgEnum("work_order_status", [
   "cancelled",
 ]);
 
+// ── Production Planning (BRD 13) enums — declared here so the workOrders
+// table below can reference priority/planning-status at module-init time. ──
+export const workCenterTypeEnum = pgEnum("work_center_type", ["machine", "manual", "hybrid"]);
+export const skillLevelEnum = pgEnum("skill_level", ["trainee", "qualified", "expert"]);
+export const processTemplateStatusEnum = pgEnum("process_template_status", ["draft", "active", "archived"]);
+export const jobStageStatusEnum = pgEnum("job_stage_status", ["pending", "in_progress", "completed", "skipped"]);
+export const planningStatusEnum = pgEnum("planning_status", ["unplanned", "feasible", "conflict", "infeasible"]);
+export const workOrderPriorityEnum = pgEnum("work_order_priority", ["low", "normal", "high", "urgent"]);
+export const planningConflictTypeEnum = pgEnum("planning_conflict_type", [
+  "material_shortage",
+  "machine_overload",
+  "manpower_short",
+  "skill_unavailable",
+  "maintenance_block",
+  "po_delay",
+  "delivery_impossible",
+  "no_template",
+  "no_work_center",
+]);
+export const planningConflictSeverityEnum = pgEnum("planning_conflict_severity", ["warning", "blocker"]);
+export const materialReservationStatusEnum = pgEnum("material_reservation_status", ["reserved", "issued", "released"]);
+
 export const workOrders = pgTable("work_orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id")
@@ -2047,6 +2069,18 @@ export const workOrders = pgTable("work_orders", {
   dueDate: timestamp("due_date", { mode: "date" }),
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   notes: text("notes"),
+  // ── Production Planning (BRD 13) — feasibility + scheduling overlay ──
+  priority: workOrderPriorityEnum("priority").default("normal").notNull(),
+  processTemplateId: uuid("process_template_id").references((): AnyPgColumn => processTemplates.id, { onDelete: "set null" }),
+  salesOrderId: uuid("sales_order_id").references((): AnyPgColumn => salesOrders.id, { onDelete: "set null" }),
+  customerId: uuid("customer_id").references((): AnyPgColumn => customers.id, { onDelete: "set null" }),
+  plannedStartDate: timestamp("planned_start_date", { mode: "date" }),
+  plannedEndDate: timestamp("planned_end_date", { mode: "date" }),
+  materialReadyDate: timestamp("material_ready_date", { mode: "date" }),
+  planningStatus: planningStatusEnum("planning_status").default("unplanned").notNull(),
+  deliveryRisk: varchar("delivery_risk", { length: 20 }),
+  planningCheckedAt: timestamp("planning_checked_at", { mode: "date" }),
+  specialInstructions: text("special_instructions"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
@@ -3002,5 +3036,269 @@ export const certificationRecords = pgTable("certification_records", {
   status: certStatusEnum("status").default("valid").notNull(),
   // Issued certificate document (DocSign), if any.
   certificateDocId: uuid("certificate_doc_id").references(() => signDocuments.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// PRODUCTION PLANNING (BRD 13) — capacity + material + manpower planning
+// engine on top of Production/Manufacturing. Defines HOW a product is made
+// (process templates → stages → stage materials), the resources available
+// (work centers, machines, skills, shifts), and schedules work orders into
+// those resources with feasibility, bottleneck, and what-if analysis.
+//
+// Reuses: `boms`/`bomLines` (global material list), `workOrders` (the job),
+// `stockLevels` (availability), `purchaseOrders` (incoming ETAs), `assets`
+// (machine downtime), `employees` (manpower pool). All tables carry
+// `workspace_id` for tenant isolation (Plan D.2.1).
+// ════════════════════════════════════════════════════════════════════
+
+// Abstract resource group (e.g. "Welding Bay", "CNC Cell"). Capacity is
+// expressed in available hours per shift; machines + shift calendars hang off.
+export const workCenters = pgTable("work_centers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 60 }),
+  type: workCenterTypeEnum("type").default("machine").notNull(),
+  department: varchar("department", { length: 120 }),
+  location: varchar("location", { length: 255 }),
+  // Effective productive hours available per working day (across all machines).
+  capacityHoursPerDay: real("capacity_hours_per_day").default(8).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("work_centers_ws_code_uq").on(t.workspaceId, t.code)]);
+
+// Physical machine/equipment inside a work center. Optionally tied to an
+// `assets` row so maintenance downtime flows into capacity planning.
+export const workCenterMachines = pgTable("work_center_machines", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workCenterId: uuid("work_center_id")
+    .notNull()
+    .references(() => workCenters.id, { onDelete: "cascade" }),
+  assetId: uuid("asset_id").references(() => assets.id, { onDelete: "set null" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  // Effective capacity adjustment 0-100 (e.g. an older machine at 80%).
+  capacityPct: real("capacity_pct").default(100).notNull(),
+  setupMinutes: integer("setup_minutes").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// Weekly shift calendar for a work center (one row per working window per day).
+export const workCenterShifts = pgTable("work_center_shifts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workCenterId: uuid("work_center_id")
+    .notNull()
+    .references(() => workCenters.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sun .. 6=Sat
+  startTime: varchar("start_time", { length: 5 }).default("08:00").notNull(), // "HH:MM"
+  endTime: varchar("end_time", { length: 5 }).default("17:00").notNull(),
+  breakMinutes: integer("break_minutes").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// Skills catalogue (e.g. "CNC Operator", "Certified Welder", "QA Inspector").
+export const productionSkills = pgTable("production_skills", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("production_skills_ws_name_uq").on(t.workspaceId, t.name)]);
+
+// Which employees hold which skill, and at what level / certification expiry.
+export const employeeSkills = pgTable("employee_skills", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  skillId: uuid("skill_id")
+    .notNull()
+    .references(() => productionSkills.id, { onDelete: "cascade" }),
+  level: skillLevelEnum("level").default("qualified").notNull(),
+  certifiedUntil: timestamp("certified_until", { mode: "date" }),
+}, (t) => [unique("employee_skills_uq").on(t.employeeId, t.skillId)]);
+
+// Normal weekly shift an employee works (capacity windows for manpower planning).
+export const employeeShifts = pgTable("employee_shifts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  dayOfWeek: integer("day_of_week").notNull(),
+  startTime: varchar("start_time", { length: 5 }).default("08:00").notNull(),
+  endTime: varchar("end_time", { length: 5 }).default("17:00").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+});
+
+// Routing — how a product is made. One template per product version; the
+// active version is what the planning engine loads for a new job.
+export const processTemplates = pgTable("process_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  productId: uuid("product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  version: varchar("version", { length: 40 }).default("v1").notNull(),
+  name: varchar("name", { length: 255 }),
+  status: processTemplateStatusEnum("status").default("draft").notNull(),
+  notes: text("notes"),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  approvedBy: uuid("approved_by").references(() => users.id, { onDelete: "set null" }),
+  effectiveDate: timestamp("effective_date", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [unique("process_templates_product_version_uq").on(t.productId, t.version)]);
+
+// One stage in a routing (Material Prep, Cutting, Welding, …). Dependencies
+// model the flow; null `dependsOnStageId` = starts when material is ready.
+export const processStages = pgTable("process_stages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id")
+    .notNull()
+    .references(() => processTemplates.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  sequence: integer("sequence").default(0).notNull(),
+  parentStageId: uuid("parent_stage_id").references((): AnyPgColumn => processStages.id, { onDelete: "set null" }),
+  dependsOnStageId: uuid("depends_on_stage_id").references((): AnyPgColumn => processStages.id, { onDelete: "set null" }),
+  durationMinutes: integer("duration_minutes").default(60).notNull(),
+  setupMinutes: integer("setup_minutes").default(0).notNull(),
+  bufferMinutes: integer("buffer_minutes").default(0).notNull(),
+  workCenterId: uuid("work_center_id").references(() => workCenters.id, { onDelete: "set null" }),
+  requiredSkillId: uuid("required_skill_id").references(() => productionSkills.id, { onDelete: "set null" }),
+  requiredHeadcount: integer("required_headcount").default(1).notNull(),
+  qaCheckpointRequired: boolean("qa_checkpoint_required").default(false).notNull(),
+  scrapPct: real("scrap_pct").default(0).notNull(),
+  outputQty: real("output_qty").default(1).notNull(),
+  instructions: text("instructions"),
+  notes: text("notes"),
+});
+
+// Stage-level material requirement — overrides/supplements the global BOM.
+// `qtyPer` is per unit of finished product; engine scales by job quantity.
+export const stageMaterials = pgTable("stage_materials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  stageId: uuid("stage_id")
+    .notNull()
+    .references(() => processStages.id, { onDelete: "cascade" }),
+  componentProductId: uuid("component_product_id").references((): AnyPgColumn => products.id, { onDelete: "set null" }),
+  description: varchar("description", { length: 255 }),
+  qtyPer: real("qty_per").default(1).notNull(),
+  unit: varchar("unit", { length: 40 }).default("unit").notNull(),
+  wastagePct: real("wastage_pct").default(0).notNull(),
+  substituteAllowed: boolean("substitute_allowed").default(false).notNull(),
+  criticalItem: boolean("critical_item").default(false).notNull(),
+  requiredBeforeStart: boolean("required_before_start").default(true).notNull(),
+  position: integer("position").default(0).notNull(),
+});
+
+// Computed schedule of a work order's stages — one row per stage per job.
+// Written by the planning engine; actual times filled as work progresses.
+export const jobStageSchedules = pgTable("job_stage_schedules", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  stageId: uuid("stage_id").references(() => processStages.id, { onDelete: "set null" }),
+  stageName: varchar("stage_name", { length: 255 }).notNull(),
+  sequence: integer("sequence").default(0).notNull(),
+  plannedStart: timestamp("planned_start", { mode: "date" }),
+  plannedEnd: timestamp("planned_end", { mode: "date" }),
+  actualStart: timestamp("actual_start", { mode: "date" }),
+  actualEnd: timestamp("actual_end", { mode: "date" }),
+  assignedWorkCenterId: uuid("assigned_work_center_id").references(() => workCenters.id, { onDelete: "set null" }),
+  assignedMachineId: uuid("assigned_machine_id").references(() => workCenterMachines.id, { onDelete: "set null" }),
+  status: jobStageStatusEnum("status").default("pending").notNull(),
+  notes: text("notes"),
+});
+
+// Manpower assigned to a scheduled stage.
+export const jobStageAssignments = pgTable("job_stage_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  jobStageScheduleId: uuid("job_stage_schedule_id")
+    .notNull()
+    .references(() => jobStageSchedules.id, { onDelete: "cascade" }),
+  employeeId: uuid("employee_id").references(() => employees.id, { onDelete: "set null" }),
+  role: varchar("role", { length: 60 }).default("operator").notNull(),
+  plannedHours: real("planned_hours").default(0).notNull(),
+  actualHours: real("actual_hours").default(0).notNull(),
+});
+
+// Detected planning blockers/warnings for a work order. Regenerated on each
+// planning run; resolved/ignored states persist for audit.
+export const planningConflicts = pgTable("planning_conflicts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  conflictType: planningConflictTypeEnum("conflict_type").notNull(),
+  severity: planningConflictSeverityEnum("severity").default("warning").notNull(),
+  stageId: uuid("stage_id").references(() => processStages.id, { onDelete: "set null" }),
+  description: text("description").notNull(),
+  suggestedAction: text("suggested_action"),
+  status: varchar("status", { length: 20 }).default("open").notNull(), // open | resolved | ignored
+  resolvedBy: uuid("resolved_by").references(() => users.id, { onDelete: "set null" }),
+  resolvedAt: timestamp("resolved_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// Inventory reserved for a work order before it starts. Does NOT move stock —
+// the engine reads qtyReserved to compute net availability; stock is issued on
+// completion via applyStockMovement(). Preserves existing stock invariants.
+export const materialReservations = pgTable("material_reservations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  componentProductId: uuid("component_product_id")
+    .notNull()
+    .references(() => products.id, { onDelete: "cascade" }),
+  warehouseId: uuid("warehouse_id").references(() => warehouses.id, { onDelete: "set null" }),
+  qtyReserved: real("qty_reserved").default(0).notNull(),
+  status: materialReservationStatusEnum("status").default("reserved").notNull(),
+  reservedAt: timestamp("reserved_at", { mode: "date" }).defaultNow().notNull(),
+  issuedAt: timestamp("issued_at", { mode: "date" }),
+});
+
+// Saved what-if scenarios (optional persistence — most simulation is in-memory).
+export const planningScenarios = pgTable("planning_scenarios", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  parameters: jsonb("parameters").$type<Record<string, unknown>>().default({}).notNull(),
+  result: jsonb("result").$type<Record<string, unknown>>().default({}).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });

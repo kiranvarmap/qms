@@ -711,6 +711,12 @@ export const createWorkOrderSchema = z.object({
   dueDate:     z.string().datetime({ offset: true }).optional(),
   boardId:     uuidSchema.optional(),
   notes:       z.string().max(2000).trim().optional(),
+  // ── Production Planning (BRD 13) ──
+  priority:            z.enum(["low", "normal", "high", "urgent"]).optional(),
+  processTemplateId:   uuidSchema.optional(),
+  salesOrderId:        uuidSchema.optional(),
+  customerId:          uuidSchema.optional(),
+  specialInstructions: z.string().max(4000).trim().optional(),
 });
 
 export const completeWorkOrderSchema = z.object({
@@ -997,4 +1003,116 @@ export const updateLocalizationSchema = z.object({
   currency: z.string().length(3).toUpperCase().optional(),
   locale:   z.string().max(10).optional(),
   timezone: z.string().max(64).optional(),
+});
+
+// ── Production Planning (BRD 13) ──────────────────────────────────────
+export const createWorkCenterSchema = z.object({
+  workspaceId:         uuidSchema,
+  name:                nameSchema,
+  code:                z.string().max(60).trim().optional(),
+  type:                z.enum(["machine", "manual", "hybrid"]).default("machine"),
+  department:          z.string().max(120).trim().optional(),
+  location:            z.string().max(255).trim().optional(),
+  capacityHoursPerDay: z.coerce.number().positive().default(8),
+  notes:               z.string().max(2000).trim().optional(),
+});
+export const updateWorkCenterSchema = createWorkCenterSchema.partial().omit({ workspaceId: true });
+
+export const workCenterMachineSchema = z.object({
+  assetId:      uuidSchema.optional(),
+  name:         nameSchema,
+  capacityPct:  z.coerce.number().min(0).max(100).default(100),
+  setupMinutes: z.coerce.number().int().min(0).default(0),
+  notes:        z.string().max(1000).trim().optional(),
+});
+
+export const workCenterShiftSchema = z.object({
+  dayOfWeek:    z.coerce.number().int().min(0).max(6),
+  startTime:    z.string().regex(/^\d{2}:\d{2}$/, "HH:MM").default("08:00"),
+  endTime:      z.string().regex(/^\d{2}:\d{2}$/, "HH:MM").default("17:00"),
+  breakMinutes: z.coerce.number().int().min(0).default(0),
+});
+export const workCenterShiftsSchema = z.object({ shifts: z.array(workCenterShiftSchema) });
+export const workCenterMachinesSchema = z.object({ machines: z.array(workCenterMachineSchema) });
+
+export const createProductionSkillSchema = z.object({
+  workspaceId: uuidSchema,
+  name:        nameSchema,
+  description: z.string().max(1000).trim().optional(),
+});
+
+export const employeeSkillSchema = z.object({
+  skillId:        uuidSchema,
+  level:          z.enum(["trainee", "qualified", "expert"]).default("qualified"),
+  certifiedUntil: z.string().datetime({ offset: true }).optional(),
+});
+export const employeeSkillsSchema = z.object({ workspaceId: uuidSchema, skills: z.array(employeeSkillSchema) });
+
+export const employeeShiftSchema = z.object({
+  dayOfWeek: z.coerce.number().int().min(0).max(6),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "HH:MM").default("08:00"),
+  endTime:   z.string().regex(/^\d{2}:\d{2}$/, "HH:MM").default("17:00"),
+});
+export const employeeShiftsSchema = z.object({ shifts: z.array(employeeShiftSchema) });
+
+export const createProcessTemplateSchema = z.object({
+  workspaceId: uuidSchema,
+  productId:   uuidSchema,
+  version:     z.string().max(40).trim().default("v1"),
+  name:        z.string().max(255).trim().optional(),
+  notes:       z.string().max(2000).trim().optional(),
+});
+export const updateProcessTemplateSchema = z.object({
+  version: z.string().max(40).trim().optional(),
+  name:    z.string().max(255).trim().optional(),
+  status:  z.enum(["draft", "active", "archived"]).optional(),
+  notes:   z.string().max(2000).trim().optional(),
+});
+
+export const stageMaterialSchema = z.object({
+  componentProductId:  uuidSchema.optional(),
+  description:         z.string().max(255).trim().optional(),
+  qtyPer:              z.coerce.number().min(0).default(1),
+  unit:                z.string().max(40).trim().default("unit"),
+  wastagePct:          z.coerce.number().min(0).default(0),
+  substituteAllowed:   z.boolean().default(false),
+  criticalItem:        z.boolean().default(false),
+  requiredBeforeStart: z.boolean().default(true),
+});
+
+export const processStageSchema = z.object({
+  name:                 nameSchema,
+  sequence:             z.coerce.number().int().min(0).default(0),
+  parentStageId:        uuidSchema.optional(),
+  dependsOnStageId:     uuidSchema.optional(),
+  durationMinutes:      z.coerce.number().int().min(0).default(60),
+  setupMinutes:         z.coerce.number().int().min(0).default(0),
+  bufferMinutes:        z.coerce.number().int().min(0).default(0),
+  workCenterId:         uuidSchema.optional(),
+  requiredSkillId:      uuidSchema.optional(),
+  requiredHeadcount:    z.coerce.number().int().min(0).default(1),
+  qaCheckpointRequired: z.boolean().default(false),
+  scrapPct:             z.coerce.number().min(0).default(0),
+  outputQty:            z.coerce.number().min(0).default(1),
+  instructions:         z.string().max(4000).trim().optional(),
+  notes:                z.string().max(2000).trim().optional(),
+  materials:            z.array(stageMaterialSchema).optional(),
+});
+export const updateProcessStageSchema = processStageSchema.partial();
+
+export const simulateSchema = z.object({
+  extraHeadcount:     z.record(z.string(), z.coerce.number()).optional(),
+  expeditePO:         z.record(z.string(), z.string()).optional(),
+  moveJobAside:       z.array(uuidSchema).optional(),
+  hoursPerDay:        z.coerce.number().positive().optional(),
+  requestedStartDate: z.string().datetime({ offset: true }).optional(),
+});
+
+export const reserveMaterialsSchema = z.object({
+  warehouseId: uuidSchema.optional(),
+});
+
+export const setPrioritySchema = z.object({
+  priority: z.enum(["low", "normal", "high", "urgent"]),
+  confirm:  z.boolean().default(false),
 });
