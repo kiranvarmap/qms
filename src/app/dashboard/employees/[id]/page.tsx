@@ -6,7 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft, Clock, LogIn, LogOut, Calendar,
-  Briefcase, Hammer, CheckSquare, TrendingUp, AlertCircle
+  Briefcase, Hammer, CheckSquare, TrendingUp, AlertCircle,
+  Wrench, Plus, Trash2
 } from "lucide-react";
 import type { Employee, TimeLog } from "@/lib/types";
 
@@ -43,8 +44,19 @@ export default function EmployeeDetailPage() {
   const router = useRouter();
   const [data, setData] = useState<EmployeeWithLogs | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "logs" | "photos">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "skills" | "logs" | "photos">("overview");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // Skills (production planning) — catalogue + this employee's assignments.
+  const [skillCatalog, setSkillCatalog] = useState<{ id: string; name: string }[]>([]);
+  const [empSkills, setEmpSkills] = useState<{ skillId: string; level: string }[]>([]);
+  const [savingSkills, setSavingSkills] = useState(false);
+  const [addSkillId, setAddSkillId] = useState("");
+  const [addSkillLevel, setAddSkillLevel] = useState("qualified");
+  // Effective workspace for skills: the employee's own, else the user's first
+  // workspace. employee_skills rows carry this workspaceId — which is exactly
+  // what the planning engine counts by — so it lines up with the work order's
+  // workspace even when the employee record itself has no workspace set.
+  const [wsId, setWsId] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/employees/${id}`);
@@ -52,6 +64,20 @@ export default function EmployeeDetailPage() {
     const d = await res.json();
     setData(d);
     setLoading(false);
+    let ws: string | null = d.workspaceId ?? null;
+    if (!ws) {
+      const wss = await fetch(`/api/workspaces`).then((r) => r.json()).catch(() => []);
+      ws = Array.isArray(wss) && wss[0] ? wss[0].id : null;
+    }
+    if (ws) {
+      setWsId(ws);
+      const [cat, mine] = await Promise.all([
+        fetch(`/api/production-skills?workspaceId=${ws}`).then((r) => r.json()).catch(() => ({})),
+        fetch(`/api/employees/${id}/skills?workspaceId=${ws}`).then((r) => r.json()).catch(() => ({})),
+      ]);
+      setSkillCatalog(cat.data ?? []);
+      setEmpSkills((mine.data ?? []).map((x: { skillId: string; level: string }) => ({ skillId: x.skillId, level: x.level })));
+    }
   }, [id, router]);
 
   useEffect(() => { load(); }, [load]); // eslint-disable-line react-hooks/set-state-in-effect
@@ -67,6 +93,28 @@ export default function EmployeeDetailPage() {
   if (!data) return null;
 
   const emp = data as EmployeeWithLogs;
+  const workspaceId = wsId;
+  const skillName = (sid: string) => skillCatalog.find((s) => s.id === sid)?.name ?? "skill";
+
+  // Replace-all save: the PUT endpoint swaps the employee's full skill set.
+  const saveSkills = async (next: { skillId: string; level: string }[]) => {
+    if (!workspaceId) return;
+    setSavingSkills(true);
+    await fetch(`/api/employees/${id}/skills`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId, skills: next }),
+    });
+    setEmpSkills(next);
+    setSavingSkills(false);
+  };
+  const addSkill = () => {
+    if (!addSkillId || empSkills.some((s) => s.skillId === addSkillId)) return;
+    saveSkills([...empSkills, { skillId: addSkillId, level: addSkillLevel }]);
+    setAddSkillId("");
+  };
+  const removeSkill = (sid: string) => saveSkills(empSkills.filter((s) => s.skillId !== sid));
+
   const logs = emp.logs ?? [];
   const completedLogs = logs.filter((l) => l.status === "completed");
   const activeLogs = logs.filter((l) => l.status === "active");
@@ -173,7 +221,7 @@ export default function EmployeeDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-white/60 rounded-xl p-1 w-fit border border-gray-200">
-        {(["overview", "logs", "photos"] as const).map((tab) => (
+        {(["overview", "skills", "logs", "photos"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -181,7 +229,7 @@ export default function EmployeeDetailPage() {
               activeTab === tab ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            {tab === "logs" ? `Time Logs (${logs.length})` : tab === "photos" ? `Photos (${allPhotos.length})` : "Overview"}
+            {tab === "logs" ? `Time Logs (${logs.length})` : tab === "photos" ? `Photos (${allPhotos.length})` : tab === "skills" ? `Skills (${empSkills.length})` : "Overview"}
           </button>
         ))}
       </div>
@@ -236,6 +284,57 @@ export default function EmployeeDetailPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* SKILLS tab */}
+      {activeTab === "skills" && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 max-w-2xl">
+          <h3 className="text-gray-900 font-semibold mb-1 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-600" /> Production Skills</h3>
+          <p className="text-gray-500 text-sm mb-4">Skills this employee holds. Production planning counts how many people have each skill when checking whether a stage&apos;s required crew is available.</p>
+
+          {!workspaceId ? (
+            <p className="text-sm text-amber-600">This employee isn&apos;t linked to a workspace, so skills can&apos;t be assigned.</p>
+          ) : skillCatalog.length === 0 ? (
+            <p className="text-sm text-gray-500">No skills defined yet. Create them under <Link href="/dashboard/production-planning/skills" className="text-blue-600 hover:underline">Production → Skills</Link> first.</p>
+          ) : (
+            <>
+              {empSkills.length === 0 ? (
+                <p className="text-sm text-gray-400 mb-4">No skills assigned yet.</p>
+              ) : (
+                <div className="space-y-2 mb-4">
+                  {empSkills.map((s) => (
+                    <div key={s.skillId} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                      <span className="text-sm text-gray-900 font-medium">{skillName(s.skillId)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs rounded-full px-2 py-0.5 bg-blue-100 text-blue-700 capitalize">{s.level}</span>
+                        <button onClick={() => removeSkill(s.skillId)} disabled={savingSkills} className="text-gray-400 hover:text-red-600 disabled:opacity-50"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-end gap-2 border-t border-gray-100 pt-4">
+                <label className="flex-1">
+                  <span className="text-xs text-gray-500">Add skill</span>
+                  <select value={addSkillId} onChange={(e) => setAddSkillId(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                    <option value="">Select…</option>
+                    {skillCatalog.filter((c) => !empSkills.some((s) => s.skillId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+                <label className="w-36">
+                  <span className="text-xs text-gray-500">Level</span>
+                  <select value={addSkillLevel} onChange={(e) => setAddSkillLevel(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                    <option value="trainee">Trainee</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="expert">Expert</option>
+                  </select>
+                </label>
+                <button onClick={addSkill} disabled={!addSkillId || savingSkills} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="w-4 h-4" /> Add</button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
