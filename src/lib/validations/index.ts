@@ -1069,6 +1069,12 @@ export const updateProcessTemplateSchema = z.object({
   notes:   z.string().max(2000).trim().optional(),
 });
 
+export const stageSkillSchema = z.object({
+  skillId:           uuidSchema,
+  requiredHeadcount: z.coerce.number().int().min(1).default(1),
+  minLevel:          z.enum(["trainee", "qualified", "expert"]).default("qualified"),
+});
+
 export const stageMaterialSchema = z.object({
   componentProductId:  uuidSchema.optional(),
   description:         z.string().max(255).trim().optional(),
@@ -1097,6 +1103,7 @@ export const processStageSchema = z.object({
   instructions:         z.string().max(4000).trim().optional(),
   notes:                z.string().max(2000).trim().optional(),
   materials:            z.array(stageMaterialSchema).optional(),
+  skills:               z.array(stageSkillSchema).optional(),
 });
 export const updateProcessStageSchema = processStageSchema.partial();
 

@@ -3187,7 +3187,25 @@ export const processStages = pgTable("process_stages", {
   outputQty: real("output_qty").default(1).notNull(),
   instructions: text("instructions"),
   notes: text("notes"),
+  // NOTE: `requiredSkillId`/`requiredHeadcount` are the legacy single-skill
+  // fields, kept as a fallback. Multi-skill requirements live in `stageSkills`.
 });
+
+// A stage can require several skills at once (e.g. 2 welders + 1 QA inspector).
+// Each row is one skill the stage needs, with its own headcount. The planning
+// engine treats this as the source of truth; if a stage has no stageSkills
+// rows it falls back to processStages.requiredSkillId/requiredHeadcount.
+export const stageSkills = pgTable("stage_skills", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  stageId: uuid("stage_id")
+    .notNull()
+    .references(() => processStages.id, { onDelete: "cascade" }),
+  skillId: uuid("skill_id")
+    .notNull()
+    .references(() => productionSkills.id, { onDelete: "cascade" }),
+  requiredHeadcount: integer("required_headcount").default(1).notNull(),
+  minLevel: skillLevelEnum("min_level").default("qualified").notNull(),
+}, (t) => [unique("stage_skills_uq").on(t.stageId, t.skillId)]);
 
 // Stage-level material requirement — overrides/supplements the global BOM.
 // `qtyPer` is per unit of finished product; engine scales by job quantity.

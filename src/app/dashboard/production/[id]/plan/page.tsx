@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, RefreshCw, AlertCircle, CheckCircle2, Lock, FlaskConical } from "lucide-react";
 
 interface Material { description: string; required: number; available: number; reserved: number; incoming: number; incomingDate: string | null; shortage: number; critical: boolean; unit: string; status: string }
-interface Stage { stageId: string; stageName: string; plannedStart: string; plannedEnd: string; workCenterName: string | null; requiredHeadcount: number; availableHeadcount: number }
+interface SkillNeed { skillId: string; skillName: string; required: number; available: number }
+interface Stage { stageId: string; stageName: string; plannedStart: string; plannedEnd: string; workCenterName: string | null; requiredHeadcount: number; availableHeadcount: number; skills: SkillNeed[] }
 interface Conflict { conflictType: string; severity: string; description: string; suggestedAction: string | null }
 interface Result {
   feasible: boolean; materialReadyDate: string; plannedStart: string; plannedEnd: string;
@@ -116,7 +117,17 @@ export default function FeasibilityPage({ params }: { params: Promise<{ id: stri
                       <td className="px-4 py-2 text-gray-600">{s.workCenterName || "—"}</td>
                       <td className="px-4 py-2 text-gray-600">{fmt(s.plannedStart)}</td>
                       <td className="px-4 py-2 text-gray-600">{fmt(s.plannedEnd)}</td>
-                      <td className="px-4 py-2 text-right" style={{ color: s.availableHeadcount < s.requiredHeadcount ? "#dc2626" : "#6b7280" }}>{s.availableHeadcount}/{s.requiredHeadcount}</td>
+                      <td className="px-4 py-2 text-right text-xs">
+                        {s.skills && s.skills.length > 0 ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            {s.skills.map((sk) => (
+                              <span key={sk.skillId} style={{ color: sk.available < sk.required ? "#dc2626" : "#6b7280" }}>{sk.required}× {sk.skillName} ({sk.available} avail)</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: s.availableHeadcount < s.requiredHeadcount ? "#dc2626" : "#6b7280" }}>{s.availableHeadcount}/{s.requiredHeadcount}</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

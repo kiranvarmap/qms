@@ -6,12 +6,13 @@ import { ArrowLeft, Plus, X, Trash2, CheckCircle2, GitBranch } from "lucide-reac
 
 interface Template { id: string; productId: string; version: string; name: string | null; status: string; workspaceId: string }
 interface Material { id?: string; componentProductId?: string | null; description?: string | null; qtyPer: number; unit: string; criticalItem: boolean }
-interface Stage { id: string; name: string; sequence: number; durationMinutes: number; setupMinutes: number; bufferMinutes: number; workCenterId: string | null; requiredSkillId: string | null; requiredHeadcount: number; qaCheckpointRequired: boolean; materials: Material[] }
+interface StageSkill { skillId: string; requiredHeadcount: number }
+interface Stage { id: string; name: string; sequence: number; durationMinutes: number; setupMinutes: number; bufferMinutes: number; workCenterId: string | null; requiredHeadcount: number; qaCheckpointRequired: boolean; materials: Material[]; skills: StageSkill[] }
 interface WorkCenter { id: string; name: string }
 interface Skill { id: string; name: string }
 interface Product { id: string; name: string }
 
-const emptyStage = { name: "", durationMinutes: "60", setupMinutes: "0", bufferMinutes: "0", workCenterId: "", requiredSkillId: "", requiredHeadcount: "1", qaCheckpointRequired: false };
+const emptyStage = { name: "", durationMinutes: "60", setupMinutes: "0", bufferMinutes: "0", workCenterId: "", qaCheckpointRequired: false };
 
 export default function TemplateBuilderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -24,6 +25,7 @@ export default function TemplateBuilderPage({ params }: { params: Promise<{ id: 
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyStage);
   const [mats, setMats] = useState<Material[]>([]);
+  const [skillRows, setSkillRows] = useState<{ skillId: string; requiredHeadcount: string }[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -53,11 +55,11 @@ export default function TemplateBuilderPage({ params }: { params: Promise<{ id: 
     await fetch(`/api/process-templates/${id}/stages`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
       name: form.name, sequence: stages.length,
       durationMinutes: Number(form.durationMinutes) || 60, setupMinutes: Number(form.setupMinutes) || 0, bufferMinutes: Number(form.bufferMinutes) || 0,
-      workCenterId: form.workCenterId || undefined, requiredSkillId: form.requiredSkillId || undefined,
-      requiredHeadcount: Number(form.requiredHeadcount) || 1, qaCheckpointRequired: form.qaCheckpointRequired,
+      workCenterId: form.workCenterId || undefined, qaCheckpointRequired: form.qaCheckpointRequired,
       materials: mats.map((m) => ({ componentProductId: m.componentProductId || undefined, description: m.description || undefined, qtyPer: Number(m.qtyPer) || 1, unit: m.unit || "unit", criticalItem: m.criticalItem })),
+      skills: skillRows.filter((s) => s.skillId).map((s) => ({ skillId: s.skillId, requiredHeadcount: Number(s.requiredHeadcount) || 1 })),
     }) });
-    setSaving(false); setShowAdd(false); setForm(emptyStage); setMats([]); load();
+    setSaving(false); setShowAdd(false); setForm(emptyStage); setMats([]); setSkillRows([]); load();
   };
 
   const delStage = async (stageId: string) => {
@@ -91,7 +93,7 @@ export default function TemplateBuilderPage({ params }: { params: Promise<{ id: 
         <div className="flex gap-2">
           {template.status !== "active" && <button onClick={() => setStatus("active")} className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md"><CheckCircle2 className="h-4 w-4" /> Activate</button>}
           {template.status === "active" && <button onClick={() => setStatus("archived")} className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-medium rounded-md">Archive</button>}
-          <button onClick={() => { setForm(emptyStage); setMats([]); setShowAdd(true); }} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> Add Stage</button>
+          <button onClick={() => { setForm(emptyStage); setMats([]); setSkillRows([]); setShowAdd(true); }} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> Add Stage</button>
         </div>
       </div>
 
@@ -108,7 +110,7 @@ export default function TemplateBuilderPage({ params }: { params: Promise<{ id: 
                     <h3 className="text-sm font-semibold text-gray-900">{s.name}{s.qaCheckpointRequired && <span className="ml-2 text-xs bg-purple-100 text-purple-700 rounded px-1.5 py-0.5">QA</span>}</h3>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {wcName(s.workCenterId)} · {s.durationMinutes}m{s.setupMinutes ? ` +${s.setupMinutes}m setup` : ""}{s.bufferMinutes ? ` +${s.bufferMinutes}m buffer` : ""}
-                      {skName(s.requiredSkillId) ? ` · ${s.requiredHeadcount}× ${skName(s.requiredSkillId)}` : ""}
+                      {s.skills && s.skills.length > 0 ? ` · ${s.skills.map((sk) => `${sk.requiredHeadcount}× ${skName(sk.skillId) ?? "skill"}`).join(", ")}` : ""}
                     </p>
                     {s.materials.length > 0 && (
                       <p className="text-xs text-gray-400 mt-1">Materials: {s.materials.map((m) => `${productName(m.componentProductId) ?? m.description ?? "item"} ×${m.qtyPer}${m.criticalItem ? " ⚠" : ""}`).join(", ")}</p>
@@ -142,13 +144,20 @@ export default function TemplateBuilderPage({ params }: { params: Promise<{ id: 
                 <select value={form.workCenterId} onChange={(e) => setForm({ ...form, workCenterId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">None</option>{workCenters.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select></label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block"><span className="text-xs text-gray-500">Required skill</span>
-                  <select value={form.requiredSkillId} onChange={(e) => setForm({ ...form, requiredSkillId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
-                    <option value="">None</option>{skills.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select></label>
-                <label className="block"><span className="text-xs text-gray-500">Headcount</span>
-                  <input type="number" value={form.requiredHeadcount} onChange={(e) => setForm({ ...form, requiredHeadcount: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-2 py-2 text-sm text-gray-900" /></label>
+              <div className="border-t border-gray-100 pt-3">
+                <div className="flex items-center justify-between mb-2"><span className="text-xs font-medium text-gray-700">Required skills</span>
+                  <button onClick={() => setSkillRows([...skillRows, { skillId: "", requiredHeadcount: "1" }])} className="text-xs text-blue-600 hover:underline">+ Add skill</button></div>
+                {skillRows.length === 0 && <p className="text-xs text-gray-400">No skill requirement — any crew can run this stage.</p>}
+                {skillRows.map((sr, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 mb-2 items-center">
+                    <select value={sr.skillId} onChange={(e) => { const x = [...skillRows]; x[i] = { ...sr, skillId: e.target.value }; setSkillRows(x); }} className="col-span-7 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+                      <option value="">Skill…</option>{skills.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    <input type="number" min="1" title="Headcount" value={sr.requiredHeadcount} onChange={(e) => { const x = [...skillRows]; x[i] = { ...sr, requiredHeadcount: e.target.value }; setSkillRows(x); }} className="col-span-3 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm" />
+                    <span className="col-span-1 text-xs text-gray-400">crew</span>
+                    <button onClick={() => setSkillRows(skillRows.filter((_, j) => j !== i))} className="col-span-1 text-gray-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                ))}
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={form.qaCheckpointRequired} onChange={(e) => setForm({ ...form, qaCheckpointRequired: e.target.checked })} /> QA checkpoint required</label>
 

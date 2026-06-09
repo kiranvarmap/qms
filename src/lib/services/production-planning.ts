@@ -18,6 +18,7 @@ import {
   processTemplates,
   processStages,
   stageMaterials,
+  stageSkills,
   jobStageSchedules,
   planningConflicts,
   materialReservations,
@@ -162,9 +163,14 @@ export async function getTemplate(workspaceId: string, id: string) {
   const stages = await db.select().from(processStages).where(eq(processStages.templateId, id)).orderBy(asc(processStages.sequence));
   const stageIds = stages.map((s) => s.id);
   const mats = stageIds.length ? await db.select().from(stageMaterials).where(inArray(stageMaterials.stageId, stageIds)) : [];
+  const skills = stageIds.length ? await db.select().from(stageSkills).where(inArray(stageSkills.stageId, stageIds)) : [];
   return {
     template: tpl,
-    stages: stages.map((s) => ({ ...s, materials: mats.filter((m) => m.stageId === s.id) })),
+    stages: stages.map((s) => ({
+      ...s,
+      materials: mats.filter((m) => m.stageId === s.id),
+      skills: skills.filter((sk) => sk.stageId === s.id),
+    })),
   };
 }
 
@@ -214,6 +220,7 @@ type StageInput = {
   instructions?: string;
   notes?: string;
   materials?: Array<Omit<typeof stageMaterials.$inferInsert, "stageId" | "workspaceId">>;
+  skills?: Array<{ skillId: string; requiredHeadcount?: number; minLevel?: "trainee" | "qualified" | "expert" }>;
 };
 
 export async function addStage(workspaceId: string, templateId: string, input: StageInput) {
@@ -242,18 +249,27 @@ export async function addStage(workspaceId: string, templateId: string, input: S
     if (input.materials && input.materials.length > 0) {
       await tx.insert(stageMaterials).values(input.materials.map((m, i) => ({ ...m, workspaceId, stageId: stage.id, position: i })));
     }
+    if (input.skills && input.skills.length > 0) {
+      await tx.insert(stageSkills).values(input.skills.map((s) => ({ stageId: stage.id, skillId: s.skillId, requiredHeadcount: s.requiredHeadcount ?? 1, minLevel: s.minLevel ?? "qualified" })));
+    }
     return stage;
   });
 }
 
 export async function updateStage(stageId: string, workspaceId: string, patch: Partial<StageInput>) {
   return db.transaction(async (tx) => {
-    const { materials, ...stagePatch } = patch;
+    const { materials, skills, ...stagePatch } = patch;
     const [stage] = await tx.update(processStages).set(stagePatch).where(eq(processStages.id, stageId)).returning();
     if (materials) {
       await tx.delete(stageMaterials).where(eq(stageMaterials.stageId, stageId));
       if (materials.length > 0) {
         await tx.insert(stageMaterials).values(materials.map((m, i) => ({ ...m, workspaceId, stageId, position: i })));
+      }
+    }
+    if (skills) {
+      await tx.delete(stageSkills).where(eq(stageSkills.stageId, stageId));
+      if (skills.length > 0) {
+        await tx.insert(stageSkills).values(skills.map((s) => ({ stageId, skillId: s.skillId, requiredHeadcount: s.requiredHeadcount ?? 1, minLevel: s.minLevel ?? "qualified" })));
       }
     }
     return stage ?? null;

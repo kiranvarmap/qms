@@ -28,6 +28,8 @@ import {
   processTemplates,
   processStages,
   stageMaterials,
+  stageSkills,
+  productionSkills,
   bomLines,
   boms,
   stockLevels,
@@ -72,6 +74,13 @@ export interface MaterialLine {
   status: "available" | "incoming" | "short";
 }
 
+export interface StageSkillNeed {
+  skillId: string;
+  skillName: string;
+  required: number;
+  available: number;
+}
+
 export interface StageSchedule {
   stageId: string;
   stageName: string;
@@ -80,8 +89,9 @@ export interface StageSchedule {
   plannedEnd: string;
   workCenterId: string | null;
   workCenterName: string | null;
-  requiredHeadcount: number;
-  availableHeadcount: number;
+  requiredHeadcount: number;          // sum across required skills
+  availableHeadcount: number;         // sum of available for required skills
+  skills: StageSkillNeed[];           // per-skill breakdown
 }
 
 export interface PlanningConflictResult {
@@ -230,8 +240,10 @@ export async function runPlanning(
     }
   }
 
-  // ── 3. Manpower headcount per required skill (count-based) ────────────
+  // ── 3. Manpower: headcount per skill + each stage's required skills ───
   const skillCounts = await skillHeadcounts(workspaceId);
+  const skillNames = await skillNameMap(workspaceId);
+  const stageSkillMap = await stageSkillRequirements(stages.map((s) => s.id));
 
   // ── 4. Existing work-center load (finite capacity serialization) ──────
   const aside = new Set(overrides.moveJobAside ?? []);
@@ -283,19 +295,33 @@ export async function runPlanning(
       });
     }
 
-    // Manpower check.
+    // Manpower check — a stage can require SEVERAL skills at once (e.g. 2
+    // welders + 1 QA inspector). Each is checked independently. Falls back to
+    // the legacy single requiredSkillId when no stage_skills rows exist.
     const extra = overrides.extraHeadcount?.[st.id] ?? 0;
-    const available = (st.requiredSkillId ? (skillCounts[st.requiredSkillId] ?? 0) : Infinity) + extra;
-    const reqHc = st.requiredHeadcount ?? 1;
-    if (st.requiredSkillId && available < reqHc) {
-      conflicts.push({
-        conflictType: available === 0 ? "skill_unavailable" : "manpower_short",
-        severity: "blocker",
-        stageId: st.id,
-        description: `${st.name}: needs ${reqHc} with the required skill, ${available} available.`,
-        suggestedAction: "Add or cross-train manpower, or schedule overtime.",
-      });
+    const required = stageSkillMap.get(st.id) ?? (st.requiredSkillId ? [{ skillId: st.requiredSkillId, requiredHeadcount: st.requiredHeadcount ?? 1 }] : []);
+    const skillNeeds: StageSkillNeed[] = [];
+    let reqSum = 0;
+    let availSum = 0;
+    for (const r of required) {
+      const available = (skillCounts[r.skillId] ?? 0) + extra;
+      const reqHc = r.requiredHeadcount ?? 1;
+      reqSum += reqHc;
+      availSum += Math.min(available, reqHc);
+      skillNeeds.push({ skillId: r.skillId, skillName: skillNames[r.skillId] ?? "skill", required: reqHc, available });
+      if (available < reqHc) {
+        conflicts.push({
+          conflictType: available === 0 ? "skill_unavailable" : "manpower_short",
+          severity: "blocker",
+          stageId: st.id,
+          description: `${st.name}: needs ${reqHc}× ${skillNames[r.skillId] ?? "skill"}, ${available} available.`,
+          suggestedAction: "Add or cross-train manpower, or schedule overtime.",
+        });
+      }
     }
+    // No skills required → unconstrained crew.
+    const reqHcTotal = required.length > 0 ? reqSum : (st.requiredHeadcount ?? 1);
+    const availTotal = required.length > 0 ? availSum : reqHcTotal;
 
     const start = normalizeToShift(earliest);
     const totalMinutes = (st.setupMinutes ?? 0) + (st.durationMinutes ?? 60) + (st.bufferMinutes ?? 0);
@@ -312,8 +338,9 @@ export async function runPlanning(
       plannedEnd: iso(end),
       workCenterId: st.workCenterId ?? null,
       workCenterName: wcName,
-      requiredHeadcount: reqHc,
-      availableHeadcount: available === Infinity ? reqHc : available,
+      requiredHeadcount: reqHcTotal,
+      availableHeadcount: availTotal,
+      skills: skillNeeds,
     });
   }
 
@@ -549,6 +576,33 @@ async function skillHeadcounts(workspaceId: string): Promise<Record<string, numb
   const out: Record<string, number> = {};
   for (const r of rows) out[r.skillId] = Number(r.count);
   return out;
+}
+
+/** skillId → display name, for conflict messages and the feasibility view. */
+async function skillNameMap(workspaceId: string): Promise<Record<string, string>> {
+  const rows = await db
+    .select({ id: productionSkills.id, name: productionSkills.name })
+    .from(productionSkills)
+    .where(eq(productionSkills.workspaceId, workspaceId));
+  const out: Record<string, string> = {};
+  for (const r of rows) out[r.id] = r.name;
+  return out;
+}
+
+/** stageId → its required skills (each with a headcount). Multi-skill source of truth. */
+async function stageSkillRequirements(stageIds: string[]): Promise<Map<string, { skillId: string; requiredHeadcount: number }[]>> {
+  const map = new Map<string, { skillId: string; requiredHeadcount: number }[]>();
+  if (stageIds.length === 0) return map;
+  const rows = await db
+    .select({ stageId: stageSkills.stageId, skillId: stageSkills.skillId, requiredHeadcount: stageSkills.requiredHeadcount })
+    .from(stageSkills)
+    .where(inArray(stageSkills.stageId, stageIds));
+  for (const r of rows) {
+    const arr = map.get(r.stageId) ?? [];
+    arr.push({ skillId: r.skillId, requiredHeadcount: r.requiredHeadcount });
+    map.set(r.stageId, arr);
+  }
+  return map;
 }
 
 /** Latest planned-end per work center across other open jobs = earliest free. */
