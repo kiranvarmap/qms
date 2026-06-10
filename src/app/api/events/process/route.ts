@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { dispatchPending } from "@/lib/events/dispatcher";
 import { sweepOverdueInvoices } from "@/lib/services/overdue";
 import { sweepCertifications } from "@/lib/services/cert-expiry";
+import { sweepExpiredEstimates } from "@/lib/services/estimate-expiry";
+import { sweepPmSchedules } from "@/lib/services/pm-generation";
 
 // POST/GET /api/events/process — durable outbox sweep (Plan E.3).
 // Triggered by Vercel Cron (see vercel.json). Secured with CRON_SECRET:
@@ -22,8 +24,17 @@ async function handle(req: Request) {
   // Time-based sweeps first (they enqueue events), then drain the outbox.
   const overdue = await sweepOverdueInvoices();
   const certs = await sweepCertifications();
+  const estimates = await sweepExpiredEstimates();
+  const pm = await sweepPmSchedules();
   const result = await dispatchPending(100);
-  return NextResponse.json({ ok: true, ...result, overdue: overdue.flagged, certsExpiring: certs.expiring });
+  return NextResponse.json({
+    ok: true,
+    ...result,
+    overdue: overdue.flagged,
+    certsExpiring: certs.expiring,
+    estimatesExpired: estimates.expired,
+    pmOrdersGenerated: pm.generated,
+  });
 }
 
 export const GET = handle;

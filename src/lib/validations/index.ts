@@ -741,6 +741,27 @@ export const assetStatusSchema = z.object({
   status: z.enum(["up", "down", "maintenance", "retired"]),
 });
 
+export const voidInvoiceSchema = z.object({
+  reason: z.string().max(500).trim().optional(),
+});
+
+export const createPmScheduleSchema = z.object({
+  workspaceId:  uuidSchema,
+  assetId:      uuidSchema,
+  name:         z.string().min(1).max(255).trim(),
+  intervalDays: z.coerce.number().int().min(0).default(0), // 0 = one-shot
+  checklist:    z.string().max(5000).trim().optional(),
+  nextDue:      z.string().datetime({ offset: true }),
+});
+
+export const updatePmScheduleSchema = z.object({
+  name:         z.string().min(1).max(255).trim().optional(),
+  intervalDays: z.coerce.number().int().min(0).optional(),
+  checklist:    z.string().max(5000).trim().nullable().optional(),
+  nextDue:      z.string().datetime({ offset: true }).optional(),
+  isActive:     z.boolean().optional(),
+});
+
 export const createMaintenanceOrderSchema = z.object({
   workspaceId:   uuidSchema,
   assetId:       uuidSchema,

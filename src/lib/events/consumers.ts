@@ -44,6 +44,7 @@ import {
   workCenterMachines,
   jobStageSchedules,
   planningConflicts,
+  vendorPerformance,
 } from "@/lib/db/schema";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nextDocNumber } from "@/lib/services/document-sequence";
@@ -401,6 +402,62 @@ async function runCertificationIssue(evt: OutboxRow): Promise<void> {
   }
 }
 
+// ── Vendor scoring (blueprint 04 §2) ─────────────────────────────────
+// Every goods receipt refreshes the vendor's rolling all-time scorecard.
+// Recomputed from source data, so the consumer is idempotent by construction.
+async function runVendorScoring(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "po.received") return;
+  if (!evt.workspaceId || !evt.aggregateId) return;
+
+  const [po] = await db
+    .select({ vendorId: purchaseOrders.vendorId })
+    .from(purchaseOrders)
+    .where(eq(purchaseOrders.id, evt.aggregateId))
+    .limit(1);
+  if (!po?.vendorId) return;
+
+  // On-time % over every PO of this vendor that has a promised date and at
+  // least one receipt: on time when the LAST receipt landed by expectedDate.
+  const rows = await db
+    .select({
+      poId: purchaseOrders.id,
+      expectedDate: purchaseOrders.expectedDate,
+      lastReceived: sql<string>`max(${goodsReceipts.receivedAt})`,
+    })
+    .from(purchaseOrders)
+    .innerJoin(goodsReceipts, eq(goodsReceipts.purchaseOrderId, purchaseOrders.id))
+    .where(eq(purchaseOrders.vendorId, po.vendorId))
+    .groupBy(purchaseOrders.id, purchaseOrders.expectedDate);
+
+  const dated = rows.filter((r) => r.expectedDate != null);
+  if (dated.length === 0) return; // nothing to score yet
+
+  const onTime = dated.filter((r) => new Date(r.lastReceived) <= r.expectedDate!).length;
+  const onTimePct = Math.round((onTime / dated.length) * 1000) / 10;
+  const rating = Math.round((onTimePct / 20) * 10) / 10; // 0–5 scale
+
+  const [existing] = await db
+    .select({ id: vendorPerformance.id })
+    .from(vendorPerformance)
+    .where(and(eq(vendorPerformance.vendorId, po.vendorId), isNull(vendorPerformance.periodStart)))
+    .limit(1);
+
+  if (existing) {
+    await db
+      .update(vendorPerformance)
+      .set({ onTimePct, rating, note: `Rolling all-time over ${dated.length} dated PO(s).` })
+      .where(eq(vendorPerformance.id, existing.id));
+  } else {
+    await db.insert(vendorPerformance).values({
+      workspaceId: evt.workspaceId,
+      vendorId: po.vendorId,
+      onTimePct,
+      rating,
+      note: `Rolling all-time over ${dated.length} dated PO(s).`,
+    });
+  }
+}
+
 // ── Replenishment (Plan §1 / blueprint 04 §1) ────────────────────────
 // stock.low → draft purchase requisition for the product, so procurement
 // has an actionable document, not just a notification. Idempotent: at most
@@ -637,6 +694,8 @@ const FEED_ACTIONS: Partial<Record<string, { refType: string; action: string; su
   "estimate.accepted": { refType: "estimate", action: "estimate_accepted", summary: "Estimate accepted" },
   "estimate.rejected": { refType: "estimate", action: "estimate_rejected", summary: "Estimate rejected" },
   "estimate.converted": { refType: "estimate", action: "estimate_converted", summary: "Estimate converted" },
+  "estimate.expired": { refType: "estimate", action: "estimate_expired", summary: "Estimate expired" },
+  "invoice.voided": { refType: "invoice", action: "invoice_voided", summary: "Invoice voided" },
   "salesorder.approved": { refType: "sales_order", action: "so_approved", summary: "Sales order approved & reserved" },
   "salesorder.cancelled": { refType: "sales_order", action: "so_cancelled", summary: "Sales order cancelled" },
   "salesorder.invoiced": { refType: "sales_order", action: "so_invoiced", summary: "Sales order invoiced" },
@@ -713,6 +772,7 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runApprovalRouting(evt);
   await runApprovalSubjectSync(evt);
   await runStockLedger(evt);
+  await runVendorScoring(evt);
   await runReplenishment(evt);
   await runSafetyEscalation(evt);
   await runAssetDowntime(evt);

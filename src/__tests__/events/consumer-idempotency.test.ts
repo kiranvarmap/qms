@@ -51,7 +51,14 @@ import {
   workOrders,
   jobStageSchedules,
   planningConflicts,
+  customers,
+  estimates,
+  pmSchedules,
+  maintenanceOrders,
+  vendorPerformance,
 } from "@/lib/db/schema";
+import { sweepPmSchedules } from "@/lib/services/pm-generation";
+import { sweepExpiredEstimates } from "@/lib/services/estimate-expiry";
 import { runConsumers } from "@/lib/events/consumers";
 import type { OutboxRow } from "@/lib/events/types";
 import { and, eq } from "drizzle-orm";
@@ -408,4 +415,114 @@ test("asset downtime: status change flags affected stage schedules once", async 
   expect(conflicts).toHaveLength(1);
   expect(conflicts[0].severity).toBe("blocker");
   expect(conflicts[0].status).toBe("open");
+});
+
+// ── 9. PM sweep generates one order and rolls the schedule forward ──
+test("pm generation: due schedule spawns one preventive order per cycle", async () => {
+  const [asset] = await db
+    .insert(assets)
+    .values({ workspaceId, code: "PRESS-1", name: "Hydraulic press", status: "up" })
+    .returning();
+
+  const due = new Date(Date.now() - 86_400_000); // due yesterday
+  const [sched] = await db
+    .insert(pmSchedules)
+    .values({ workspaceId, assetId: asset.id, name: "Monthly lube", intervalDays: 30, nextDue: due })
+    .returning();
+
+  await sweepPmSchedules();
+  await sweepPmSchedules(); // re-sweep must not double-generate
+
+  const orders = await db
+    .select()
+    .from(maintenanceOrders)
+    .where(and(eq(maintenanceOrders.assetId, asset.id), eq(maintenanceOrders.type, "preventive")));
+  expect(orders).toHaveLength(1);
+  expect(orders[0].fault).toContain("Monthly lube");
+
+  const [after] = await db.select().from(pmSchedules).where(eq(pmSchedules.id, sched.id));
+  expect(after.isActive).toBe(true);
+  expect(after.nextDue!.getTime()).toBe(due.getTime() + 30 * 86_400_000);
+
+  // One-shot schedule deactivates after generating.
+  const [oneShot] = await db
+    .insert(pmSchedules)
+    .values({ workspaceId, assetId: asset.id, name: "Commissioning check", intervalDays: 0, nextDue: due })
+    .returning();
+  await sweepPmSchedules();
+  const [oneShotAfter] = await db.select().from(pmSchedules).where(eq(pmSchedules.id, oneShot.id));
+  expect(oneShotAfter.isActive).toBe(false);
+});
+
+// ── 10. Vendor scoring recomputes one rolling row ────────────────────
+test("vendor scoring: po.received maintains a single all-time scorecard row", async () => {
+  const [vendor] = await db
+    .insert(vendors)
+    .values({ workspaceId, name: "Score Vendor" })
+    .returning();
+  const [po] = await db
+    .insert(purchaseOrders)
+    .values({
+      workspaceId,
+      vendorId: vendor.id,
+      docNumber: "PO-SCORE-1",
+      createdBy: userId,
+      expectedDate: new Date(Date.now() + 86_400_000), // promised tomorrow
+    })
+    .returning();
+  await db.insert(goodsReceipts).values({
+    workspaceId,
+    purchaseOrderId: po.id,
+    docNumber: "GRN-SCORE-1",
+    receivedBy: userId,
+  });
+
+  const evt = makeEvent({
+    eventType: "po.received",
+    aggregateType: "purchase_order",
+    aggregateId: po.id,
+    payload: {},
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const rows = await db
+    .select()
+    .from(vendorPerformance)
+    .where(eq(vendorPerformance.vendorId, vendor.id));
+  expect(rows).toHaveLength(1);
+  expect(rows[0].onTimePct).toBe(100);
+  expect(rows[0].rating).toBe(5);
+});
+
+// ── 11. Estimate expiry flips open quotes exactly once ──────────────
+test("estimate expiry: sweep expires sent quotes once and emits once", async () => {
+  const [customer] = await db
+    .insert(customers)
+    .values({ workspaceId, name: "Expiry Customer" })
+    .returning();
+  const [est] = await db
+    .insert(estimates)
+    .values({
+      workspaceId,
+      customerId: customer.id,
+      docNumber: "EST-EXP-1",
+      status: "sent",
+      validUntil: new Date(Date.now() - 86_400_000),
+      createdBy: userId,
+    })
+    .returning();
+
+  await sweepExpiredEstimates();
+  await sweepExpiredEstimates();
+
+  const [after] = await db.select().from(estimates).where(eq(estimates.id, est.id));
+  expect(after.status).toBe("expired");
+
+  const emitted = await db
+    .select()
+    .from(eventOutbox)
+    .where(and(eq(eventOutbox.eventType, "estimate.expired"), eq(eventOutbox.aggregateId, est.id)));
+  expect(emitted).toHaveLength(1);
 });

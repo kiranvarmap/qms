@@ -96,7 +96,9 @@ export async function getMaintenanceOrder(workspaceId: string, id: string) {
   return { order: mo, parts };
 }
 
-export async function createMaintenanceOrder(workspaceId: string, input: MaintenanceOrderInput, userId: string) {
+// `userId` is null for system-generated orders (PM sweep) — both createdBy and
+// the event actor are nullable set-null FKs.
+export async function createMaintenanceOrder(workspaceId: string, input: MaintenanceOrderInput, userId: string | null) {
   return db.transaction(async (tx) => {
     const number = await nextDocNumber(tx, { workspaceId, docType: "maintenance_order" });
     const [mo] = await tx
