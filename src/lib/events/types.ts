@@ -45,6 +45,7 @@ export type EventType =
   | "estimate.rejected"
   | "estimate.expired"
   | "estimate.converted"
+  | "salesorder.submitted"
   | "salesorder.approved"
   | "salesorder.cancelled"
   | "salesorder.invoiced"

@@ -6,9 +6,11 @@
  */
 
 import { db } from "@/lib/db";
-import { salesOrderLineItems, salesOrders, taxRates } from "@/lib/db/schema";
+import { salesOrderLineItems, salesOrders, taxRates, products } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { toMinor, taxOf, sumMinor } from "@/lib/money";
+import { applyStockMovement } from "@/lib/services/inventory";
+import { emitEvent } from "@/lib/events/outbox";
 import type { EstimateAdjustments } from "./estimates";
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -87,4 +89,65 @@ export async function writeSalesOrderLinesAndTotals(
     .where(eq(salesOrders.id, salesOrderId));
 
   return { subtotalMinor, taxMinor, totalMinor };
+}
+
+/**
+ * Approve a sales order and reserve stock for its tracked lines (Plan §6.3:
+ * committed+ only; on-hand leaves at shipment). Callable from the direct
+ * approve route AND the approval-engine subject sync, so both paths share one
+ * implementation. Status guard makes it idempotent: only draft/
+ * pending_approval orders transition.
+ */
+export async function reserveAndApproveSalesOrder(
+  workspaceId: string,
+  salesOrderId: string,
+  actorUserId: string | null
+): Promise<{ ok: true; status: "reserved" } | { error: "not_found" | "conflict" | "warehouse_required" }> {
+  const [so] = await db.select().from(salesOrders).where(eq(salesOrders.id, salesOrderId)).limit(1);
+  if (!so || so.workspaceId !== workspaceId) return { error: "not_found" };
+  if (so.status !== "draft" && so.status !== "pending_approval") return { error: "conflict" };
+
+  const lines = await db.select().from(salesOrderLineItems).where(eq(salesOrderLineItems.salesOrderId, salesOrderId));
+  const productIds = lines.map((l) => l.productId).filter(Boolean) as string[];
+  const trackedIds = new Set<string>();
+  if (productIds.length > 0) {
+    const prods = await db.select().from(products).where(inArray(products.id, productIds));
+    for (const p of prods) if (p.trackInventory) trackedIds.add(p.id);
+  }
+  const trackedLines = lines.filter((l) => l.productId && trackedIds.has(l.productId));
+  if (trackedLines.length > 0 && !so.warehouseId) return { error: "warehouse_required" };
+
+  await db.transaction(async (tx) => {
+    for (const line of trackedLines) {
+      const toReserve = line.quantity - line.qtyReserved;
+      if (toReserve <= 0) continue;
+      await applyStockMovement(tx, {
+        workspaceId: so.workspaceId,
+        productId: line.productId!,
+        warehouseId: so.warehouseId!,
+        type: "reservation",
+        quantity: toReserve,
+        refType: "sales_order",
+        refId: so.id,
+        actorUserId,
+      });
+      await tx.update(salesOrderLineItems).set({ qtyReserved: line.quantity }).where(eq(salesOrderLineItems.id, line.id));
+    }
+
+    await tx
+      .update(salesOrders)
+      .set({ status: "reserved", approvedAt: new Date(), updatedAt: new Date() })
+      .where(eq(salesOrders.id, salesOrderId));
+
+    await emitEvent(tx, {
+      workspaceId: so.workspaceId,
+      eventType: "salesorder.approved",
+      aggregateType: "sales_order",
+      aggregateId: so.id,
+      actorUserId,
+      payload: { docNumber: so.docNumber, customerId: so.customerId, boardId: so.boardId, itemId: so.itemId },
+    });
+  });
+
+  return { ok: true, status: "reserved" };
 }

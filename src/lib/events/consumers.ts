@@ -45,7 +45,9 @@ import {
   jobStageSchedules,
   planningConflicts,
   vendorPerformance,
+  salesOrders,
 } from "@/lib/db/schema";
+import { reserveAndApproveSalesOrder } from "@/lib/services/sales-orders";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nextDocNumber } from "@/lib/services/document-sequence";
 import { sendEmail } from "@/lib/email";
@@ -268,6 +270,28 @@ async function runApprovalSubjectSync(evt: OutboxRow): Promise<void> {
       actorUserId: evt.actorUserId,
       payload: { docNumber: exp.docNumber, employeeId: exp.employeeId, boardId: exp.boardId, itemId: exp.itemId },
     });
+  } else if (subjectType === "sales_order") {
+    const [so] = await db.select().from(salesOrders).where(eq(salesOrders.id, subjectId)).limit(1);
+    if (!so || so.status !== "pending_approval") return; // idempotent guard
+    if (approved) {
+      // Shared path with the direct approve route: reserve tracked lines and
+      // mark approved/reserved; emits salesorder.approved itself.
+      const result = await reserveAndApproveSalesOrder(so.workspaceId, so.id, evt.actorUserId ?? null);
+      if ("error" in result && result.error === "warehouse_required") {
+        // Approved but unreservable (no warehouse on the order): record the
+        // decision without stock impact; ops sets a warehouse then reserves.
+        await db
+          .update(salesOrders)
+          .set({ status: "approved", approvedAt: new Date(), updatedAt: new Date() })
+          .where(eq(salesOrders.id, subjectId));
+      }
+    } else {
+      // Rejected orders return to draft so sales can rework and resubmit.
+      await db
+        .update(salesOrders)
+        .set({ status: "draft", updatedAt: new Date() })
+        .where(eq(salesOrders.id, subjectId));
+    }
   } else if (subjectType === "leave_request") {
     const [lr] = await db.select().from(leaveRequests).where(eq(leaveRequests.id, subjectId)).limit(1);
     if (!lr || lr.status !== "pending") return; // idempotent guard
@@ -696,6 +720,7 @@ const FEED_ACTIONS: Partial<Record<string, { refType: string; action: string; su
   "estimate.converted": { refType: "estimate", action: "estimate_converted", summary: "Estimate converted" },
   "estimate.expired": { refType: "estimate", action: "estimate_expired", summary: "Estimate expired" },
   "invoice.voided": { refType: "invoice", action: "invoice_voided", summary: "Invoice voided" },
+  "salesorder.submitted": { refType: "sales_order", action: "so_submitted", summary: "Sales order submitted for approval" },
   "salesorder.approved": { refType: "sales_order", action: "so_approved", summary: "Sales order approved & reserved" },
   "salesorder.cancelled": { refType: "sales_order", action: "so_cancelled", summary: "Sales order cancelled" },
   "salesorder.invoiced": { refType: "sales_order", action: "so_invoiced", summary: "Sales order invoiced" },

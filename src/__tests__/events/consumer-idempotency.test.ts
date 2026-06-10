@@ -529,6 +529,83 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
   expect(emitted).toHaveLength(1);
 });
 
+// ── 12b. Approval sync approves a sales order exactly once ──────────
+test("approval sync: sales order approval reserves stock once; rejection returns to draft", async () => {
+  const { salesOrders, salesOrderLineItems } = await import("@/lib/db/schema");
+
+  const [customer] = await db
+    .insert(customers)
+    .values({ workspaceId, name: "SO Customer" })
+    .returning();
+  const [warehouse] = await db
+    .insert(warehouses)
+    .values({ workspaceId, name: "SO WH" })
+    .returning();
+  const [product] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Gear", sku: "GEAR-1", trackInventory: true })
+    .returning();
+
+  const [so] = await db
+    .insert(salesOrders)
+    .values({
+      workspaceId,
+      customerId: customer.id,
+      docNumber: "SO-APPR-1",
+      status: "pending_approval",
+      warehouseId: warehouse.id,
+      createdBy: userId,
+    })
+    .returning();
+  await db.insert(salesOrderLineItems).values({
+    salesOrderId: so.id,
+    productId: product.id,
+    description: "Gear",
+    quantity: 4,
+    unitPriceMinor: 1000,
+  });
+
+  const evt = makeEvent({
+    eventType: "approval.approved",
+    aggregateType: "approval_request",
+    aggregateId: randomUUID(),
+    payload: { subjectType: "sales_order", subjectId: so.id },
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const [after] = await db.select().from(salesOrders).where(eq(salesOrders.id, so.id));
+  expect(after.status).toBe("reserved");
+
+  const movements = await db
+    .select()
+    .from(stockMovements)
+    .where(and(eq(stockMovements.refType, "sales_order"), eq(stockMovements.refId, so.id)));
+  expect(movements).toHaveLength(1);
+  expect(movements[0].committedDelta).toBe(4);
+
+  // Rejection path: a second pending order returns to draft.
+  const [so2] = await db
+    .insert(salesOrders)
+    .values({
+      workspaceId,
+      customerId: customer.id,
+      docNumber: "SO-APPR-2",
+      status: "pending_approval",
+      createdBy: userId,
+    })
+    .returning();
+  await runConsumers(makeEvent({
+    eventType: "approval.rejected",
+    aggregateType: "approval_request",
+    aggregateId: randomUUID(),
+    payload: { subjectType: "sales_order", subjectId: so2.id },
+  }));
+  const [so2After] = await db.select().from(salesOrders).where(eq(salesOrders.id, so2.id));
+  expect(so2After.status).toBe("draft");
+});
+
 // ── 12. Work-order stock cycle: reserve on release, settle on complete ──
 test("work order: release reserves materials, completion consumes and releases", async () => {
   const [warehouse] = await db
