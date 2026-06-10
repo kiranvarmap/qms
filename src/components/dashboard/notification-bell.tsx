@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, Check, Loader2, Trash2, Bot, Mail, Zap, FileText, AtSign, Info } from "lucide-react";
+import { Bell, Check, Loader2, Trash2, Bot, Mail, Zap, FileText, AtSign, Info, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -135,6 +135,9 @@ export function NotificationBell() {
                 <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
               )}
             </div>
+            <Link href="/dashboard/settings/notifications" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-700" title="Notification preferences">
+              <Settings className="h-3.5 w-3.5" />
+            </Link>
             {unreadCount > 0 && (
               <button onClick={markAllRead} className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors">
                 <Check className="h-3 w-3" />All read
