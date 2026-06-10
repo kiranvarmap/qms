@@ -6,6 +6,8 @@ import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/
 import { hasModuleAccess } from "@/lib/services/access";
 import { createProductSchema } from "@/lib/validations";
 import { toMinor } from "@/lib/money";
+import { emitEvent } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 // GET /api/products?workspaceId=...&active=true — list with rolled-up stock
 export async function GET(req: Request) {
@@ -79,6 +81,16 @@ export async function POST(req: Request) {
         createdBy: session.user.id,
       })
       .returning();
+
+    await emitEvent(db, {
+      workspaceId: input.workspaceId,
+      eventType: "product.created",
+      aggregateType: "product",
+      aggregateId: product.id,
+      actorUserId: session.user.id,
+      payload: { sku: product.sku, name: product.name },
+    });
+    dispatchInline();
 
     return created(product);
   }, { route: "POST /api/products" });

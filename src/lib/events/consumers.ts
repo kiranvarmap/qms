@@ -38,8 +38,15 @@ import {
   leaveBalances,
   certifications,
   certificationRecords,
+  products,
+  purchaseRequisitions,
+  requisitionLines,
+  workCenterMachines,
+  jobStageSchedules,
+  planningConflicts,
 } from "@/lib/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { nextDocNumber } from "@/lib/services/document-sequence";
 import { sendEmail } from "@/lib/email";
 import { logger } from "@/lib/logger";
 import { emitEventStandalone } from "./outbox";
@@ -394,6 +401,147 @@ async function runCertificationIssue(evt: OutboxRow): Promise<void> {
   }
 }
 
+// ── Replenishment (Plan §1 / blueprint 04 §1) ────────────────────────
+// stock.low → draft purchase requisition for the product, so procurement
+// has an actionable document, not just a notification. Idempotent: at most
+// one open (draft/submitted) auto-requisition line per product.
+async function runReplenishment(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "stock.low") return;
+  const productId = evt.aggregateId;
+  const workspaceId = evt.workspaceId;
+  if (!productId || !workspaceId) return;
+
+  // Already an open requisition carrying this product? Then the retry/repeat
+  // low-stock signal adds nothing.
+  const [open] = await db
+    .select({ id: requisitionLines.id })
+    .from(requisitionLines)
+    .innerJoin(purchaseRequisitions, eq(purchaseRequisitions.id, requisitionLines.requisitionId))
+    .where(
+      and(
+        eq(purchaseRequisitions.workspaceId, workspaceId),
+        inArray(purchaseRequisitions.status, ["draft", "submitted"]),
+        eq(requisitionLines.productId, productId)
+      )
+    )
+    .limit(1);
+  if (open) return;
+
+  const [product] = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+  if (!product) return;
+
+  const available = Number(evt.payload?.available ?? 0);
+  const reorderLevel = Number(evt.payload?.reorderLevel ?? product.reorderLevel ?? 0);
+  const qty = Math.max(reorderLevel - available, 1);
+
+  await db.transaction(async (tx) => {
+    const docNumber = await nextDocNumber(tx, { workspaceId, docType: "purchase_requisition" });
+    const [req] = await tx
+      .insert(purchaseRequisitions)
+      .values({
+        workspaceId,
+        docNumber,
+        status: "draft",
+        notes: `Auto-draft: ${product.name} fell below its reorder level (available ${available}, reorder at ${reorderLevel}).`,
+        requestedBy: evt.actorUserId ?? null,
+      })
+      .returning();
+    await tx.insert(requisitionLines).values({
+      requisitionId: req.id,
+      productId,
+      description: product.name,
+      quantity: qty,
+      estUnitCostMinor: product.costMinor ?? 0,
+    });
+  });
+}
+
+// ── Safety escalation (blueprint 04 §6) ──────────────────────────────
+// High/critical incidents must reach people immediately — targeted pings to
+// workspace owners/admins, deduped per event so retries never re-page.
+async function runSafetyEscalation(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "incident.reported") return;
+  const severity = (evt.payload?.severity as string) ?? "low";
+  if (severity !== "high" && severity !== "critical" || !evt.workspaceId) return;
+
+  // Dedupe on the producing event id.
+  const [already] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(and(eq(notifications.type, "incident_escalation"), sql`${notifications.meta}->>'eventId' = ${evt.id}`))
+    .limit(1);
+  if (already) return;
+
+  const admins = await db
+    .select({ userId: workspaceMembers.userId })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, evt.workspaceId), inArray(workspaceMembers.role, ["owner", "admin"])));
+
+  for (const a of admins) {
+    await notifyUser(
+      a.userId,
+      "incident_escalation",
+      `${severity === "critical" ? "CRITICAL" : "High-severity"} incident reported`,
+      `Incident ${String(evt.payload?.number ?? "")} (${String(evt.payload?.type ?? "incident")}) requires immediate attention.`,
+      { eventId: evt.id, incidentId: evt.aggregateId, severity }
+    );
+  }
+}
+
+// ── Asset downtime → planning impact (blueprint 04 §4/§5) ────────────
+// When an asset goes down or into maintenance, every pending/in-progress
+// stage scheduled on a machine backed by that asset gets a blocker conflict,
+// so planners see the impact immediately instead of at the next replan.
+async function runAssetDowntime(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "asset.status_changed") return;
+  const to = (evt.payload?.to as string) ?? "";
+  if ((to !== "down" && to !== "maintenance") || !evt.aggregateId || !evt.workspaceId) return;
+
+  const machines = await db
+    .select({ id: workCenterMachines.id })
+    .from(workCenterMachines)
+    .where(and(eq(workCenterMachines.workspaceId, evt.workspaceId), eq(workCenterMachines.assetId, evt.aggregateId)));
+  if (machines.length === 0) return;
+
+  const affected = await db
+    .select()
+    .from(jobStageSchedules)
+    .where(
+      and(
+        eq(jobStageSchedules.workspaceId, evt.workspaceId),
+        inArray(jobStageSchedules.assignedMachineId, machines.map((m) => m.id)),
+        inArray(jobStageSchedules.status, ["pending", "in_progress"])
+      )
+    );
+
+  for (const sched of affected) {
+    // One open maintenance_block per work order × stage is enough.
+    const [existing] = await db
+      .select({ id: planningConflicts.id })
+      .from(planningConflicts)
+      .where(
+        and(
+          eq(planningConflicts.workOrderId, sched.workOrderId),
+          eq(planningConflicts.conflictType, "maintenance_block"),
+          eq(planningConflicts.status, "open"),
+          sched.stageId ? eq(planningConflicts.stageId, sched.stageId) : isNull(planningConflicts.stageId)
+        )
+      )
+      .limit(1);
+    if (existing) continue;
+
+    await db.insert(planningConflicts).values({
+      workspaceId: evt.workspaceId,
+      workOrderId: sched.workOrderId,
+      stageId: sched.stageId ?? null,
+      conflictType: "maintenance_block",
+      severity: "blocker",
+      description: `Stage "${sched.stageName}" is scheduled on a machine whose asset is ${to}.`,
+      suggestedAction: "Reassign the stage to another machine/work center or reschedule after the asset returns to service.",
+    });
+  }
+}
+
 // ── Notifications fan-out ────────────────────────────────────────────
 // Unified delivery: write in-app rows and (optionally) email, honouring
 // notification_preferences. (Plan D.5.2.) Audience = workspace members for
@@ -510,6 +658,27 @@ const FEED_ACTIONS: Partial<Record<string, { refType: string; action: string; su
   "course.completed": { refType: "course", action: "course_completed", summary: "Course completed" },
   "certification.issued": { refType: "certification_record", action: "certification_issued", summary: "Certification issued" },
   "certification.expiring": { refType: "certification_record", action: "certification_expiring", summary: "Certification expiring" },
+  // ── Masters (Phase 1: silent modules wired) ─────────────────────────
+  "product.created": { refType: "product", action: "product_created", summary: "Product created" },
+  "product.updated": { refType: "product", action: "product_updated", summary: "Product updated" },
+  "product.lifecycle_changed": { refType: "product", action: "product_lifecycle_changed", summary: "Product lifecycle changed" },
+  "customer.created": { refType: "customer", action: "customer_created", summary: "Customer added" },
+  "customer.updated": { refType: "customer", action: "customer_updated", summary: "Customer updated" },
+  // ── Manufacturing / maintenance / safety / requisitions ────────────
+  "workorder.released": { refType: "work_order", action: "workorder_released", summary: "Work order released" },
+  "workorder.completed": { refType: "work_order", action: "workorder_completed", summary: "Work order completed" },
+  "workorder.cancelled": { refType: "work_order", action: "workorder_cancelled", summary: "Work order cancelled" },
+  "asset.created": { refType: "asset", action: "asset_created", summary: "Asset registered" },
+  "asset.status_changed": { refType: "asset", action: "asset_status_changed", summary: "Asset status changed" },
+  "maintenance.scheduled": { refType: "maintenance_order", action: "maintenance_scheduled", summary: "Maintenance order created" },
+  "maintenance.started": { refType: "maintenance_order", action: "maintenance_started", summary: "Maintenance started" },
+  "maintenance.completed": { refType: "maintenance_order", action: "maintenance_completed", summary: "Maintenance completed" },
+  "incident.reported": { refType: "incident", action: "incident_reported", summary: "Incident reported" },
+  "incident.closed": { refType: "incident", action: "incident_closed", summary: "Incident closed" },
+  "requisition.submitted": { refType: "purchase_requisition", action: "requisition_submitted", summary: "Requisition submitted" },
+  "requisition.approved": { refType: "purchase_requisition", action: "requisition_approved", summary: "Requisition approved" },
+  "requisition.rejected": { refType: "purchase_requisition", action: "requisition_rejected", summary: "Requisition rejected" },
+  "requisition.converted": { refType: "purchase_requisition", action: "requisition_converted", summary: "Requisition converted to PO" },
 };
 
 async function runActivityFeed(evt: OutboxRow): Promise<void> {
@@ -544,6 +713,9 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runApprovalRouting(evt);
   await runApprovalSubjectSync(evt);
   await runStockLedger(evt);
+  await runReplenishment(evt);
+  await runSafetyEscalation(evt);
+  await runAssetDowntime(evt);
   await runCertificationIssue(evt);
   await runNotifications(evt);
 }

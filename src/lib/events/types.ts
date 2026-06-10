@@ -76,6 +76,8 @@ export type EventType =
   | "product.created"
   | "product.updated"
   | "product.lifecycle_changed"
+  | "customer.created"
+  | "customer.updated"
   | "bom.created"
   | "bom.updated"
   | "product.revision_created"

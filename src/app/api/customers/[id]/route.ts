@@ -6,6 +6,8 @@ import { apiHandler, ok, noContent, unauthorized, notFound, forbidden } from "@/
 import { hasModuleAccess } from "@/lib/services/access";
 import { updateCustomerSchema } from "@/lib/validations";
 import { getCustomerDetail, updateCustomer } from "@/lib/services/customer";
+import { emitEvent } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 async function load(id: string) {
   const [customer] = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
@@ -42,6 +44,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const patch = updateCustomerSchema.parse(await req.json());
     const updated = await updateCustomer(customer.workspaceId, id, patch);
+
+    await emitEvent(db, {
+      workspaceId: customer.workspaceId,
+      eventType: "customer.updated",
+      aggregateType: "customer",
+      aggregateId: id,
+      actorUserId: session.user.id,
+      payload: { name: customer.name },
+    });
+    dispatchInline();
+
     return ok(updated);
   }, { route: "PATCH /api/customers/[id]" });
 }

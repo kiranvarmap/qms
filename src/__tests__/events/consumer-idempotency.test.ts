@@ -41,6 +41,16 @@ import {
   courses,
   certifications,
   certificationRecords,
+  purchaseRequisitions,
+  requisitionLines,
+  notifications,
+  workspaceMembers,
+  assets,
+  workCenters,
+  workCenterMachines,
+  workOrders,
+  jobStageSchedules,
+  planningConflicts,
 } from "@/lib/db/schema";
 import { runConsumers } from "@/lib/events/consumers";
 import type { OutboxRow } from "@/lib/events/types";
@@ -286,4 +296,116 @@ test("certification issue: retried course.completed mints one record", async () 
     .where(and(eq(certificationRecords.employeeId, emp.id), eq(certificationRecords.certificationId, cert.id)));
   expect(records).toHaveLength(1);
   expect(records[0].status).toBe("valid");
+});
+
+// ── 6. Replenishment drafts one requisition per low-stock product ───
+test("replenishment: repeated stock.low yields one open draft requisition", async () => {
+  const [product] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Bolt M8", sku: "BOLT-8", reorderLevel: 50 })
+    .returning();
+
+  const evt = makeEvent({
+    eventType: "stock.low",
+    aggregateType: "product",
+    aggregateId: product.id,
+    payload: { available: 10, reorderLevel: 50, name: product.name },
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+  // A second, distinct low-stock signal must also not duplicate while one is open.
+  await runConsumers(makeEvent({
+    eventType: "stock.low",
+    aggregateType: "product",
+    aggregateId: product.id,
+    payload: { available: 8, reorderLevel: 50, name: product.name },
+  }));
+
+  const lines = await db
+    .select()
+    .from(requisitionLines)
+    .where(eq(requisitionLines.productId, product.id));
+  expect(lines).toHaveLength(1);
+  expect(lines[0].quantity).toBe(40); // reorder 50 − available 10
+
+  const [req] = await db
+    .select()
+    .from(purchaseRequisitions)
+    .where(eq(purchaseRequisitions.id, lines[0].requisitionId));
+  expect(req.status).toBe("draft");
+});
+
+// ── 7. Safety escalation pages admins exactly once ──────────────────
+test("safety escalation: critical incident notifies admins once", async () => {
+  await db
+    .insert(workspaceMembers)
+    .values({ workspaceId, userId, role: "owner" })
+    .onConflictDoNothing();
+
+  const evt = makeEvent({
+    eventType: "incident.reported",
+    aggregateType: "incident",
+    aggregateId: randomUUID(),
+    payload: { number: "INC-001", type: "injury", severity: "critical" },
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const pings = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.type, "incident_escalation")));
+  expect(pings).toHaveLength(1);
+});
+
+// ── 8. Asset downtime raises one blocker per scheduled stage ────────
+test("asset downtime: status change flags affected stage schedules once", async () => {
+  const [asset] = await db
+    .insert(assets)
+    .values({ workspaceId, code: "CNC-1", name: "CNC mill", status: "up" })
+    .returning();
+  const [wc] = await db
+    .insert(workCenters)
+    .values({ workspaceId, name: "Machining" })
+    .returning();
+  const [machine] = await db
+    .insert(workCenterMachines)
+    .values({ workspaceId, workCenterId: wc.id, assetId: asset.id, name: "CNC mill #1" })
+    .returning();
+  const [product] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Bracket", sku: "BRK-1" })
+    .returning();
+  const [wo] = await db
+    .insert(workOrders)
+    .values({ workspaceId, number: "WO-001", productId: product.id, qtyPlanned: 5, createdBy: userId })
+    .returning();
+  await db.insert(jobStageSchedules).values({
+    workspaceId,
+    workOrderId: wo.id,
+    stageName: "Milling",
+    assignedWorkCenterId: wc.id,
+    assignedMachineId: machine.id,
+    status: "pending",
+  });
+
+  const evt = makeEvent({
+    eventType: "asset.status_changed",
+    aggregateType: "asset",
+    aggregateId: asset.id,
+    payload: { from: "up", to: "down" },
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const conflicts = await db
+    .select()
+    .from(planningConflicts)
+    .where(and(eq(planningConflicts.workOrderId, wo.id), eq(planningConflicts.conflictType, "maintenance_block")));
+  expect(conflicts).toHaveLength(1);
+  expect(conflicts[0].severity).toBe("blocker");
+  expect(conflicts[0].status).toBe("open");
 });

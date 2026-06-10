@@ -6,6 +6,8 @@ import { apiHandler, ok, noContent, unauthorized, notFound, forbidden } from "@/
 import { hasModuleAccess } from "@/lib/services/access";
 import { updateProductSchema } from "@/lib/validations";
 import { toMinor } from "@/lib/money";
+import { emitEvent } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 async function load(id: string) {
   const [product] = await db.select().from(products).where(eq(products.id, id)).limit(1);
@@ -72,6 +74,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       })
       .where(eq(products.id, id))
       .returning();
+
+    const lifecycleChanged =
+      patch.lifecycleStatus !== undefined && patch.lifecycleStatus !== product.lifecycleStatus;
+    await emitEvent(db, {
+      workspaceId: product.workspaceId,
+      eventType: lifecycleChanged ? "product.lifecycle_changed" : "product.updated",
+      aggregateType: "product",
+      aggregateId: id,
+      actorUserId: session.user.id,
+      payload: lifecycleChanged
+        ? { sku: updated.sku, name: updated.name, from: product.lifecycleStatus, to: updated.lifecycleStatus }
+        : { sku: updated.sku, name: updated.name },
+    });
+    dispatchInline();
 
     return ok(updated);
   }, { route: "PATCH /api/products/[id]" });

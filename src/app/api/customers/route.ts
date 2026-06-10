@@ -6,6 +6,8 @@ import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/
 import { hasModuleAccess } from "@/lib/services/access";
 import { createCustomerSchema } from "@/lib/validations";
 import { createCustomer } from "@/lib/services/customer";
+import { emitEvent } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 // GET /api/customers?workspaceId=...&status=active — list a workspace's customers
 export async function GET(req: Request) {
@@ -40,6 +42,17 @@ export async function POST(req: Request) {
       return forbidden();
 
     const customer = await createCustomer(input.workspaceId, input, session.user.id);
+
+    await emitEvent(db, {
+      workspaceId: input.workspaceId,
+      eventType: "customer.created",
+      aggregateType: "customer",
+      aggregateId: customer.id,
+      actorUserId: session.user.id,
+      payload: { name: customer.name },
+    });
+    dispatchInline();
+
     return created(customer);
   }, { route: "POST /api/customers" });
 }
