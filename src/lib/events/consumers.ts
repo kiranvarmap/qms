@@ -831,6 +831,7 @@ const FEED_ACTIONS: Partial<Record<string, { refType: string; action: string; su
   "approval.requested": { refType: "approval_request", action: "approval_requested", summary: "Approval requested" },
   "approval.approved": { refType: "approval_request", action: "approval_approved", summary: "Approval granted" },
   "approval.rejected": { refType: "approval_request", action: "approval_rejected", summary: "Approval rejected" },
+  "approval.overdue": { refType: "approval_request", action: "approval_overdue", summary: "Approval overdue — escalated" },
   "po.submitted": { refType: "purchase_order", action: "po_submitted", summary: "PO submitted for approval" },
   "po.approved": { refType: "purchase_order", action: "po_approved", summary: "PO approved" },
   "po.rejected": { refType: "purchase_order", action: "po_rejected", summary: "PO rejected" },

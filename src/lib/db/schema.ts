@@ -1482,6 +1482,10 @@ export const approvalSteps = pgTable("approval_steps", {
   decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
   decidedAt: timestamp("decided_at", { mode: "date" }),
   comment: text("comment"),
+  // SLA (blueprint 05 §2): when a pending step should be decided by; the cron
+  // sweep escalates overdue steps to the approver's manager once.
+  dueAt: timestamp("due_at", { mode: "date" }),
+  escalatedAt: timestamp("escalated_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 

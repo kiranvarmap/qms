@@ -118,12 +118,16 @@ export async function createApprovalRequest(
     })
     .returning();
 
+  // SLA clock starts at request creation for every step (v1 approximation —
+  // policy-driven per-step SLAs land with the policy engine).
+  const dueAt = new Date(Date.now() + 48 * 3_600_000);
   await executor.insert(approvalSteps).values(
     steps.map((s, i) => ({
       requestId: req.id,
       stepNumber: i + 1,
       approverEmployeeId: s.approverEmployeeId ?? null,
       approverRole: s.approverRole ?? null,
+      dueAt,
     }))
   );
 

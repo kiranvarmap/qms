@@ -58,6 +58,7 @@ export type EventType =
   | "invoice.paid"
   | "invoice.overdue"
   | "invoice.voided"
+  | "approval.overdue"
   | "payment.recorded"
   | "expense.submitted"
   | "expense.approved"

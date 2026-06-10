@@ -529,6 +529,62 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
   expect(emitted).toHaveLength(1);
 });
 
+// ── 15. Approval SLA escalates an overdue step exactly once ─────────
+test("approval sla: overdue step notifies approver + manager + requester once", async () => {
+  const { approvalRequests, approvalSteps } = await import("@/lib/db/schema");
+  const { sweepApprovalSlas } = await import("@/lib/services/approval-sla");
+
+  // Manager chain: approver reports to manager; both have user accounts.
+  const [mgrUser] = await db
+    .insert(users)
+    .values({ name: "Mgr", email: "mgr@test.local", role: "manager" })
+    .returning();
+  const [mgrEmp] = await db
+    .insert(employees)
+    .values({ workspaceId, employeeId: "EMP-MGR", name: "Mgr", userId: mgrUser.id })
+    .returning();
+  const [apprUser] = await db
+    .insert(users)
+    .values({ name: "Approver", email: "approver@test.local", role: "user" })
+    .returning();
+  const [apprEmp] = await db
+    .insert(employees)
+    .values({ workspaceId, employeeId: "EMP-APPR", name: "Approver", userId: apprUser.id, managerEmployeeId: mgrEmp.id })
+    .returning();
+
+  const [req] = await db
+    .insert(approvalRequests)
+    .values({ workspaceId, subjectType: "expense", subjectId: randomUUID(), requestedBy: userId, currentStep: 1 })
+    .returning();
+  await db.insert(approvalSteps).values({
+    requestId: req.id,
+    stepNumber: 1,
+    approverEmployeeId: apprEmp.id,
+    dueAt: new Date(Date.now() - 3_600_000), // due an hour ago
+  });
+
+  await sweepApprovalSlas();
+  await sweepApprovalSlas(); // escalatedAt guard → no double-page
+
+  const apprPings = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, apprUser.id), eq(notifications.type, "approval_overdue")));
+  expect(apprPings).toHaveLength(1);
+
+  const mgrPings = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, mgrUser.id), eq(notifications.type, "approval_escalated")));
+  expect(mgrPings).toHaveLength(1);
+
+  const overdueEvents = await db
+    .select()
+    .from(eventOutbox)
+    .where(and(eq(eventOutbox.eventType, "approval.overdue"), eq(eventOutbox.aggregateId, req.id)));
+  expect(overdueEvents).toHaveLength(1);
+});
+
 // ── 14. Receiving QC spawns one inspection per GRN ──────────────────
 test("receiving qc: po.received spawns one linked inspection for QC products", async () => {
   const { inspectionTemplates, inspections } = await import("@/lib/db/schema");
