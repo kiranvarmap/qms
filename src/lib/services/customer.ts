@@ -6,8 +6,8 @@
  */
 
 import { db } from "@/lib/db";
-import { customers, customerContacts } from "@/lib/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { customers, customerContacts, estimates, salesOrders, invoices } from "@/lib/db/schema";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { toMinor } from "@/lib/money";
 
 type Address = Record<string, string | undefined>;
@@ -104,5 +104,51 @@ export async function getCustomerDetail(workspaceId: string, id: string) {
   const [customer] = await db.select().from(customers).where(and(eq(customers.id, id), eq(customers.workspaceId, workspaceId))).limit(1);
   if (!customer) return null;
   const contacts = await db.select().from(customerContacts).where(eq(customerContacts.customerId, id)).orderBy(asc(customerContacts.position));
-  return { ...customer, contacts };
+
+  // 360° roll-ups (audit 02 §1: the customer page had no related documents/AR).
+  const recentEstimates = await db
+    .select({ id: estimates.id, docNumber: estimates.docNumber, status: estimates.status, totalMinor: estimates.totalMinor, createdAt: estimates.createdAt })
+    .from(estimates)
+    .where(and(eq(estimates.customerId, id), eq(estimates.workspaceId, workspaceId)))
+    .orderBy(desc(estimates.createdAt))
+    .limit(20);
+  const recentSalesOrders = await db
+    .select({ id: salesOrders.id, docNumber: salesOrders.docNumber, status: salesOrders.status, totalMinor: salesOrders.totalMinor, createdAt: salesOrders.createdAt })
+    .from(salesOrders)
+    .where(and(eq(salesOrders.customerId, id), eq(salesOrders.workspaceId, workspaceId)))
+    .orderBy(desc(salesOrders.createdAt))
+    .limit(20);
+  const recentInvoices = await db
+    .select({ id: invoices.id, docNumber: invoices.docNumber, status: invoices.status, totalMinor: invoices.totalMinor, amountPaidMinor: invoices.amountPaidMinor, dueDate: invoices.dueDate, createdAt: invoices.createdAt })
+    .from(invoices)
+    .where(and(eq(invoices.customerId, id), eq(invoices.workspaceId, workspaceId), eq(invoices.kind, "ar")))
+    .orderBy(desc(invoices.createdAt))
+    .limit(20);
+
+  const [ar] = await db
+    .select({
+      outstanding: sql<number>`coalesce(sum(${invoices.totalMinor} - ${invoices.amountPaidMinor}), 0)`,
+      overdue: sql<number>`coalesce(sum(case when ${invoices.status} = 'overdue' then ${invoices.totalMinor} - ${invoices.amountPaidMinor} else 0 end), 0)`,
+      lifetime: sql<number>`coalesce(sum(${invoices.totalMinor}), 0)`,
+    })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.customerId, id),
+        eq(invoices.workspaceId, workspaceId),
+        eq(invoices.kind, "ar"),
+        inArray(invoices.status, ["sent", "partially_paid", "paid", "overdue"])
+      )
+    );
+
+  return {
+    ...customer,
+    contacts,
+    estimates: recentEstimates,
+    salesOrders: recentSalesOrders,
+    invoices: recentInvoices,
+    arOutstandingMinor: Number(ar?.outstanding ?? 0),
+    arOverdueMinor: Number(ar?.overdue ?? 0),
+    lifetimeBilledMinor: Number(ar?.lifetime ?? 0),
+  };
 }

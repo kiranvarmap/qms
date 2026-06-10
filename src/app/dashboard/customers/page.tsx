@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Users2, KeyRound, X, AlertCircle } from "lucide-react";
 import ImportExport from "@/components/ImportExport";
@@ -90,9 +92,9 @@ export default function CustomersPage() {
         </div>
         <div className="flex items-center gap-2">
           <ImportExport entity="customers" workspaceId={workspaceId} onImported={load} />
-          <a href="/dashboard/customers/new" className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
+          <Link href="/dashboard/customers/new" className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md">
             <Plus className="h-4 w-4" /> New Customer
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -118,7 +120,7 @@ export default function CustomersPage() {
               <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-500">No customers yet.</td></tr>
             ) : customers.map((c) => (
               <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="px-4 py-3 text-gray-900">{c.name}</td>
+                <td className="px-4 py-3"><Link href={`/dashboard/customers/${c.id}`} className="text-blue-700 hover:underline">{c.name}</Link></td>
                 <td className="px-4 py-3 text-gray-600">{c.email || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{c.phone || "—"}</td>
                 <td className="px-4 py-3 text-right">
