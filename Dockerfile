@@ -6,7 +6,10 @@
 # `output: standalone`, because Next 16's Turbopack build does not reliably
 # trace all server chunks into .next/standalone (missing-chunk 500s).
 
-FROM node:22-alpine AS base
+# Docker Hub official image via the ECR Public mirror — pulling docker.io/node
+# from ACR build agents intermittently fails with "toomanyrequests"
+# (unauthenticated pull rate limit). Same image, no auth, no practical limit.
+FROM public.ecr.aws/docker/library/node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 # ── All deps (for build) ─────────────────────────────────────────────
