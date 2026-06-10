@@ -326,6 +326,9 @@ export const createProductSchema = z.object({
   // Product Management (BRD 0X): engineering lifecycle.
   lifecycleStatus: z.enum(["draft", "active", "obsolete"]).optional(),
   boardId:        uuidSchema.optional(),
+  // Receiving QC: spawn an inspection from this template on goods receipt.
+  qcRequired:     z.boolean().optional(),
+  qcTemplateId:   uuidSchema.nullable().optional(),
 });
 export const updateProductSchema = createProductSchema
   .omit({ workspaceId: true })

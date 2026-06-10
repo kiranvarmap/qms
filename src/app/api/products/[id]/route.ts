@@ -69,6 +69,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(patch.trackInventory !== undefined ? { trackInventory: patch.trackInventory } : {}),
         ...(patch.lifecycleStatus !== undefined ? { lifecycleStatus: patch.lifecycleStatus } : {}),
         ...(patch.boardId !== undefined ? { boardId: patch.boardId || null } : {}),
+        ...(patch.qcRequired !== undefined ? { qcRequired: patch.qcRequired } : {}),
+        ...(patch.qcTemplateId !== undefined ? { qcTemplateId: patch.qcTemplateId || null } : {}),
         ...(patch.isActive !== undefined ? { isActive: patch.isActive } : {}),
         updatedAt: new Date(),
       })

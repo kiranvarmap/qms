@@ -78,6 +78,8 @@ export async function POST(req: Request) {
         trackInventory: input.type === "service" ? false : input.trackInventory ?? true,
         lifecycleStatus: input.lifecycleStatus ?? "active",
         boardId: input.boardId || null,
+        qcRequired: input.qcRequired ?? false,
+        qcTemplateId: input.qcTemplateId || null,
         createdBy: session.user.id,
       })
       .returning();

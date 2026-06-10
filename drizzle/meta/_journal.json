@@ -232,6 +232,13 @@
       "when": 1781074359353,
       "tag": "0032_silky_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1781091478065,
+      "tag": "0033_flippant_madrox",
+      "breakpoints": true
     }
   ]
 }

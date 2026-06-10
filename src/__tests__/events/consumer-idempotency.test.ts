@@ -529,6 +529,65 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
   expect(emitted).toHaveLength(1);
 });
 
+// ── 14. Receiving QC spawns one inspection per GRN ──────────────────
+test("receiving qc: po.received spawns one linked inspection for QC products", async () => {
+  const { inspectionTemplates, inspections } = await import("@/lib/db/schema");
+
+  const [template] = await db
+    .insert(inspectionTemplates)
+    .values({ title: "Incoming goods check", createdBy: userId })
+    .returning();
+  const [vendor] = await db
+    .insert(vendors)
+    .values({ workspaceId, name: "QC Vendor" })
+    .returning();
+  const [product] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Casting", sku: "CAST-1", qcRequired: true, qcTemplateId: template.id })
+    .returning();
+  const [warehouse] = await db
+    .insert(warehouses)
+    .values({ workspaceId, name: "QC WH" })
+    .returning();
+  const [po] = await db
+    .insert(purchaseOrders)
+    .values({ workspaceId, vendorId: vendor.id, docNumber: "PO-QC-1", createdBy: userId })
+    .returning();
+  const [line] = await db
+    .insert(poLineItems)
+    .values({ purchaseOrderId: po.id, description: "Casting", productId: product.id, quantity: 3, unitCostMinor: 100 })
+    .returning();
+  const [grn] = await db
+    .insert(goodsReceipts)
+    .values({ workspaceId, purchaseOrderId: po.id, docNumber: "GRN-QC-1", warehouseId: warehouse.id, receivedBy: userId })
+    .returning();
+  await db
+    .insert(goodsReceiptLines)
+    .values({ goodsReceiptId: grn.id, poLineItemId: line.id, productId: product.id, quantity: 3 });
+
+  const evt = makeEvent({
+    eventType: "po.received",
+    aggregateType: "purchase_order",
+    aggregateId: po.id,
+    payload: { goodsReceiptId: grn.id },
+  });
+
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const links = await db
+    .select()
+    .from(entityLinks)
+    .where(and(eq(entityLinks.targetType, "goods_receipt"), eq(entityLinks.targetId, grn.id)));
+  expect(links).toHaveLength(1);
+
+  const [insp] = await db.select().from(inspections).where(eq(inspections.id, links[0].sourceId));
+  expect(insp.title).toContain("GRN-QC-1");
+  expect(insp.title).toContain("Casting");
+  expect(insp.status).toBe("in_progress");
+  expect(insp.templateId).toBe(template.id);
+});
+
 // ── 13. GL posting books each financial event exactly once ──────────
 test("gl posting: invoice issue, payment, and void each book one balanced entry", async () => {
   const { invoices, payments, journalEntries, journalLines, ledgerAccounts } = await import("@/lib/db/schema");

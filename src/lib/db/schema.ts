@@ -1751,6 +1751,10 @@ export const products = pgTable("products", {
   lifecycleStatus: productLifecycleEnum("lifecycle_status").default("active").notNull(),
   // Current released engineering revision label (e.g. "A"); null until released.
   currentRevision: varchar("current_revision", { length: 40 }),
+  // Receiving QC (blueprint 04 §1): when set, every goods receipt of this
+  // product spawns an inspection from qcTemplateId, linked evidence_for the GRN.
+  qcRequired: boolean("qc_required").default(false).notNull(),
+  qcTemplateId: uuid("qc_template_id").references(() => inspectionTemplates.id, { onDelete: "set null" }),
   // Optional link to the project board this product belongs to.
   boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

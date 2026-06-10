@@ -19,6 +19,9 @@ import {
   items,
   inspections,
   inspectionActions,
+  inspectionTemplates,
+  templateSections,
+  templateQuestions,
   entityLinks,
   notifications,
   notificationPreferences,
@@ -432,6 +435,104 @@ async function runCertificationIssue(evt: OutboxRow): Promise<void> {
   }
 }
 
+// ── Receiving QC (blueprint 04 §1) ───────────────────────────────────
+// Goods receipts containing QC-flagged products spawn an incoming-goods
+// inspection (one per distinct QC template per GRN), linked `evidence_for`
+// the receipt so quality and procurement see the same record. Idempotent:
+// the GRN-side entity link is the guard.
+async function runReceivingQC(evt: OutboxRow): Promise<void> {
+  if (evt.eventType !== "po.received") return;
+  const grnId = (evt.payload?.goodsReceiptId as string) ?? null;
+  if (!grnId) return;
+
+  const [already] = await db
+    .select({ id: entityLinks.id })
+    .from(entityLinks)
+    .where(
+      and(
+        eq(entityLinks.targetType, "goods_receipt"),
+        eq(entityLinks.targetId, grnId),
+        eq(entityLinks.relation, "evidence_for")
+      )
+    )
+    .limit(1);
+  if (already) return;
+
+  const [grn] = await db.select().from(goodsReceipts).where(eq(goodsReceipts.id, grnId)).limit(1);
+  if (!grn) return;
+  const conductedBy = grn.receivedBy ?? evt.actorUserId;
+  if (!conductedBy) return; // inspections need a conducting user
+
+  // Which received products demand QC?
+  const lines = await db
+    .select({ productId: goodsReceiptLines.productId, lineProductId: poLineItems.productId })
+    .from(goodsReceiptLines)
+    .leftJoin(poLineItems, eq(poLineItems.id, goodsReceiptLines.poLineItemId))
+    .where(eq(goodsReceiptLines.goodsReceiptId, grnId));
+  const productIds = [...new Set(lines.map((l) => l.productId ?? l.lineProductId).filter(Boolean))] as string[];
+  if (productIds.length === 0) return;
+
+  const qcProducts = await db
+    .select({ id: products.id, name: products.name, qcTemplateId: products.qcTemplateId })
+    .from(products)
+    .where(and(inArray(products.id, productIds), eq(products.qcRequired, true)));
+  const byTemplate = new Map<string, string[]>();
+  for (const p of qcProducts) {
+    if (!p.qcTemplateId) continue;
+    byTemplate.set(p.qcTemplateId, [...(byTemplate.get(p.qcTemplateId) ?? []), p.name]);
+  }
+  if (byTemplate.size === 0) return;
+
+  for (const [templateId, productNames] of byTemplate) {
+    const [template] = await db
+      .select()
+      .from(inspectionTemplates)
+      .where(eq(inspectionTemplates.id, templateId))
+      .limit(1);
+    if (!template) continue;
+
+    const sections = await db
+      .select()
+      .from(templateSections)
+      .where(eq(templateSections.templateId, templateId))
+      .orderBy(templateSections.position);
+    const sectionsWithQuestions = [];
+    for (const s of sections) {
+      const questions = await db
+        .select()
+        .from(templateQuestions)
+        .where(eq(templateQuestions.sectionId, s.id))
+        .orderBy(templateQuestions.position);
+      sectionsWithQuestions.push({ ...s, questions });
+    }
+
+    const [inspection] = await db
+      .insert(inspections)
+      .values({
+        templateId,
+        templateSnapshot: { sections: sectionsWithQuestions, scoringEnabled: template.scoringEnabled },
+        title: `Receiving QC — ${grn.docNumber} (${productNames.join(", ")})`,
+        workspaceId: grn.workspaceId,
+        conductedBy,
+        status: "in_progress",
+      })
+      .returning();
+
+    await db
+      .insert(entityLinks)
+      .values({
+        workspaceId: grn.workspaceId,
+        sourceType: "inspection",
+        sourceId: inspection.id,
+        targetType: "goods_receipt",
+        targetId: grnId,
+        relation: "evidence_for",
+        createdBy: conductedBy,
+      })
+      .onConflictDoNothing();
+  }
+}
+
 // ── Vendor scoring (blueprint 04 §2) ─────────────────────────────────
 // Every goods receipt refreshes the vendor's rolling all-time scorecard.
 // Recomputed from source data, so the consumer is idempotent by construction.
@@ -821,6 +922,7 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runApprovalRouting(evt);
   await runApprovalSubjectSync(evt);
   await runStockLedger(evt);
+  await runReceivingQC(evt);
   await runVendorScoring(evt);
   await runReplenishment(evt);
   await runSafetyEscalation(evt);
