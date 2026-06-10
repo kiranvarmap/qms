@@ -49,7 +49,11 @@ import {
   planningConflicts,
   vendorPerformance,
   salesOrders,
+  eventRecipes,
+  webhookSubscriptions,
+  workspaces,
 } from "@/lib/db/schema";
+import { createHmac } from "crypto";
 import { reserveAndApproveSalesOrder } from "@/lib/services/sales-orders";
 import {
   postInvoiceIssued,
@@ -748,6 +752,140 @@ async function runGlPosting(evt: OutboxRow): Promise<void> {
   }
 }
 
+// ── Event recipes (blueprint 05 §3) ──────────────────────────────────
+// Admin-configured "when ⟨event⟩ then ⟨action⟩" automations. Each
+// (recipe × event) executes at most once: the entity_links uniqueness
+// constraint is the claim — losing the insert race means a retry already
+// handled it.
+async function runRecipes(evt: OutboxRow): Promise<void> {
+  if (!evt.workspaceId) return;
+  const recipes = await db
+    .select()
+    .from(eventRecipes)
+    .where(and(eq(eventRecipes.workspaceId, evt.workspaceId), eq(eventRecipes.eventType, evt.eventType), eq(eventRecipes.isActive, true)));
+  if (recipes.length === 0) return;
+
+  for (const recipe of recipes) {
+    const claimed = await db
+      .insert(entityLinks)
+      .values({
+        workspaceId: evt.workspaceId,
+        sourceType: "event_recipe",
+        sourceId: recipe.id,
+        targetType: "event",
+        targetId: evt.id,
+        relation: "executed_for",
+      })
+      .onConflictDoNothing()
+      .returning({ id: entityLinks.id });
+    if (claimed.length === 0) continue; // already executed for this event
+
+    const cfg = (recipe.config ?? {}) as { userId?: string; boardId?: string; groupName?: string; titleTemplate?: string };
+    const summary = `${recipe.name}: ${evt.eventType.replace(/\./g, " ").replace(/_/g, " ")}`;
+
+    if (recipe.actionType === "notify_admins") {
+      const admins = await db
+        .select({ userId: workspaceMembers.userId })
+        .from(workspaceMembers)
+        .where(and(eq(workspaceMembers.workspaceId, evt.workspaceId), inArray(workspaceMembers.role, ["owner", "admin"])));
+      for (const a of admins) {
+        await notifyUser(a.userId, "recipe_triggered", recipe.name, summary, { eventId: evt.id, recipeId: recipe.id, eventType: evt.eventType });
+      }
+    } else if (recipe.actionType === "notify_user" && cfg.userId) {
+      await notifyUser(cfg.userId, "recipe_triggered", recipe.name, summary, { eventId: evt.id, recipeId: recipe.id, eventType: evt.eventType });
+    } else if (recipe.actionType === "create_task" && cfg.boardId) {
+      const groupName = cfg.groupName?.trim() || "Automations";
+      const [existingGroup] = await db
+        .select()
+        .from(groups)
+        .where(and(eq(groups.boardId, cfg.boardId), eq(groups.name, groupName)))
+        .limit(1);
+      let groupId = existingGroup?.id;
+      if (!groupId) {
+        const [g] = await db.insert(groups).values({ boardId: cfg.boardId, name: groupName, color: "#9d50dd" }).returning();
+        groupId = g.id;
+      }
+      const title = (cfg.titleTemplate?.trim() || `${recipe.name} — {event}`).replace("{event}", evt.eventType);
+      // items.createdBy is NOT NULL — fall back to the workspace owner for
+      // system-triggered events with no actor.
+      let creator = evt.actorUserId ?? recipe.createdBy ?? null;
+      if (!creator) {
+        const [ws] = await db
+          .select({ ownerId: workspaces.ownerId })
+          .from(workspaces)
+          .where(eq(workspaces.id, evt.workspaceId))
+          .limit(1);
+        creator = ws?.ownerId ?? null;
+      }
+      if (!creator) continue;
+      await db.insert(items).values({
+        boardId: cfg.boardId,
+        groupId,
+        workspaceId: evt.workspaceId,
+        name: title,
+        createdBy: creator,
+      });
+    }
+  }
+}
+
+// ── Outbound webhooks (blueprint 06 §4) ──────────────────────────────
+// Push every matching event to subscribed external systems. Bodies are
+// HMAC-SHA256 signed (X-QMS-Signature). Delivery is at-least-once by design
+// (consumers may retry); 20 consecutive failures auto-disable a subscription.
+async function runWebhooks(evt: OutboxRow): Promise<void> {
+  if (!evt.workspaceId) return;
+  const subs = await db
+    .select()
+    .from(webhookSubscriptions)
+    .where(and(eq(webhookSubscriptions.workspaceId, evt.workspaceId), eq(webhookSubscriptions.isActive, true)));
+  if (subs.length === 0) return;
+
+  const body = JSON.stringify({
+    id: evt.id,
+    eventType: evt.eventType,
+    aggregateType: evt.aggregateType,
+    aggregateId: evt.aggregateId,
+    payload: evt.payload,
+    workspaceId: evt.workspaceId,
+    occurredAt: evt.occurredAt,
+  });
+
+  for (const sub of subs) {
+    const filter = (sub.eventTypes ?? []) as string[];
+    if (filter.length > 0 && !filter.includes(evt.eventType)) continue;
+
+    const signature = createHmac("sha256", sub.secret).update(body).digest("hex");
+    try {
+      const res = await fetch(sub.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-QMS-Event": evt.eventType,
+          "X-QMS-Signature": signature,
+        },
+        body,
+        signal: AbortSignal.timeout(5000),
+      });
+      await db
+        .update(webhookSubscriptions)
+        .set({
+          lastStatus: res.status,
+          lastDeliveredAt: new Date(),
+          failCount: res.ok ? 0 : sub.failCount + 1,
+          ...(res.ok || sub.failCount + 1 < 20 ? {} : { isActive: false }),
+        })
+        .where(eq(webhookSubscriptions.id, sub.id));
+    } catch (err) {
+      logger?.warn?.("webhook delivery failed", { subscriptionId: sub.id, error: String(err) });
+      await db
+        .update(webhookSubscriptions)
+        .set({ failCount: sub.failCount + 1, ...(sub.failCount + 1 < 20 ? {} : { isActive: false }) })
+        .where(eq(webhookSubscriptions.id, sub.id));
+    }
+  }
+}
+
 // ── Notifications fan-out ────────────────────────────────────────────
 // Unified delivery: write in-app rows and (optionally) email, honouring
 // notification_preferences. (Plan D.5.2.) Audience = workspace members for
@@ -930,7 +1068,9 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runAssetDowntime(evt);
   await runCertificationIssue(evt);
   await runGlPosting(evt);
+  await runRecipes(evt);
   await runNotifications(evt);
+  await runWebhooks(evt);
 }
 
 // Re-export for callers that want roll-up SQL elsewhere.

@@ -1084,6 +1084,53 @@ export const entityLinks = pgTable(
 );
 
 // ════════════════════════════════════════════════════════════════════
+// OUTBOUND WEBHOOKS (blueprint 06 §4) — external systems subscribe to the
+// same event bus the platform runs on. Deliveries are HMAC-signed; repeated
+// failures auto-disable the subscription.
+// ════════════════════════════════════════════════════════════════════
+
+export const webhookSubscriptions = pgTable("webhook_subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 120 }).notNull(),
+  url: text("url").notNull(),
+  // HMAC-SHA256 signing secret (hex), generated server-side at create time.
+  secret: varchar("secret", { length: 128 }).notNull(),
+  // Event-type filter; empty array = every event.
+  eventTypes: jsonb("event_types").default("[]").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  failCount: integer("fail_count").default(0).notNull(),
+  lastStatus: integer("last_status"),
+  lastDeliveredAt: timestamp("last_delivered_at", { mode: "date" }),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
+// EVENT RECIPES (blueprint 05 §3) — admin-configurable cross-module
+// automations: "when ⟨event⟩ then ⟨action⟩". System loops stay hard-coded
+// consumers; recipes are the customer-configurable glue.
+// ════════════════════════════════════════════════════════════════════
+
+export const eventRecipes = pgTable("event_recipes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 160 }).notNull(),
+  eventType: varchar("event_type", { length: 100 }).notNull(),
+  // 'notify_admins' | 'notify_user' | 'create_task'
+  actionType: varchar("action_type", { length: 30 }).notNull(),
+  // notify_user: { userId } · create_task: { boardId, groupName?, titleTemplate? }
+  config: jsonb("config").default("{}").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ════════════════════════════════════════════════════════════════════
 // SAVED VIEWS (audit P4) — persisted board view state (view mode, filters,
 // sort, search) per user, optionally shared with the workspace.
 // ════════════════════════════════════════════════════════════════════

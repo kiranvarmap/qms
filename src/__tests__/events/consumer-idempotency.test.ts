@@ -11,7 +11,7 @@
  * history — see test-db.ts.
  */
 import { randomUUID } from "crypto";
-import { beforeAll, expect, test } from "vitest";
+import { beforeAll, expect, test, vi } from "vitest";
 
 // `@/lib/db` is aliased to ./test-db by vitest.config.ts, so every module in
 // the chain (consumers, outbox, inventory service) hits the PGlite instance.
@@ -527,6 +527,62 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
     .from(eventOutbox)
     .where(and(eq(eventOutbox.eventType, "estimate.expired"), eq(eventOutbox.aggregateId, est.id)));
   expect(emitted).toHaveLength(1);
+});
+
+// ── 16. Event recipes execute exactly once per event ────────────────
+test("recipes: notify_admins and create_task fire once per event", async () => {
+  const { eventRecipes, boards, items } = await import("@/lib/db/schema");
+
+  await db.insert(workspaceMembers).values({ workspaceId, userId, role: "owner" }).onConflictDoNothing();
+  const [board] = await db.insert(boards).values({ workspaceId, name: "Recipe board", createdBy: userId }).returning();
+
+  await db.insert(eventRecipes).values([
+    { workspaceId, name: "Page admins on overdue", eventType: "invoice.overdue", actionType: "notify_admins", createdBy: userId },
+    { workspaceId, name: "Chase task", eventType: "invoice.overdue", actionType: "create_task", config: { boardId: board.id, titleTemplate: "Chase {event}" }, createdBy: userId },
+  ]);
+
+  const evt = makeEvent({ eventType: "invoice.overdue", aggregateType: "invoice", aggregateId: randomUUID() });
+  await runConsumers(evt);
+  await runConsumers(evt);
+
+  const pings = await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.type, "recipe_triggered")));
+  expect(pings).toHaveLength(1);
+
+  const tasks = await db.select().from(items).where(eq(items.boardId, board.id));
+  expect(tasks).toHaveLength(1);
+  expect(tasks[0].name).toBe("Chase invoice.overdue");
+});
+
+// ── 17. Webhooks deliver matching events with a signature ───────────
+test("webhooks: matching subscription receives a signed delivery", async () => {
+  const { webhookSubscriptions } = await import("@/lib/db/schema");
+
+  await db.insert(webhookSubscriptions).values([
+    { workspaceId, name: "All events", url: "https://example.test/hook", secret: "s3cret", eventTypes: [] },
+    { workspaceId, name: "Wrong filter", url: "https://example.test/other", secret: "s3cret2", eventTypes: ["invoice.paid"] },
+  ]);
+
+  const calls: { url: string; headers: Record<string, string> }[] = [];
+  const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(url), headers: (init?.headers ?? {}) as Record<string, string> });
+    return new Response("ok", { status: 200 });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    const evt = makeEvent({ eventType: "vendor.created", aggregateType: "vendor", aggregateId: randomUUID() });
+    await runConsumers(evt);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+
+  const hookCalls = calls.filter((c) => c.url.includes("example.test"));
+  expect(hookCalls).toHaveLength(1); // filtered sub skipped
+  expect(hookCalls[0].url).toBe("https://example.test/hook");
+  expect(hookCalls[0].headers["X-QMS-Event"]).toBe("vendor.created");
+  expect(hookCalls[0].headers["X-QMS-Signature"]).toMatch(/^[a-f0-9]{64}$/);
 });
 
 // ── 15. Approval SLA escalates an overdue step exactly once ─────────
