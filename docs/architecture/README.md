@@ -45,6 +45,7 @@ architecture that exists**, then harden it for enterprise. See
 | [06-enterprise-readiness.md](06-enterprise-readiness.md) | Multi-org tenancy, RBAC v2, security/compliance, scale, API-first, reporting |
 | [07-ui-ux-design-system.md](07-ui-ux-design-system.md) | Vibe/monday.com-style design system, component library, navigation, 360° record UX |
 | [08-roadmap.md](08-roadmap.md) | Phase 0–5 roadmap from today's codebase to the enterprise platform, with risks |
+| [audit/](audit/README.md) | **Feature-completeness audit**: module-by-module scorecard, cross-cutting product gaps (P1–P12), dead-schema register, and per-module enterprise target models |
 
 ## Related documents (not duplicated here)
 

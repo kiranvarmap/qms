@@ -44,6 +44,21 @@ Close gaps G1–G3: wire every module into the spine. Detailed specs in
 **Exit criteria:** event coverage ≈100% of state-changing routes; the seven
 flagship loops close end-to-end in tests; record pages can show linked records.
 
+## Phase 1.5 — Product completeness mechanisms (runs alongside Phases 1–3)
+
+The [feature-completeness audit](audit/README.md) found twelve cross-cutting
+product gaps (P1–P12) that recur in every module: list endpoints without
+pagination/search, hard deletes without guards, no duplicate/clone, no saved
+views, no document PDFs/email, unreachable lifecycle statuses, create-only
+sub-entities, dead schema, no attachments/comments on documents, record pages
+without related-records, thin import/export, and no global search. These are
+**platform mechanisms, built once**: the list-query contract and soft-delete
+guards land with Phase 1 API work; attachments, PDF/email service, saved
+views, and search land with the Phase 3 kit; the per-module "missing
+essentials" in the audit suite files are then scheduled into each suite's
+Phase 3 migration so every suite exits feature-complete, not just restyled.
+The audit's dead-schema register is a standing implement-or-remove backlog.
+
 ## Phase 2 — Workflow & approvals v2 (3–4 weeks)
 
 Spec: [05-workflow-architecture.md](05-workflow-architecture.md).
