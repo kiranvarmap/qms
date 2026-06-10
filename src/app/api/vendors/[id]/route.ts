@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { vendors } from "@/lib/db/schema";
+import { vendors, purchaseOrders, expenses } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { apiHandler, ok, noContent, unauthorized, notFound, forbidden } from "@/lib/api";
+import { apiHandler, ok, noContent, unauthorized, notFound, forbidden, conflict } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { updateVendorSchema } from "@/lib/validations";
 
@@ -75,6 +75,16 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (!vendor) return notFound();
     if (!(await hasModuleAccess(vendor.workspaceId, session.user.id, "canAccessVendors", session.user.role)))
       return forbidden();
+
+    // Referential guard (audit P2): vendors with purchasing history are
+    // deactivated, never hard-deleted.
+    const refs: string[] = [];
+    const [po] = await db.select({ id: purchaseOrders.id }).from(purchaseOrders).where(eq(purchaseOrders.vendorId, id)).limit(1);
+    if (po) refs.push("purchase orders");
+    const [exp] = await db.select({ id: expenses.id }).from(expenses).where(eq(expenses.vendorId, id)).limit(1);
+    if (exp) refs.push("expenses");
+    if (refs.length > 0)
+      return conflict(`Cannot delete: vendor has ${refs.join(", ")}. Set the vendor inactive instead.`);
 
     await db.delete(vendors).where(eq(vendors.id, id));
     return noContent();

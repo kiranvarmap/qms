@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { products, stockLevels, warehouses } from "@/lib/db/schema";
+import { products, stockLevels, warehouses, stockMovements, poLineItems, salesOrderLineItems, bomLines } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { apiHandler, ok, noContent, unauthorized, notFound, forbidden } from "@/lib/api";
+import { apiHandler, ok, noContent, unauthorized, notFound, forbidden, conflict } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { updateProductSchema } from "@/lib/validations";
 import { toMinor } from "@/lib/money";
@@ -106,6 +106,20 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (!product) return notFound();
     if (!(await hasModuleAccess(product.workspaceId, session.user.id, "canAccessInventory", session.user.role)))
       return forbidden();
+
+    // Referential guard (audit P2): products woven into history must be
+    // archived (isActive=false / lifecycle obsolete), never hard-deleted.
+    const refs: string[] = [];
+    const [mv] = await db.select({ id: stockMovements.id }).from(stockMovements).where(eq(stockMovements.productId, id)).limit(1);
+    if (mv) refs.push("stock movements");
+    const [pol] = await db.select({ id: poLineItems.id }).from(poLineItems).where(eq(poLineItems.productId, id)).limit(1);
+    if (pol) refs.push("purchase orders");
+    const [sol] = await db.select({ id: salesOrderLineItems.id }).from(salesOrderLineItems).where(eq(salesOrderLineItems.productId, id)).limit(1);
+    if (sol) refs.push("sales orders");
+    const [boml] = await db.select({ id: bomLines.id }).from(bomLines).where(eq(bomLines.componentProductId, id)).limit(1);
+    if (boml) refs.push("BOMs");
+    if (refs.length > 0)
+      return conflict(`Cannot delete: product is referenced by ${refs.join(", ")}. Archive it instead (set inactive).`);
 
     await db.delete(products).where(eq(products.id, id));
     return noContent();

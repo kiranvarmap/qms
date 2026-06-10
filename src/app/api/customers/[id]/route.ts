@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { customers } from "@/lib/db/schema";
+import { customers, invoices, salesOrders, estimates } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { apiHandler, ok, noContent, unauthorized, notFound, forbidden } from "@/lib/api";
+import { apiHandler, ok, noContent, unauthorized, notFound, forbidden, conflict } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { updateCustomerSchema } from "@/lib/validations";
 import { getCustomerDetail, updateCustomer } from "@/lib/services/customer";
@@ -70,6 +70,18 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (!customer) return notFound();
     if (!(await hasModuleAccess(customer.workspaceId, session.user.id, "canAccessInvoicing", session.user.role)))
       return forbidden();
+
+    // Referential guard (audit P2): customers with documents are archived,
+    // not deleted — their history must survive.
+    const refs: string[] = [];
+    const [inv] = await db.select({ id: invoices.id }).from(invoices).where(eq(invoices.customerId, id)).limit(1);
+    if (inv) refs.push("invoices");
+    const [so] = await db.select({ id: salesOrders.id }).from(salesOrders).where(eq(salesOrders.customerId, id)).limit(1);
+    if (so) refs.push("sales orders");
+    const [est] = await db.select({ id: estimates.id }).from(estimates).where(eq(estimates.customerId, id)).limit(1);
+    if (est) refs.push("estimates");
+    if (refs.length > 0)
+      return conflict(`Cannot delete: customer has ${refs.join(", ")}. Set the customer inactive instead.`);
 
     await db.delete(customers).where(eq(customers.id, id));
     return noContent();
