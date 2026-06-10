@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Plus, Trash2, Star, ShieldCheck, Send, BadgeCheck, MapPin, FileText, Landmark, BarChart3, Package, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Trash2, Star, ShieldCheck, Send, BadgeCheck, MapPin, FileText, Landmark, BarChart3, Package, ShoppingCart, Pencil, X } from "lucide-react";
 
-interface Vendor { id: string; name: string; code: string | null; status: string; approvalState: string; isPreferred: boolean; }
+interface Vendor { id: string; name: string; code: string | null; email: string | null; phone: string | null; status: string; approvalState: string; isPreferred: boolean; }
 interface Address { id: string; kind: string; line1: string | null; city: string | null; country: string | null; }
 interface Doc { id: string; docType: string; number: string | null; expiryDate: string | null; status: string; isMandatory: boolean; }
 interface Bank { id: string; bankName: string | null; accountNumber: string | null; isVerified: boolean; }
@@ -21,6 +21,9 @@ export default function VendorDetail() {
   const { id } = useParams<{ id: string }>();
   const [d, setD] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
+  const [edit, setEdit] = useState({ name: "", code: "", email: "", phone: "", status: "active" });
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -33,6 +36,30 @@ export default function VendorDetail() {
 
   const post = async (path: string, body: unknown) => { await fetch(`/api/vendors/${id}/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); load(); };
   const del = async (path: string, rid: string) => { await fetch(`/api/vendors/${id}/${path}?id=${rid}`, { method: "DELETE" }); load(); };
+
+  const openEdit = () => {
+    if (!d) return;
+    setEdit({ name: d.vendor.name ?? "", code: d.vendor.code ?? "", email: d.vendor.email ?? "", phone: d.vendor.phone ?? "", status: d.vendor.status });
+    setShowEdit(true);
+  };
+  const saveEdit = async () => {
+    if (!edit.name.trim()) return;
+    setSaving(true);
+    await fetch(`/api/vendors/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: edit.name.trim(),
+        code: edit.code.trim() || undefined,
+        email: edit.email.trim() || undefined,
+        phone: edit.phone.trim() || undefined,
+        status: edit.status as "active" | "inactive",
+      }),
+    });
+    setSaving(false);
+    setShowEdit(false);
+    load();
+  };
 
   if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
   if (!d) return <div className="p-8 text-gray-500">Vendor not found. <Link href="/dashboard/vendors" className="text-blue-600 hover:underline">Back</Link></div>;
@@ -57,6 +84,7 @@ export default function VendorDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={openEdit} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded-md"><Pencil className="h-4 w-4" /> Edit</button>
             <button onClick={() => post("preferred", { isPreferred: !v.isPreferred })} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded-md"><Star className="h-4 w-4" /> {v.isPreferred ? "Unprefer" : "Prefer"}</button>
             {v.approvalState !== "pending" && (
               <button onClick={() => post("submit", {})} className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md"><Send className="h-4 w-4" /> Submit for approval</button>
@@ -85,6 +113,37 @@ export default function VendorDetail() {
           </div>
         )}
       </Card>
+
+      {showEdit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEdit(false)}>
+          <div className="bg-white border border-gray-200 rounded-lg w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Edit vendor</h2>
+              <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <label className="block"><span className="text-xs text-gray-500">Name *</span><input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block"><span className="text-xs text-gray-500">Code</span><input value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
+                <label className="block"><span className="text-xs text-gray-500">Status</span>
+                  <select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className={`mt-1 w-full ${inp}`}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block"><span className="text-xs text-gray-500">Email</span><input value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
+                <label className="block"><span className="text-xs text-gray-500">Phone</span><input value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setShowEdit(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+              <button onClick={saveEdit} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md">{saving ? "Saving…" : "Save"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Addresses data={d.addresses} onAdd={(b) => post("addresses", b)} onDel={(rid) => del("addresses", rid)} />
       <Documents data={d.documents} onAdd={(b) => post("documents", b)} onDel={(rid) => del("documents", rid)} />
