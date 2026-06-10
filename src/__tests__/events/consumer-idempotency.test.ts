@@ -59,6 +59,8 @@ import {
 } from "@/lib/db/schema";
 import { sweepPmSchedules } from "@/lib/services/pm-generation";
 import { sweepExpiredEstimates } from "@/lib/services/estimate-expiry";
+import { releaseWorkOrder, completeWorkOrder, cancelWorkOrder } from "@/lib/services/production";
+import { workOrderMaterials, stockLevels as stockLevelsTable } from "@/lib/db/schema";
 import { runConsumers } from "@/lib/events/consumers";
 import type { OutboxRow } from "@/lib/events/types";
 import { and, eq } from "drizzle-orm";
@@ -525,4 +527,71 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
     .from(eventOutbox)
     .where(and(eq(eventOutbox.eventType, "estimate.expired"), eq(eventOutbox.aggregateId, est.id)));
   expect(emitted).toHaveLength(1);
+});
+
+// ── 12. Work-order stock cycle: reserve on release, settle on complete ──
+test("work order: release reserves materials, completion consumes and releases", async () => {
+  const [warehouse] = await db
+    .insert(warehouses)
+    .values({ workspaceId, name: "WO WH" })
+    .returning();
+  const [component] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Steel rod", sku: "ROD-1", trackInventory: true })
+    .returning();
+  const [fg] = await db
+    .insert(products)
+    .values({ workspaceId, name: "Axle", sku: "AXLE-1", trackInventory: true })
+    .returning();
+  await db.insert(stockLevelsTable).values({
+    workspaceId,
+    productId: component.id,
+    warehouseId: warehouse.id,
+    onHand: 100,
+    committed: 0,
+  });
+
+  async function makeWo(number: string) {
+    const [wo] = await db
+      .insert(workOrders)
+      .values({ workspaceId, number, productId: fg.id, qtyPlanned: 5, warehouseId: warehouse.id, createdBy: userId })
+      .returning();
+    await db.insert(workOrderMaterials).values({
+      workOrderId: wo.id,
+      componentProductId: component.id,
+      qtyRequired: 10,
+    });
+    return wo;
+  }
+
+  async function level(productId: string) {
+    const [l] = await db
+      .select()
+      .from(stockLevelsTable)
+      .where(and(eq(stockLevelsTable.productId, productId), eq(stockLevelsTable.warehouseId, warehouse.id)));
+    return l ?? { onHand: 0, committed: 0 };
+  }
+
+  // Release → committed rises; double release is a no-op (claim guard).
+  const wo1 = await makeWo("WO-CYCLE-1");
+  expect(await releaseWorkOrder(workspaceId, wo1.id, userId)).not.toBeNull();
+  expect(await releaseWorkOrder(workspaceId, wo1.id, userId)).toBeNull();
+  expect((await level(component.id)).committed).toBe(10);
+
+  // Complete → component consumed once, reservation released, FG received.
+  const result = await completeWorkOrder(workspaceId, wo1.id, {}, userId);
+  expect("error" in result).toBe(false);
+  const compAfter = await level(component.id);
+  expect(compAfter.onHand).toBe(90);
+  expect(compAfter.committed).toBe(0);
+  expect((await level(fg.id)).onHand).toBe(5);
+
+  // Cancel after release → reservation fully returned, nothing consumed.
+  const wo2 = await makeWo("WO-CYCLE-2");
+  await releaseWorkOrder(workspaceId, wo2.id, userId);
+  expect((await level(component.id)).committed).toBe(10);
+  expect(await cancelWorkOrder(workspaceId, wo2.id, userId)).not.toBeNull();
+  const compFinal = await level(component.id);
+  expect(compFinal.committed).toBe(0);
+  expect(compFinal.onHand).toBe(90);
 });

@@ -14,8 +14,9 @@ import {
   bomLines,
   warehouses,
   products,
+  stockMovements,
 } from "@/lib/db/schema";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { emitEvent } from "@/lib/events/outbox";
 import { nextDocNumber } from "@/lib/services/document-sequence";
 import { applyStockMovement, type Tx } from "@/lib/services/inventory";
@@ -107,12 +108,42 @@ export async function createWorkOrder(workspaceId: string, input: WorkOrderInput
 
 export async function releaseWorkOrder(workspaceId: string, id: string, userId: string) {
   return db.transaction(async (tx) => {
+    // Claim: only a planned WO releases, so the reservation below is single-shot
+    // even under concurrent calls.
     const [wo] = await tx
       .update(workOrders)
       .set({ status: "released", releasedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(workOrders.id, id), eq(workOrders.workspaceId, workspaceId)))
+      .where(and(eq(workOrders.id, id), eq(workOrders.workspaceId, workspaceId), eq(workOrders.status, "planned")))
       .returning();
     if (!wo) return null;
+
+    // Reserve tracked components (committed+) so available stock reflects this
+    // job and sales orders can't ship the materials away (blueprint 04 §4).
+    const warehouseId = await resolveWarehouse(tx, workspaceId, null, wo.warehouseId);
+    if (warehouseId) {
+      const materials = await tx.select().from(workOrderMaterials).where(eq(workOrderMaterials.workOrderId, id));
+      for (const m of materials) {
+        if (!m.componentProductId || m.qtyRequired <= 0) continue;
+        const [comp] = await tx
+          .select({ track: products.trackInventory })
+          .from(products)
+          .where(eq(products.id, m.componentProductId))
+          .limit(1);
+        if (!comp?.track) continue;
+        await applyStockMovement(tx, {
+          workspaceId,
+          productId: m.componentProductId,
+          warehouseId,
+          type: "reservation",
+          quantity: m.qtyRequired,
+          refType: "work_order",
+          refId: id,
+          note: `WO ${wo.number} material reservation`,
+          actorUserId: userId,
+        });
+      }
+    }
+
     await emitEvent(tx, {
       workspaceId,
       eventType: "workorder.released",
@@ -120,6 +151,75 @@ export async function releaseWorkOrder(workspaceId: string, id: string, userId: 
       aggregateId: id,
       actorUserId: userId,
       payload: { number: wo.number, productId: wo.productId, qtyPlanned: wo.qtyPlanned },
+    });
+    return wo;
+  });
+}
+
+/**
+ * Release whatever this work order still holds reserved, computed from the
+ * ledger itself (sum of committedDelta per product × warehouse) — robust
+ * against warehouse overrides and material edits between release and now.
+ */
+async function releaseWoReservations(tx: Tx, workspaceId: string, woId: string, woNumber: string, userId: string | null) {
+  const held = await tx
+    .select({
+      productId: stockMovements.productId,
+      warehouseId: stockMovements.warehouseId,
+      qty: sql<number>`sum(${stockMovements.committedDelta})`,
+    })
+    .from(stockMovements)
+    .where(
+      and(
+        eq(stockMovements.refType, "work_order"),
+        eq(stockMovements.refId, woId),
+        inArray(stockMovements.type, ["reservation", "reservation_release"])
+      )
+    )
+    .groupBy(stockMovements.productId, stockMovements.warehouseId);
+
+  for (const h of held) {
+    const qty = Number(h.qty);
+    if (qty <= 0) continue;
+    await applyStockMovement(tx, {
+      workspaceId,
+      productId: h.productId,
+      warehouseId: h.warehouseId,
+      type: "reservation_release",
+      quantity: qty,
+      refType: "work_order",
+      refId: woId,
+      note: `WO ${woNumber} reservation release`,
+      actorUserId: userId,
+    });
+  }
+}
+
+export async function cancelWorkOrder(workspaceId: string, id: string, userId: string) {
+  return db.transaction(async (tx) => {
+    const [wo] = await tx
+      .update(workOrders)
+      .set({ status: "cancelled", updatedAt: new Date() })
+      .where(
+        and(
+          eq(workOrders.id, id),
+          eq(workOrders.workspaceId, workspaceId),
+          inArray(workOrders.status, ["planned", "released"])
+        )
+      )
+      .returning();
+    if (!wo) return null;
+
+    // A released WO holds material reservations — give them back.
+    await releaseWoReservations(tx, workspaceId, id, wo.number, userId);
+
+    await emitEvent(tx, {
+      workspaceId,
+      eventType: "workorder.cancelled",
+      aggregateType: "work_order",
+      aggregateId: id,
+      actorUserId: userId,
+      payload: { number: wo.number, productId: wo.productId },
     });
     return wo;
   });
@@ -155,6 +255,10 @@ export async function completeWorkOrder(workspaceId: string, id: string, input: 
     if (!warehouseId) return { error: "no_warehouse" as const };
 
     const qtyProduced = input.qtyProduced ?? wo.qtyPlanned;
+
+    // Give back whatever release reserved before consuming — consumption
+    // lowers onHand, the release lowers committed, so available stays honest.
+    await releaseWoReservations(tx, workspaceId, id, wo.number, userId);
 
     // Consume each tracked component from stock (negative adjustment).
     const materials = await tx.select().from(workOrderMaterials).where(eq(workOrderMaterials.workOrderId, id));
