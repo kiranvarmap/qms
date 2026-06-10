@@ -529,6 +529,85 @@ test("estimate expiry: sweep expires sent quotes once and emits once", async () 
   expect(emitted).toHaveLength(1);
 });
 
+// ── 13. GL posting books each financial event exactly once ──────────
+test("gl posting: invoice issue, payment, and void each book one balanced entry", async () => {
+  const { invoices, payments, journalEntries, journalLines, ledgerAccounts } = await import("@/lib/db/schema");
+
+  const [customer] = await db
+    .insert(customers)
+    .values({ workspaceId, name: "GL Customer" })
+    .returning();
+  const [inv] = await db
+    .insert(invoices)
+    .values({
+      workspaceId,
+      customerId: customer.id,
+      docNumber: "INV-GL-1",
+      status: "sent",
+      subtotalMinor: 1000,
+      taxMinor: 100,
+      totalMinor: 1100,
+      createdBy: userId,
+    })
+    .returning();
+
+  const issueEvt = makeEvent({ eventType: "invoice.sent", aggregateType: "invoice", aggregateId: inv.id });
+  await runConsumers(issueEvt);
+  await runConsumers(issueEvt);
+
+  const issued = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.sourceType, "invoice.sent"), eq(journalEntries.sourceId, inv.id)));
+  expect(issued).toHaveLength(1);
+  expect(issued[0].status).toBe("posted");
+
+  const issuedLines = await db.select().from(journalLines).where(eq(journalLines.journalEntryId, issued[0].id));
+  const debits = issuedLines.reduce((s, l) => s + l.debitMinor, 0);
+  const credits = issuedLines.reduce((s, l) => s + l.creditMinor, 0);
+  expect(debits).toBe(1100);
+  expect(credits).toBe(1100);
+
+  // System accounts were created by convention.
+  const accounts = await db.select().from(ledgerAccounts).where(eq(ledgerAccounts.workspaceId, workspaceId));
+  const codes = accounts.map((a) => a.code);
+  expect(codes).toContain("1100"); // AR
+  expect(codes).toContain("4000"); // Revenue
+  expect(codes).toContain("2200"); // Tax
+
+  // Payment → Dr Cash / Cr AR, once.
+  const [pay] = await db
+    .insert(payments)
+    .values({ workspaceId, invoiceId: inv.id, amountMinor: 500 })
+    .returning();
+  const payEvt = makeEvent({
+    eventType: "payment.recorded",
+    aggregateType: "payment",
+    aggregateId: pay.id,
+    payload: { invoiceId: inv.id },
+  });
+  await runConsumers(payEvt);
+  await runConsumers(payEvt);
+  const payJes = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.sourceType, "payment.recorded"), eq(journalEntries.sourceId, pay.id)));
+  expect(payJes).toHaveLength(1);
+
+  // Void → one reversing entry mirroring the issue lines.
+  const voidEvt = makeEvent({ eventType: "invoice.voided", aggregateType: "invoice", aggregateId: inv.id });
+  await runConsumers(voidEvt);
+  await runConsumers(voidEvt);
+  const reversals = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.sourceType, "invoice.voided"), eq(journalEntries.sourceId, inv.id)));
+  expect(reversals).toHaveLength(1);
+  const revLines = await db.select().from(journalLines).where(eq(journalLines.journalEntryId, reversals[0].id));
+  expect(revLines.reduce((s, l) => s + l.debitMinor, 0)).toBe(1100);
+  expect(revLines.reduce((s, l) => s + l.creditMinor, 0)).toBe(1100);
+});
+
 // ── 12b. Approval sync approves a sales order exactly once ──────────
 test("approval sync: sales order approval reserves stock once; rejection returns to draft", async () => {
   const { salesOrders, salesOrderLineItems } = await import("@/lib/db/schema");

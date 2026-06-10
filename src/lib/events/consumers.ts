@@ -48,6 +48,12 @@ import {
   salesOrders,
 } from "@/lib/db/schema";
 import { reserveAndApproveSalesOrder } from "@/lib/services/sales-orders";
+import {
+  postInvoiceIssued,
+  postPaymentRecorded,
+  postExpenseReimbursed,
+  postInvoiceVoided,
+} from "@/lib/services/gl-posting";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nextDocNumber } from "@/lib/services/document-sequence";
 import { sendEmail } from "@/lib/email";
@@ -623,6 +629,24 @@ async function runAssetDowntime(evt: OutboxRow): Promise<void> {
   }
 }
 
+// ── GL posting (blueprint 04 §7) ─────────────────────────────────────
+// Operational events become balanced journal entries on the system chart of
+// accounts, so Books reflects operations without manual entry. Each poster
+// guards on (eventType, aggregateId) → retried events never double-book.
+async function runGlPosting(evt: OutboxRow): Promise<void> {
+  if (!evt.aggregateId) return;
+  switch (evt.eventType) {
+    case "invoice.sent":
+      return postInvoiceIssued(evt.aggregateId, evt.actorUserId ?? null);
+    case "payment.recorded":
+      return postPaymentRecorded(evt.aggregateId, evt.actorUserId ?? null);
+    case "expense.reimbursed":
+      return postExpenseReimbursed(evt.aggregateId, evt.actorUserId ?? null);
+    case "invoice.voided":
+      return postInvoiceVoided(evt.aggregateId, evt.actorUserId ?? null);
+  }
+}
+
 // ── Notifications fan-out ────────────────────────────────────────────
 // Unified delivery: write in-app rows and (optionally) email, honouring
 // notification_preferences. (Plan D.5.2.) Audience = workspace members for
@@ -802,6 +826,7 @@ export async function runConsumers(evt: OutboxRow): Promise<void> {
   await runSafetyEscalation(evt);
   await runAssetDowntime(evt);
   await runCertificationIssue(evt);
+  await runGlPosting(evt);
   await runNotifications(evt);
 }
 
