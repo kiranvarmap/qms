@@ -140,7 +140,7 @@ export function createRecurringInvoice(workspaceId: string, input: { customerId:
   return db.insert(recurringInvoices).values({ workspaceId, customerId: input.customerId, name: input.name, cadence: input.cadence ?? "monthly", nextRunDate: new Date(), template: { lines: input.lines ?? [] } }).returning().then((r) => r[0]);
 }
 const CADENCE_DAYS: Record<string, number> = { weekly: 7, monthly: 30, quarterly: 91 };
-export async function generateRecurringInvoice(workspaceId: string, id: string, userId: string) {
+export async function generateRecurringInvoice(workspaceId: string, id: string, userId: string | null) {
   return db.transaction(async (tx) => {
     const [ri] = await tx.select().from(recurringInvoices).where(and(eq(recurringInvoices.id, id), eq(recurringInvoices.workspaceId, workspaceId))).limit(1);
     if (!ri) return { error: "not_found" as const };

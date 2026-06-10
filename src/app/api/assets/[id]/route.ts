@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { assets } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { assets, maintenanceOrders, pmSchedules, activityFeed } from "@/lib/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { apiHandler, ok, unauthorized, notFound, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
 import { assetStatusSchema } from "@/lib/validations";
@@ -23,7 +23,32 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!asset) return notFound();
     if (!(await hasModuleAccess(asset.workspaceId, session.user.id, "canAccessInventory", session.user.role)))
       return forbidden();
-    return ok(asset);
+
+    // 360° roll-ups (audit 03 §3: asset detail had no history).
+    const orders = await db
+      .select()
+      .from(maintenanceOrders)
+      .where(and(eq(maintenanceOrders.assetId, id), eq(maintenanceOrders.workspaceId, asset.workspaceId)))
+      .orderBy(desc(maintenanceOrders.createdAt))
+      .limit(30);
+    const schedules = await db
+      .select()
+      .from(pmSchedules)
+      .where(and(eq(pmSchedules.assetId, id), eq(pmSchedules.workspaceId, asset.workspaceId)))
+      .orderBy(desc(pmSchedules.createdAt));
+    const activity = await db
+      .select({
+        id: activityFeed.id,
+        action: activityFeed.action,
+        summary: activityFeed.summary,
+        occurredAt: activityFeed.occurredAt,
+      })
+      .from(activityFeed)
+      .where(and(eq(activityFeed.refType, "asset"), eq(activityFeed.refId, id)))
+      .orderBy(desc(activityFeed.occurredAt))
+      .limit(30);
+
+    return ok({ ...asset, orders, schedules, activity });
   }, { route: "GET /api/assets/[id]" });
 }
 

@@ -5,6 +5,7 @@ import { sweepCertifications } from "@/lib/services/cert-expiry";
 import { sweepExpiredEstimates } from "@/lib/services/estimate-expiry";
 import { sweepPmSchedules } from "@/lib/services/pm-generation";
 import { sweepApprovalSlas } from "@/lib/services/approval-sla";
+import { sweepRecurringDocs } from "@/lib/services/recurring-sweep";
 
 // POST/GET /api/events/process — durable outbox sweep (Plan E.3).
 // Triggered by Vercel Cron (see vercel.json). Secured with CRON_SECRET:
@@ -28,6 +29,7 @@ async function handle(req: Request) {
   const estimates = await sweepExpiredEstimates();
   const pm = await sweepPmSchedules();
   const slas = await sweepApprovalSlas();
+  const recurring = await sweepRecurringDocs();
   const result = await dispatchPending(100);
   return NextResponse.json({
     ok: true,
@@ -37,6 +39,7 @@ async function handle(req: Request) {
     estimatesExpired: estimates.expired,
     pmOrdersGenerated: pm.generated,
     approvalsEscalated: slas.escalated,
+    recurringGenerated: recurring,
   });
 }
 

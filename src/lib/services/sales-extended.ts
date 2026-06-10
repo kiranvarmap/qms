@@ -128,7 +128,7 @@ export function createRecurringOrder(workspaceId: string, input: { customerId: s
 const CADENCE_DAYS: Record<string, number> = { weekly: 7, monthly: 30, quarterly: 91 };
 
 /** Generate a draft sales order from a recurring template and roll nextRunDate. */
-export async function generateRecurringOrder(workspaceId: string, id: string, userId: string) {
+export async function generateRecurringOrder(workspaceId: string, id: string, userId: string | null) {
   return db.transaction(async (tx) => {
     const [ro] = await tx.select().from(recurringOrders).where(and(eq(recurringOrders.id, id), eq(recurringOrders.workspaceId, workspaceId))).limit(1);
     if (!ro) return { error: "not_found" as const };

@@ -97,7 +97,7 @@ export default function AssetsPage() {
             ) : assets.map((a) => (
               <tr key={a.id} className="border-b border-gray-100">
                 <td className="px-4 py-3 text-gray-500 font-mono text-xs">{a.code || "—"}</td>
-                <td className="px-4 py-3 text-gray-900">{a.name}</td>
+                <td className="px-4 py-3"><Link href={`/dashboard/maintenance/assets/${a.id}`} className="text-blue-700 hover:underline">{a.name}</Link></td>
                 <td className="px-4 py-3 text-gray-600">{a.location || "—"}</td>
                 <td className="px-4 py-3 text-gray-600 capitalize">{a.criticality}</td>
                 <td className="px-4 py-3">
