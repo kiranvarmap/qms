@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Plus, Trash2, Star, ShieldCheck, Send, BadgeCheck, MapPin, FileText, Landmark, BarChart3, Package } from "lucide-react";
+import { ArrowLeft, Building2, Plus, Trash2, Star, ShieldCheck, Send, BadgeCheck, MapPin, FileText, Landmark, BarChart3, Package, ShoppingCart } from "lucide-react";
 
 interface Vendor { id: string; name: string; code: string | null; status: string; approvalState: string; isPreferred: boolean; }
 interface Address { id: string; kind: string; line1: string | null; city: string | null; country: string | null; }
@@ -11,7 +11,8 @@ interface Doc { id: string; docType: string; number: string | null; expiryDate: 
 interface Bank { id: string; bankName: string | null; accountNumber: string | null; isVerified: boolean; }
 interface Perf { id: string; onTimePct: number; qualityRejectPct: number; rating: number; createdAt: string; }
 interface Item { id: string; description: string | null; vendorSku: string | null; unitPriceMinor: number; leadTimeDays: number; }
-interface Detail { vendor: Vendor; addresses: Address[]; documents: Doc[]; bankAccounts: Bank[]; performance: Perf[]; items: Item[]; }
+interface PoRow { id: string; docNumber: string; status: string; totalMinor: number; expectedDate: string | null; createdAt: string }
+interface Detail { vendor: Vendor; addresses: Address[]; documents: Doc[]; bankAccounts: Bank[]; performance: Perf[]; items: Item[]; purchaseOrders: PoRow[]; openPoMinor: number; lifetimeSpendMinor: number; }
 
 const docBadge: Record<string, string> = { valid: "bg-green-100 text-green-700", expiring: "bg-amber-100 text-amber-700", expired: "bg-red-100 text-red-700" };
 const apprBadge: Record<string, string> = { approved: "bg-green-100 text-green-700", pending: "bg-amber-100 text-amber-700", rejected: "bg-red-100 text-red-700" };
@@ -63,6 +64,27 @@ export default function VendorDetail() {
           </div>
         </div>
       </div>
+
+      {/* Spend summary + purchasing history (vendor 360°) */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm"><div className="text-xs text-gray-500">Open POs</div><div className="text-lg font-semibold mt-0.5 text-blue-700">{(d.openPoMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div></div>
+        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm"><div className="text-xs text-gray-500">Lifetime spend</div><div className="text-lg font-semibold mt-0.5 text-gray-900">{(d.lifetimeSpendMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div></div>
+      </div>
+
+      <Card icon={<ShoppingCart className="h-4 w-4 text-blue-600" />} title={`Purchase Orders (${d.purchaseOrders.length})`}>
+        {d.purchaseOrders.length === 0 ? <p className="text-sm text-gray-500">No purchase orders yet.</p> : (
+          <div className="space-y-2">
+            {d.purchaseOrders.map((po) => (
+              <div key={po.id} className="flex items-center justify-between text-sm">
+                <Link href={`/dashboard/purchase-orders/${po.id}`} className="text-blue-700 hover:underline">{po.docNumber}</Link>
+                <span className="text-gray-500 capitalize">{po.status.replace(/_/g, " ")}</span>
+                <span className="text-gray-400 text-xs">{new Date(po.createdAt).toLocaleDateString()}</span>
+                <span className="text-gray-900">{(po.totalMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Addresses data={d.addresses} onAdd={(b) => post("addresses", b)} onDel={(rid) => del("addresses", rid)} />
       <Documents data={d.documents} onAdd={(b) => post("documents", b)} onDel={(rid) => del("documents", rid)} />

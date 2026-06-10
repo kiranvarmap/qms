@@ -7,8 +7,8 @@
  */
 
 import { db } from "@/lib/db";
-import { vendorAddresses, vendorDocuments, vendorBankAccounts, vendorPerformance, vendorItems, vendors } from "@/lib/db/schema";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { vendorAddresses, vendorDocuments, vendorBankAccounts, vendorPerformance, vendorItems, vendors, purchaseOrders } from "@/lib/db/schema";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { toMinor } from "@/lib/money";
 import { createApprovalRequest } from "@/lib/services/approvals";
 
@@ -34,7 +34,28 @@ export async function getVendorDetail(workspaceId: string, vendorId: string) {
     db.select().from(vendorPerformance).where(eq(vendorPerformance.vendorId, vendorId)).orderBy(desc(vendorPerformance.createdAt)),
     db.select().from(vendorItems).where(eq(vendorItems.vendorId, vendorId)).orderBy(asc(vendorItems.description)),
   ]);
-  return { vendor, addresses, documents, bankAccounts, performance, items };
+
+  // 360° roll-ups (audit 01 §4: the vendor page had no purchasing history).
+  const recentPurchaseOrders = await db
+    .select({ id: purchaseOrders.id, docNumber: purchaseOrders.docNumber, status: purchaseOrders.status, totalMinor: purchaseOrders.totalMinor, expectedDate: purchaseOrders.expectedDate, createdAt: purchaseOrders.createdAt })
+    .from(purchaseOrders)
+    .where(and(eq(purchaseOrders.vendorId, vendorId), eq(purchaseOrders.workspaceId, workspaceId)))
+    .orderBy(desc(purchaseOrders.createdAt))
+    .limit(20);
+  const [spend] = await db
+    .select({
+      openPos: sql<number>`coalesce(sum(case when ${purchaseOrders.status} in ('approved','sent','partially_received') then ${purchaseOrders.totalMinor} else 0 end), 0)`,
+      lifetime: sql<number>`coalesce(sum(case when ${purchaseOrders.status} != 'cancelled' then ${purchaseOrders.totalMinor} else 0 end), 0)`,
+    })
+    .from(purchaseOrders)
+    .where(and(eq(purchaseOrders.vendorId, vendorId), eq(purchaseOrders.workspaceId, workspaceId)));
+
+  return {
+    vendor, addresses, documents, bankAccounts, performance, items,
+    purchaseOrders: recentPurchaseOrders,
+    openPoMinor: Number(spend?.openPos ?? 0),
+    lifetimeSpendMinor: Number(spend?.lifetime ?? 0),
+  };
 }
 
 // ── Addresses ─────────────────────────────────────────────────────────
