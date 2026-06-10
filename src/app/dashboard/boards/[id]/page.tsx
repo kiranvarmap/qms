@@ -34,6 +34,7 @@ import { BoardSettingsPanel } from "@/components/board/board-settings-panel";
 import { GanttView } from "@/components/board/gantt-view";
 import { CalendarView } from "@/components/board/calendar-view";
 import { KanbanView } from "@/components/board/kanban-view";
+import { SavedViewsMenu, type SavedViewConfig } from "@/components/board/saved-views-menu";
 
 export default function BoardPage() {
   const params = useParams();
@@ -545,6 +546,18 @@ export default function BoardPage() {
                 )}>{icon}{label}</button>
             ))}
           </div>
+
+          <SavedViewsMenu
+            boardId={boardId}
+            getConfig={() => ({ viewMode, filters, sortColumnId, sortDir, searchQuery })}
+            onApply={(c: SavedViewConfig) => {
+              if (c.viewMode) setViewMode(c.viewMode as ViewMode);
+              if (Array.isArray(c.filters)) setFilters(c.filters as FilterCondition[]);
+              setSortColumnId(c.sortColumnId ?? null);
+              if (c.sortDir === "asc" || c.sortDir === "desc") setSortDir(c.sortDir);
+              setSearchQuery(c.searchQuery ?? "");
+            }}
+          />
 
           <div className="relative flex-1 max-w-[200px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600" />

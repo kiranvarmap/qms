@@ -1084,6 +1084,33 @@ export const entityLinks = pgTable(
 );
 
 // ════════════════════════════════════════════════════════════════════
+// SAVED VIEWS (audit P4) — persisted board view state (view mode, filters,
+// sort, search) per user, optionally shared with the workspace.
+// ════════════════════════════════════════════════════════════════════
+
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    // { viewMode, filters, sortColumnId, sortDir, searchQuery }
+    config: jsonb("config").default("{}").notNull(),
+    isShared: boolean("is_shared").default(false).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("saved_views_board_idx").on(t.boardId)]
+);
+
+// ════════════════════════════════════════════════════════════════════
 // ATTACHMENTS (audit P9) — files on ANY record, polymorphic like
 // entity_links: (refType, refId) names the owning document/master. Binary
 // lives in object storage (lib/storage.ts); this row is the registry.
