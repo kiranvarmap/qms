@@ -19,6 +19,7 @@ import {
   Download,
   ArrowUpDown,
   Table2,
+  KanbanSquare,
   GanttChartSquare,
   Calendar,
   Bot,
@@ -32,6 +33,7 @@ import { ItemDetailPanel } from "@/components/board/item-detail-panel";
 import { BoardSettingsPanel } from "@/components/board/board-settings-panel";
 import { GanttView } from "@/components/board/gantt-view";
 import { CalendarView } from "@/components/board/calendar-view";
+import { KanbanView } from "@/components/board/kanban-view";
 
 export default function BoardPage() {
   const params = useParams();
@@ -48,7 +50,7 @@ export default function BoardPage() {
   const [bulkAction, setBulkAction] = useState<string | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [showBoardSettings, setShowBoardSettings] = useState(false);
-  type ViewMode = "table" | "gantt" | "calendar";
+  type ViewMode = "table" | "kanban" | "gantt" | "calendar";
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   type SortDir = "asc" | "desc";
   const [sortColumnId, setSortColumnId] = useState<string | null>(null);
@@ -536,7 +538,7 @@ export default function BoardPage() {
         <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
           {/* View switcher */}
           <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
-            {([["table", <Table2 key="t" className="h-3.5 w-3.5" />, "Table"], ["gantt", <GanttChartSquare key="g" className="h-3.5 w-3.5" />, "Gantt"], ["calendar", <Calendar key="c" className="h-3.5 w-3.5" />, "Calendar"]] as [ViewMode, React.ReactNode, string][]).map(([mode, icon, label]) => (
+            {([["table", <Table2 key="t" className="h-3.5 w-3.5" />, "Table"], ["kanban", <KanbanSquare key="k" className="h-3.5 w-3.5" />, "Kanban"], ["gantt", <GanttChartSquare key="g" className="h-3.5 w-3.5" />, "Gantt"], ["calendar", <Calendar key="c" className="h-3.5 w-3.5" />, "Calendar"]] as [ViewMode, React.ReactNode, string][]).map(([mode, icon, label]) => (
               <button key={mode} onClick={() => setViewMode(mode)}
                 className={cn("px-2.5 py-1 text-xs font-medium flex items-center gap-1 transition-colors",
                   viewMode === mode ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-50"
@@ -658,6 +660,9 @@ export default function BoardPage() {
 
       {/* Board Content */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        {viewMode === "kanban" && (
+          <KanbanView board={board} onUpdateCell={updateCell} onItemClick={(id) => setOpenItemId(id)} />
+        )}
         {viewMode === "gantt" && (
           <GanttView board={board} />
         )}

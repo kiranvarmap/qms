@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Wrench, X, AlertCircle, Boxes, Play, CheckCircle2 } from "lucide-react";
+import { Plus, Wrench, X, AlertCircle, Boxes, Play, CheckCircle2, CalendarClock } from "lucide-react";
 
 interface Workspace { id: string; name: string }
 interface Asset { id: string; name: string; code: string | null }
@@ -91,6 +91,7 @@ export default function MaintenancePage() {
           <h1 className="text-xl font-semibold text-gray-900">Maintenance</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/dashboard/maintenance/pm-schedules" className="inline-flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-md"><CalendarClock className="h-4 w-4" /> PM Schedules</Link>
           <Link href="/dashboard/maintenance/assets" className="inline-flex items-center gap-2 px-3.5 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded-md"><Boxes className="h-4 w-4" /> Assets</Link>
           <button onClick={() => { setForm(empty); setError(""); setShowCreate(true); }} disabled={!workspaceId} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Order</button>
         </div>
