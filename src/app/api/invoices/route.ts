@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invoices, customers } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
+import { parseListParams, likePattern } from "@/lib/services/list-query";
 import { createInvoiceSchema } from "@/lib/validations";
 import { writeInvoiceLinesAndTotals } from "@/lib/services/invoices";
 import { nextDocNumber } from "@/lib/services/document-sequence";
@@ -26,6 +27,8 @@ export async function GET(req: Request) {
     const status = url.searchParams.get("status");
     const customerId = url.searchParams.get("customerId");
     const conds = [eq(invoices.workspaceId, workspaceId)];
+    const lq = parseListParams(url);
+    if (lq.q) conds.push(or(ilike(invoices.docNumber, likePattern(lq.q)))!);
     if (status) conds.push(eq(invoices.status, status as typeof invoices.$inferSelect.status));
     if (customerId) conds.push(eq(invoices.customerId, customerId));
 
@@ -45,7 +48,7 @@ export async function GET(req: Request) {
       .from(invoices)
       .leftJoin(customers, eq(customers.id, invoices.customerId))
       .where(and(...conds))
-      .orderBy(desc(invoices.createdAt));
+      .orderBy(desc(invoices.createdAt)).offset(lq.offset).limit(lq.limit ?? 100000);
     return ok({ data: rows });
   }, { route: "GET /api/invoices" });
 }

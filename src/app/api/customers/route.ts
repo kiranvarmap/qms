@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { customers } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
+import { parseListParams, likePattern } from "@/lib/services/list-query";
 import { createCustomerSchema } from "@/lib/validations";
 import { createCustomer } from "@/lib/services/customer";
 import { emitEvent } from "@/lib/events/outbox";
@@ -22,11 +23,13 @@ export async function GET(req: Request) {
       return forbidden();
 
     const status = url.searchParams.get("status");
-    const where = status
-      ? and(eq(customers.workspaceId, workspaceId), eq(customers.status, status as "active" | "inactive"))
-      : eq(customers.workspaceId, workspaceId);
+    const lq = parseListParams(url);
+    const conds = [eq(customers.workspaceId, workspaceId)];
+    if (status) conds.push(eq(customers.status, status as "active" | "inactive"));
+    if (lq.q) conds.push(or(ilike(customers.name, likePattern(lq.q)), ilike(customers.email, likePattern(lq.q)))!);
 
-    const rows = await db.select().from(customers).where(where).orderBy(desc(customers.createdAt));
+    const base = db.select().from(customers).where(and(...conds)).orderBy(desc(customers.createdAt)).offset(lq.offset);
+    const rows = await (lq.limit != null ? base.limit(lq.limit) : base);
     return ok({ data: rows });
   }, { route: "GET /api/customers" });
 }

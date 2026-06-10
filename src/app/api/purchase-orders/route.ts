@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { purchaseOrders, vendors } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
+import { parseListParams, likePattern } from "@/lib/services/list-query";
 import { createPurchaseOrderSchema } from "@/lib/validations";
 import { writePoLinesAndTotals } from "@/lib/services/purchasing";
 import { nextDocNumber } from "@/lib/services/document-sequence";
@@ -25,6 +26,8 @@ export async function GET(req: Request) {
     const status = url.searchParams.get("status");
     const vendorId = url.searchParams.get("vendorId");
     const conds = [eq(purchaseOrders.workspaceId, workspaceId)];
+    const lq = parseListParams(url);
+    if (lq.q) conds.push(or(ilike(purchaseOrders.docNumber, likePattern(lq.q)))!);
     if (status) conds.push(eq(purchaseOrders.status, status as typeof purchaseOrders.$inferSelect.status));
     if (vendorId) conds.push(eq(purchaseOrders.vendorId, vendorId));
 
@@ -43,7 +46,7 @@ export async function GET(req: Request) {
       .from(purchaseOrders)
       .leftJoin(vendors, eq(vendors.id, purchaseOrders.vendorId))
       .where(and(...conds))
-      .orderBy(desc(purchaseOrders.createdAt));
+      .orderBy(desc(purchaseOrders.createdAt)).offset(lq.offset).limit(lq.limit ?? 100000);
     return ok({ data: rows });
   }, { route: "GET /api/purchase-orders" });
 }

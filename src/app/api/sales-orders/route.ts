@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { salesOrders, customers } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
+import { parseListParams, likePattern } from "@/lib/services/list-query";
 import { createSalesOrderSchema } from "@/lib/validations";
 import { writeSalesOrderLinesAndTotals } from "@/lib/services/sales-orders";
 import { nextDocNumber } from "@/lib/services/document-sequence";
@@ -24,6 +25,8 @@ export async function GET(req: Request) {
     const status = url.searchParams.get("status");
     const customerId = url.searchParams.get("customerId");
     const conds = [eq(salesOrders.workspaceId, workspaceId)];
+    const lq = parseListParams(url);
+    if (lq.q) conds.push(or(ilike(salesOrders.docNumber, likePattern(lq.q)))!);
     if (status) conds.push(eq(salesOrders.status, status as typeof salesOrders.$inferSelect.status));
     if (customerId) conds.push(eq(salesOrders.customerId, customerId));
 
@@ -41,7 +44,7 @@ export async function GET(req: Request) {
       .from(salesOrders)
       .leftJoin(customers, eq(customers.id, salesOrders.customerId))
       .where(and(...conds))
-      .orderBy(desc(salesOrders.createdAt));
+      .orderBy(desc(salesOrders.createdAt)).offset(lq.offset).limit(lq.limit ?? 100000);
     return ok({ data: rows });
   }, { route: "GET /api/sales-orders" });
 }

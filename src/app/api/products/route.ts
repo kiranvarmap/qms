@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { products, stockLevels } from "@/lib/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { apiHandler, ok, created, unauthorized, badRequest, forbidden } from "@/lib/api";
 import { hasModuleAccess } from "@/lib/services/access";
+import { parseListParams, likePattern } from "@/lib/services/list-query";
 import { createProductSchema } from "@/lib/validations";
 import { toMinor } from "@/lib/money";
 import { emitEvent } from "@/lib/events/outbox";
@@ -22,6 +23,8 @@ export async function GET(req: Request) {
       return forbidden();
 
     const conds = [eq(products.workspaceId, workspaceId)];
+    const lq = parseListParams(url);
+    if (lq.q) conds.push(or(ilike(products.name, likePattern(lq.q)) , ilike(products.sku, likePattern(lq.q)))!);
     if (url.searchParams.get("active") === "true") conds.push(eq(products.isActive, true));
 
     const rows = await db
@@ -44,7 +47,7 @@ export async function GET(req: Request) {
       .leftJoin(stockLevels, eq(stockLevels.productId, products.id))
       .where(and(...conds))
       .groupBy(products.id)
-      .orderBy(desc(products.createdAt));
+      .orderBy(desc(products.createdAt)).offset(lq.offset).limit(lq.limit ?? 100000);
 
     const data = rows.map((r) => ({ ...r, available: Number(r.onHand) - Number(r.committed) }));
     return ok({ data });
