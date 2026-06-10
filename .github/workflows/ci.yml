@@ -1,9 +1,10 @@
 name: CI
 
+# Manual-only: run from the Actions tab when wanted. Automatic push/PR
+# triggers removed at the owner's request — local gates (build, tsc, lint,
+# jest, loop tests) run before every commit anyway.
 on:
-  push:
-    branches: [main, Integratedsystem]
-  pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
