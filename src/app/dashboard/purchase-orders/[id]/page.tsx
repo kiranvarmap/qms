@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, CheckCircle2, PackageCheck, X, AlertCircle } from "lucide-react";
+import { AttachmentsSection } from "@/components/shared/attachments-section";
 
 interface Line {
   id: string;
@@ -231,6 +232,8 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
       )}
+
+      {po && <AttachmentsSection workspaceId={po.workspaceId} refType="purchase_order" refId={po.id} />}
     </div>
   );
 }

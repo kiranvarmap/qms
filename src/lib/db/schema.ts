@@ -12,6 +12,7 @@ import {
   jsonb,
   real,
   uniqueIndex,
+  index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
@@ -1080,6 +1081,32 @@ export const entityLinks = pgTable(
       t.relation
     ),
   ]
+);
+
+// ════════════════════════════════════════════════════════════════════
+// ATTACHMENTS (audit P9) — files on ANY record, polymorphic like
+// entity_links: (refType, refId) names the owning document/master. Binary
+// lives in object storage (lib/storage.ts); this row is the registry.
+// ════════════════════════════════════════════════════════════════════
+
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    refType: varchar("ref_type", { length: 40 }).notNull(), // 'invoice' | 'purchase_order' | 'asset' | ...
+    refId: uuid("ref_id").notNull(),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    fileKey: text("file_key").notNull(), // storage object key
+    fileUrl: text("file_url"),
+    fileSize: integer("file_size").default(0).notNull(),
+    contentType: varchar("content_type", { length: 120 }),
+    uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("attachments_ref_idx").on(t.refType, t.refId)]
 );
 
 // ════════════════════════════════════════════════════════════════════

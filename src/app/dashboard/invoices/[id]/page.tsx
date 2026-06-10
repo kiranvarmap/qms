@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, DollarSign, X, AlertCircle, Download } from "lucide-react";
+import { AttachmentsSection } from "@/components/shared/attachments-section";
 
 interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }
 interface Payment { id: string; amountMinor: number; method: string; reference: string | null; receivedDate: string }
 interface Invoice {
-  id: string; docNumber: string; status: string; currency: string;
+  id: string; workspaceId: string; docNumber: string; status: string; currency: string;
   subtotalMinor: number; taxMinor: number; totalMinor: number; amountPaidMinor: number;
   dueDate: string | null; notes: string | null;
   customer: { id: string; name: string } | null;
@@ -167,6 +168,8 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
       )}
+
+      <AttachmentsSection workspaceId={inv.workspaceId} refType="invoice" refId={inv.id} />
     </div>
   );
 }

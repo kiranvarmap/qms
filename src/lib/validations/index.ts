@@ -744,6 +744,17 @@ export const assetStatusSchema = z.object({
   status: z.enum(["up", "down", "maintenance", "retired"]),
 });
 
+export const createAttachmentSchema = z.object({
+  workspaceId: uuidSchema,
+  refType:     z.string().min(1).max(40).trim(),
+  refId:       uuidSchema,
+  fileName:    z.string().min(1).max(255).trim(),
+  fileKey:     z.string().min(1),
+  fileUrl:     z.string().url().optional(),
+  fileSize:    z.coerce.number().int().min(0).optional(),
+  contentType: z.string().max(120).optional(),
+});
+
 export const voidInvoiceSchema = z.object({
   reason: z.string().max(500).trim().optional(),
 });
