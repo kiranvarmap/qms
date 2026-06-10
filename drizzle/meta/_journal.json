@@ -225,6 +225,13 @@
       "when": 1780987996427,
       "tag": "0031_powerful_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1781074359353,
+      "tag": "0032_silky_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }

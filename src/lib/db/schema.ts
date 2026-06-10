@@ -11,6 +11,7 @@ import {
   integer,
   jsonb,
   real,
+  uniqueIndex,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
@@ -1122,19 +1123,26 @@ export const linkPolicies = pgTable(
 // read. Populated by the event dispatcher (eventually consistent).
 // ════════════════════════════════════════════════════════════════════
 
-export const activityFeed = pgTable("activity_feed", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
-  boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
-  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
-  itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
-  actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
-  refType: varchar("ref_type", { length: 30 }).notNull(), // 'time_log' | 'inspection' | 'sign_document' | 'comment' | 'item'
-  refId: uuid("ref_id"),
-  action: varchar("action", { length: 50 }).notNull(), // 'clocked_in' | 'inspection_submitted' | 'document_signed' | ...
-  summary: text("summary"), // human-readable timeline line
-  occurredAt: timestamp("occurred_at", { mode: "date" }).defaultNow().notNull(),
-});
+export const activityFeed = pgTable(
+  "activity_feed",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    boardId: uuid("board_id").references(() => boards.id, { onDelete: "set null" }),
+    groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+    itemId: uuid("item_id").references(() => items.id, { onDelete: "set null" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, { onDelete: "set null" }),
+    // Producing outbox event — unique so a retried event can never project a
+    // duplicate timeline row (nullable: legacy rows predate the column).
+    eventId: uuid("event_id"),
+    refType: varchar("ref_type", { length: 30 }).notNull(), // 'time_log' | 'inspection' | 'sign_document' | 'comment' | 'item'
+    refId: uuid("ref_id"),
+    action: varchar("action", { length: 50 }).notNull(), // 'clocked_in' | 'inspection_submitted' | 'document_signed' | ...
+    summary: text("summary"), // human-readable timeline line
+    occurredAt: timestamp("occurred_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("activity_feed_event_uq").on(t.eventId)]
+);
 
 // ════════════════════════════════════════════════════════════════════
 // NOTIFICATION PREFERENCES (Plan D.5.2)

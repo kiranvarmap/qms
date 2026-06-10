@@ -517,17 +517,23 @@ async function runActivityFeed(evt: OutboxRow): Promise<void> {
   if (!spec) return;
 
   const p = evt.payload ?? {};
-  await db.insert(activityFeed).values({
-    workspaceId: evt.workspaceId ?? null,
-    boardId: (p.boardId as string) ?? null,
-    groupId: (p.groupId as string) ?? null,
-    itemId: (p.itemId as string) ?? null,
-    actorUserId: evt.actorUserId ?? null,
-    refType: spec.refType,
-    refId: evt.aggregateId ?? null,
-    action: spec.action,
-    summary: (p.summary as string) ?? spec.summary,
-  });
+  await db
+    .insert(activityFeed)
+    .values({
+      workspaceId: evt.workspaceId ?? null,
+      boardId: (p.boardId as string) ?? null,
+      groupId: (p.groupId as string) ?? null,
+      itemId: (p.itemId as string) ?? null,
+      actorUserId: evt.actorUserId ?? null,
+      eventId: evt.id,
+      refType: spec.refType,
+      refId: evt.aggregateId ?? null,
+      action: spec.action,
+      summary: (p.summary as string) ?? spec.summary,
+    })
+    // A consumer failing later in the chain re-runs this event; the unique
+    // event_id makes the feed projection a no-op on retry.
+    .onConflictDoNothing({ target: activityFeed.eventId });
 }
 
 /** All consumers, run in order for a single event. */

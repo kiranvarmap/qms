@@ -491,17 +491,19 @@ function ConductView({
   onAddAction: (qId: string, repeatIndex: number) => void;
 }) {
   const section = sections[activeSectionIdx];
+
+  // Overall progress across all repeat instances (hook must run unconditionally,
+  // before the no-section early return)
+  const allResponseValues = useMemo(() =>
+    Object.fromEntries(Object.entries(responses).map(([key, r]) => [key, { value: r.value }])),
+    [responses]
+  );
+
   if (!section) return <div className="p-8 text-gray-600">No sections found.</div>;
 
   const repeatCount = sectionRepeatCounts[section.id] ?? 1;
   const maxReps = section.maxRepetitions;
   const canAddMore = section.isRepeatable && (maxReps === null || repeatCount < maxReps);
-
-  // Overall progress across all repeat instances
-  const allResponseValues = useMemo(() =>
-    Object.fromEntries(Object.entries(responses).map(([key, r]) => [key, { value: r.value }])),
-    [responses]
-  );
 
   // Count answered across all instances (using repeatIndex-aware key)
   const totalQuestionsAcrossInstances = section.questions.length * repeatCount;

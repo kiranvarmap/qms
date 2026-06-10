@@ -73,8 +73,9 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { employeeId, workshopId, projectId, taskId, checkInPhoto } = body;
   // Scope ladder (Plan B.4): link the shift to a work item so labor rolls up.
-  let { workspaceId, boardId, groupId, itemId } = body as {
-    workspaceId?: string | null; boardId?: string | null; groupId?: string | null; itemId?: string | null;
+  const { itemId } = body as { itemId?: string | null };
+  let { workspaceId, boardId, groupId } = body as {
+    workspaceId?: string | null; boardId?: string | null; groupId?: string | null;
   };
 
   if (!employeeId) {

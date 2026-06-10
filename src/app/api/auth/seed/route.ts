@@ -7,6 +7,12 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  // Dev-only bootstrap: creates a known admin account. Never allowed where
+  // real data lives — requires non-production AND an explicit opt-in flag.
+  if (process.env.NODE_ENV === "production" || process.env.ALLOW_DEV_SEED !== "true") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const email = "hello@test.com";
   const password = "Test@1234";
   const name = "Admin";
