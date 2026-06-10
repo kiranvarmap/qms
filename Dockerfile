@@ -16,7 +16,9 @@ RUN apk add --no-cache libc6-compat
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# The lock is written by npm 11 locally; node:22's bundled npm 10 resolves
+# optional deps (esbuild/@emnapi) differently and rejects it. Pin npm 11.
+RUN npm install -g npm@11 && npm ci
 
 # ── Build ────────────────────────────────────────────────────────────
 FROM base AS builder
