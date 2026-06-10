@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, DollarSign, X, AlertCircle } from "lucide-react";
+import { ArrowLeft, Send, DollarSign, X, AlertCircle, Download } from "lucide-react";
 
 interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }
 interface Payment { id: string; amountMinor: number; method: string; reference: string | null; receivedDate: string }
@@ -85,6 +85,7 @@ export default function InvoiceDetailPage() {
           <p className="text-sm text-gray-600 mt-1">{inv.customer?.name ?? "—"}{inv.dueDate ? ` · due ${new Date(inv.dueDate).toLocaleDateString()}` : ""}</p>
         </div>
         <div className="flex items-center gap-2">
+          <a href={`/api/invoices/${inv.id}/pdf`} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-medium rounded-md"><Download className="h-4 w-4" /> PDF</a>
           {inv.status === "draft" && <button onClick={send} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Send className="h-4 w-4" /> Send</button>}
           {canPay && <button onClick={() => setShowPay(true)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><DollarSign className="h-4 w-4" /> Record payment</button>}
         </div>

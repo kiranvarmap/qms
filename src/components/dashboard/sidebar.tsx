@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   Building2,
   Inbox,
+  ListTodo,
   ShoppingCart,
   Boxes,
   FileText,
@@ -121,6 +122,7 @@ export function Sidebar({ user }: SidebarProps) {
   // ── Top-level links (always visible) ───────────────────────────────
   const topLinks: NavLink[] = [
     { name: "Home", href: "/dashboard", icon: LayoutDashboard },
+    { name: "My Work", href: "/dashboard/my-work", icon: ListTodo },
     { name: "Approvals", href: "/dashboard/approvals", icon: Inbox },
     ...(mgr ? [{ name: "Reports", href: "/dashboard/reports", icon: BarChart3 }] : []),
   ];

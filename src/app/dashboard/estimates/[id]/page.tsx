@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, CheckCircle2, XCircle, RotateCcw, AlertCircle, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Send, CheckCircle2, XCircle, RotateCcw, AlertCircle, ArrowRightLeft, Download } from "lucide-react";
 
 interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }
 interface Version { id: string; version: number; createdAt: string }
@@ -91,6 +91,7 @@ export default function EstimateDetailPage() {
           <p className="text-sm text-gray-600 mt-1">{est.customer?.name ?? "—"}</p>
         </div>
         <div className="flex items-center gap-2">
+          <a href={`/api/estimates/${est.id}/pdf`} className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-700 hover:text-gray-900 text-xs font-medium rounded-md"><Download className="h-4 w-4" /> PDF</a>
           {sendable && <button onClick={() => act("send")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Send className="h-4 w-4" /> Send</button>}
           {decidable && <button onClick={() => act("accept")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><CheckCircle2 className="h-4 w-4" /> Accept</button>}
           {decidable && <button onClick={() => act("reject")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600/80 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-medium rounded-md"><XCircle className="h-4 w-4" /> Reject</button>}
