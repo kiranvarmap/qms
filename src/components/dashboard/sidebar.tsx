@@ -28,6 +28,7 @@ import {
   Building2,
   Inbox,
   ListTodo,
+  Zap,
   ShoppingCart,
   Boxes,
   FileText,
@@ -124,7 +125,10 @@ export function Sidebar({ user }: SidebarProps) {
     { name: "Home", href: "/dashboard", icon: LayoutDashboard },
     { name: "My Work", href: "/dashboard/my-work", icon: ListTodo },
     { name: "Approvals", href: "/dashboard/approvals", icon: Inbox },
-    ...(mgr ? [{ name: "Reports", href: "/dashboard/reports", icon: BarChart3 }] : []),
+    ...(mgr ? [
+      { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+      { name: "Automations", href: "/dashboard/settings/integrations", icon: Zap },
+    ] : []),
   ];
 
   // ── Grouped, collapsible sections ──────────────────────────────────
