@@ -216,7 +216,7 @@ export function BoardSettingsPanel({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <h2 className="text-base font-semibold text-gray-900">Board Settings</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{boardName}</p>
+            <p className="text-xs text-gray-600 mt-0.5">{boardName}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
             <X className="h-4 w-4" />
@@ -300,11 +300,11 @@ export function BoardSettingsPanel({
 
               {/* Existing permissions */}
               {permsLoading ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-600 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" />Loading…
                 </div>
               ) : colPerms.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No column permissions set. All workspace members can see all columns.</p>
+                <p className="text-sm text-gray-600 text-center py-4">No column permissions set. All workspace members can see all columns.</p>
               ) : (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-700">Column Rules ({colPerms.length})</h4>
@@ -312,7 +312,7 @@ export function BoardSettingsPanel({
                     <div key={perm.id} className="flex items-center gap-3 border border-gray-200 rounded-lg p-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900">{perm.userName ?? perm.userEmail}</p>
-                        <p className="text-xs text-gray-400">{perm.columnName ?? "All columns"}</p>
+                        <p className="text-xs text-gray-600">{perm.columnName ?? "All columns"}</p>
                       </div>
                       <label className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer">
                         <input type="checkbox" checked={perm.canView} onChange={(e) => updateColPerm(perm.id, "canView", e.target.checked)} className="rounded" />
@@ -324,7 +324,7 @@ export function BoardSettingsPanel({
                       </label>
                       <button
                         onClick={() => deletePerm(perm.id, "column")}
-                        className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"
+                        className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -340,7 +340,7 @@ export function BoardSettingsPanel({
                     <div key={perm.id} className="flex items-center gap-3 border border-gray-200 rounded-lg p-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900">{perm.userName ?? perm.userEmail}</p>
-                        <p className="text-xs text-gray-400">Row: {perm.itemName ?? perm.itemId}</p>
+                        <p className="text-xs text-gray-600">Row: {perm.itemName ?? perm.itemId}</p>
                       </div>
                       <span className={cn("text-xs px-1.5 py-0.5 rounded", perm.canView ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")}>
                         {perm.canView ? "Can view" : "Hidden"}
@@ -350,7 +350,7 @@ export function BoardSettingsPanel({
                       </span>
                       <button
                         onClick={() => deletePerm(perm.id, "row")}
-                        className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"
+                        className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -445,11 +445,11 @@ export function BoardSettingsPanel({
 
               {/* Existing rules */}
               {rulesLoading ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="flex items-center gap-2 text-gray-600 text-sm">
                   <Loader2 className="h-4 w-4 animate-spin" />Loading…
                 </div>
               ) : rules.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No notification rules yet.</p>
+                <p className="text-sm text-gray-600 text-center py-4">No notification rules yet.</p>
               ) : (
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-gray-700">Active Rules ({rules.length})</h4>
@@ -463,11 +463,11 @@ export function BoardSettingsPanel({
                               {rule.triggerValue}
                             </span>
                           </p>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-600 mt-1">
                             Notify {(rule.notifyUserIds as string[]).length} user(s)
                           </p>
                           {rule.emailSubject && (
-                            <p className="text-xs text-gray-400 italic">{rule.emailSubject}</p>
+                            <p className="text-xs text-gray-600 italic">{rule.emailSubject}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -482,7 +482,7 @@ export function BoardSettingsPanel({
                           </button>
                           <button
                             onClick={() => deleteRule(rule.id)}
-                            className="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500"
+                            className="p-1 rounded hover:bg-red-50 text-gray-700 hover:text-red-500"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

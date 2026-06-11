@@ -209,7 +209,7 @@ export default function WorkspaceSettingsPage() {
           </CardHeader>
           <CardContent>
             {labelsLoading ? (
-              <div className="flex items-center gap-2 text-gray-400">
+              <div className="flex items-center gap-2 text-gray-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading…
               </div>
@@ -220,7 +220,7 @@ export default function WorkspaceSettingsPage() {
                     <div key={key} className="space-y-1.5">
                       <Label className="text-sm font-medium">
                         {label} label
-                        <span className="ml-1 text-gray-400 font-normal">
+                        <span className="ml-1 text-gray-600 font-normal">
                           (default: &quot;{DEFAULT_LABELS[key]}&quot;)
                         </span>
                       </Label>
@@ -232,7 +232,7 @@ export default function WorkspaceSettingsPage() {
                         placeholder={DEFAULT_LABELS[key]}
                         className="h-9"
                       />
-                      <p className="text-xs text-gray-400">{description}</p>
+                      <p className="text-xs text-gray-600">{description}</p>
                     </div>
                   ))}
                 </div>
@@ -301,12 +301,12 @@ export default function WorkspaceSettingsPage() {
             </CardHeader>
             <CardContent className="p-0">
               {membersLoading ? (
-                <div className="p-6 flex items-center gap-2 text-gray-400">
+                <div className="p-6 flex items-center gap-2 text-gray-600">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading…
                 </div>
               ) : members.length === 0 ? (
-                <p className="p-6 text-sm text-gray-400">No members yet.</p>
+                <p className="p-6 text-sm text-gray-600">No members yet.</p>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {/* Header row */}
@@ -326,7 +326,7 @@ export default function WorkspaceSettingsPage() {
                     >
                       <div>
                         <p className="text-sm font-medium text-gray-900">{m.userName ?? m.userEmail}</p>
-                        <p className="text-xs text-gray-400">{m.userEmail}</p>
+                        <p className="text-xs text-gray-600">{m.userEmail}</p>
                       </div>
                       <select
                         value={m.role}
@@ -368,7 +368,7 @@ export default function WorkspaceSettingsPage() {
                         {m.role !== "owner" && (
                           <button
                             onClick={() => removeMember(m.userId)}
-                            className="p-1 text-gray-400 hover:text-red-500 rounded"
+                            className="p-1 text-gray-600 hover:text-red-500 rounded"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

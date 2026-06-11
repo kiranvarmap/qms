@@ -7,6 +7,16 @@ import { getToken } from "next-auth/jwt";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  // Exposes env/config/DB diagnostics. Locked out of production unless the
+  // caller presents the cron secret (operator-only escape hatch).
+  if (process.env.NODE_ENV === "production") {
+    const secret = process.env.CRON_SECRET;
+    const authz = req.headers.get("authorization");
+    if (!secret || authz !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+  }
+
   const auth0Domain   = process.env.AUTH0_DOMAIN        || process.env.AUTH_AUTH0_DOMAIN;
   const auth0ClientId = process.env.AUTH0_CLIENT_ID     || process.env.AUTH_AUTH0_ID;
   const auth0Secret   = process.env.AUTH0_CLIENT_SECRET || process.env.AUTH_AUTH0_SECRET;

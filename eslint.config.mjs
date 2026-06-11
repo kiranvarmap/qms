@@ -5,6 +5,20 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    // React-compiler advisory diagnostics: real cleanups, but they predate CI
+    // and would block the pipeline. Kept visible as warnings; burn-down is
+    // scheduled with the design-system page migration (blueprint Phase 3).
+    // `react-hooks/rules-of-hooks` stays an error.
+    rules: {
+      "react-hooks/static-components": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/error-boundaries": "warn",
+      "react-hooks/use-memo": "warn",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

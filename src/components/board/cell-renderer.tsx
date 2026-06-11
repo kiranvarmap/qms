@@ -139,7 +139,7 @@ function TextCell({
         setEditing(true);
       }}
     >
-      {value || <span className="text-gray-300">—</span>}
+      {value || <span className="text-gray-700">—</span>}
     </button>
   );
 }
@@ -186,7 +186,7 @@ function NumberCell({
         setEditing(true);
       }}
     >
-      {value != null ? value : <span className="text-gray-300">—</span>}
+      {value != null ? value : <span className="text-gray-700">—</span>}
     </button>
   );
 }
@@ -263,7 +263,7 @@ function StatusCell({
               <>
                 <hr className="my-1" />
                 <button
-                  className="w-full px-2 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50"
+                  className="w-full px-2 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-50"
                   onClick={() => {
                     onChange(null);
                     setOpen(false);
@@ -325,23 +325,43 @@ function DateCell({
   const inputRef = useRef<HTMLInputElement>(null);
   const dateStr = value ? new Date(value).toISOString().split("T")[0] : "";
 
+  const openPicker = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    // showPicker() opens the native calendar reliably; fall back to focus.
+    if (typeof el.showPicker === "function") {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        /* showPicker can throw if not user-activated — fall through to focus */
+      }
+    }
+    el.focus();
+    el.click();
+  };
+
   return (
     <div className="relative">
       <button
+        type="button"
         className="w-full text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100 text-center min-h-[28px]"
-        onClick={() => inputRef.current?.showPicker?.()}
+        onClick={openPicker}
       >
         {dateStr
           ? new Date(dateStr).toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             })
-          : <span className="text-gray-300">—</span>}
+          : <span className="text-gray-700">—</span>}
       </button>
+      {/* Visually hidden (not overlaying the button, so clicks reach it), but
+          still in the DOM so showPicker() works. */}
       <input
         ref={inputRef}
         type="date"
-        className="absolute inset-0 opacity-0 cursor-pointer"
+        className="sr-only"
+        tabIndex={-1}
         value={dateStr}
         onChange={(e) => onChange(e.target.value || null)}
       />
@@ -394,7 +414,7 @@ function PersonCell({
             </span>
           </>
         ) : (
-          <span className="text-gray-300">—</span>
+          <span className="text-gray-700">—</span>
         )}
       </button>
       {open && (
@@ -426,7 +446,7 @@ function PersonCell({
               <>
                 <hr className="my-1" />
                 <button
-                  className="w-full px-2 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50"
+                  className="w-full px-2 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-50"
                   onClick={() => {
                     onChange(null);
                     setOpen(false);
@@ -476,7 +496,7 @@ function DropdownCell({
         className="w-full text-xs px-2 py-1 rounded hover:bg-gray-100 text-center min-h-[28px] text-gray-700"
         onClick={handleOpen}
       >
-        {value?.text || <span className="text-gray-300">\u2014</span>}
+        {value?.text || <span className="text-gray-700">\u2014</span>}
       </button>
       {open && (
         <>
@@ -502,7 +522,7 @@ function DropdownCell({
             ))}
             {value && (
               <button
-                className="w-full px-2 py-1.5 text-left text-xs text-gray-400 hover:bg-gray-50 border-t"
+                className="w-full px-2 py-1.5 text-left text-xs text-gray-600 hover:bg-gray-50 border-t"
                 onClick={() => {
                   onChange(null);
                   setOpen(false);
@@ -621,7 +641,7 @@ function LinkCell({
         {value ? (
           <span className="underline">{value.replace(/^https?:\/\//, "").slice(0, 30)}</span>
         ) : (
-          <span className="text-gray-300">—</span>
+          <span className="text-gray-700">—</span>
         )}
       </button>
       {value && (
@@ -632,7 +652,7 @@ function LinkCell({
           className="p-0.5 hover:bg-gray-100 rounded"
           onClick={(e) => e.stopPropagation()}
         >
-          <ExternalLink className="h-3 w-3 text-gray-400" />
+          <ExternalLink className="h-3 w-3 text-gray-600" />
         </a>
       )}
     </div>
@@ -662,8 +682,8 @@ function RatingCell({
           <Star
             className={`h-3.5 w-3.5 transition-colors ${
               star <= (hover || value)
-                ? "fill-yellow-400 text-yellow-400"
-                : "text-gray-300"
+                ? "fill-yellow-400 text-yellow-600"
+                : "text-gray-700"
             }`}
           />
         </button>
@@ -713,7 +733,7 @@ function FileCell({
           </a>
         ) : (
           <a href={value.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 flex-1 min-w-0">
-            <FileText className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+            <FileText className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
             <span className="text-[11px] text-blue-600 truncate hover:underline">{value.name}</span>
           </a>
         )}
@@ -722,7 +742,7 @@ function FileCell({
           onClick={(e) => { e.stopPropagation(); onChange(null); }}
           title="Remove file"
         >
-          <Trash2 className="h-3 w-3 text-gray-300 hover:text-red-500" />
+          <Trash2 className="h-3 w-3 text-gray-700 hover:text-red-500" />
         </button>
       </div>
     );
@@ -732,7 +752,7 @@ function FileCell({
     <div className="flex items-center justify-center min-h-[28px]">
       <input ref={inputRef} type="file" className="hidden" onChange={handleUpload} />
       <button
-        className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
+        className="text-[11px] text-gray-600 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
       >

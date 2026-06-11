@@ -42,6 +42,8 @@ export interface ItemDef {
   groupId: string;
   name: string;
   position: number;
+  startDate: string | null;
+  endDate: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

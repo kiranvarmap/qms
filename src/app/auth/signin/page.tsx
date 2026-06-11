@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 
 function SignInForm() {
   const searchParams = useSearchParams();
@@ -78,6 +79,12 @@ function SignInForm() {
       >
         {loading ? "Signing in…" : "Sign in"}
       </button>
+      <p className="text-center text-sm text-gray-500">
+        Don&apos;t have an account?{" "}
+        <Link href="/auth/signup" className="font-medium text-blue-600 hover:underline">
+          Sign up
+        </Link>
+      </p>
     </form>
   );
 }

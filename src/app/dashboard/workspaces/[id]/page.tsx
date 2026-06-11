@@ -104,7 +104,7 @@ export default function WorkspaceDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function WorkspaceDetailPage() {
         </Button>
         <div className="flex items-center gap-3 flex-1">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-900 font-bold text-lg flex-shrink-0"
             style={{ backgroundColor: workspace.color }}
           >
             {workspace.name.charAt(0).toUpperCase()}
@@ -198,7 +198,7 @@ export default function WorkspaceDetailPage() {
       {workspace.boards.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
-            <Table2 className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <Table2 className="mx-auto h-12 w-12 text-gray-700 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-1">No boards yet</h3>
             <p className="text-sm text-gray-500 mb-4">
               Create your first board to start managing tasks.

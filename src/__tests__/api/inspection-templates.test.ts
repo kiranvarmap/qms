@@ -24,6 +24,7 @@ jest.mock("@/lib/db/schema", () => ({
   inspectionTemplates: {},
   templateSections: {},
   templateQuestions: {},
+  boards: { id: "boards.id", name: "boards.name" },
 }));
 
 jest.mock("drizzle-orm", () => ({
@@ -69,15 +70,16 @@ describe("GET /api/inspection-templates", () => {
     function makeChain(result: unknown): Record<string, jest.Mock> {
       const obj: Record<string, jest.Mock> = {
         from: jest.fn(() => obj),
+        leftJoin: jest.fn(() => obj),
         where: jest.fn(() => obj),
         orderBy: jest.fn(() => Promise.resolve(result)),
       };
       return obj;
     }
 
-    // Call order: 1 templates query, 1 sections query (for t1), 1 questions query (for s1)
+    // Call order: 1 templates query (joined shape), 1 sections query (for t1), 1 questions query (for s1)
     mockDb.select
-      .mockReturnValueOnce(makeChain([{ id: "t1", title: "Template 1", isPublished: true, scoringEnabled: false, createdBy: "user-1", createdAt: new Date(), updatedAt: new Date() }]))
+      .mockReturnValueOnce(makeChain([{ template: { id: "t1", title: "Template 1", isPublished: true, scoringEnabled: false, createdBy: "user-1", createdAt: new Date(), updatedAt: new Date() }, boardName: null }]))
       .mockReturnValueOnce(makeChain([{ id: "s1", templateId: "t1", title: "General", position: 0 }]))
       .mockReturnValueOnce(makeChain([])); // questions for s1
 

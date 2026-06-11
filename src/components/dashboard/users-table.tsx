@@ -126,7 +126,7 @@ export function UsersTable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -187,7 +187,7 @@ export function UsersTable() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
-                      <RoleIcon className="h-3.5 w-3.5 text-gray-400" />
+                      <RoleIcon className="h-3.5 w-3.5 text-gray-600" />
                       <span className="capitalize">{user.role}</span>
                     </div>
                   </td>
@@ -217,7 +217,7 @@ export function UsersTable() {
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-1">
                       {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
                       ) : (
                         <>
                           {/* Quick status toggles */}
@@ -285,7 +285,7 @@ export function UsersTable() {
                             title="Delete user"
                             onClick={() => deleteUser(user.id)}
                           >
-                            <Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" />
+                            <Trash2 className="h-4 w-4 text-red-600 hover:text-red-600" />
                           </Button>
                         </>
                       )}
@@ -326,7 +326,7 @@ function EmployeeLinker({
           <span className="text-gray-800 font-medium text-xs">
             {linkedEmployee.name}
           </span>
-          <span className="text-gray-400 text-xs">
+          <span className="text-gray-600 text-xs">
             ({linkedEmployee.employeeId})
           </span>
           <Button
@@ -342,7 +342,7 @@ function EmployeeLinker({
       ) : (
         <button
           onClick={onOpen}
-          className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors"
+          className="flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors"
         >
           <Link className="h-3 w-3" />
           Link employee
@@ -354,7 +354,7 @@ function EmployeeLinker({
           <div className="fixed inset-0 z-10" onClick={onClose} />
           <div className="absolute left-0 z-20 mt-1 w-64 rounded-md bg-white shadow-lg ring-1 ring-gray-200 max-h-64 overflow-y-auto">
             <div className="py-1">
-              <p className="px-3 py-1.5 text-xs font-medium text-gray-400 sticky top-0 bg-white border-b border-gray-100">
+              <p className="px-3 py-1.5 text-xs font-medium text-gray-600 sticky top-0 bg-white border-b border-gray-100">
                 Select employee
               </p>
               {linkedEmployee && (
@@ -370,7 +370,7 @@ function EmployeeLinker({
                 </button>
               )}
               {employees.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-gray-400">
+                <p className="px-3 py-2 text-xs text-gray-600">
                   No employees found
                 </p>
               ) : (
@@ -388,11 +388,11 @@ function EmployeeLinker({
                     }}
                   >
                     <span className="font-medium">{emp.name}</span>
-                    <span className="text-gray-400 ml-1">
+                    <span className="text-gray-600 ml-1">
                       #{emp.employeeId}
                     </span>
                     {emp.department && (
-                      <span className="text-gray-400 ml-1">
+                      <span className="text-gray-600 ml-1">
                         · {emp.department}
                       </span>
                     )}
@@ -437,7 +437,7 @@ function RoleMenu({
           />
           <div className="absolute right-0 z-20 mt-1 w-36 rounded-md bg-white shadow-lg ring-1 ring-gray-200">
             <div className="py-1">
-              <p className="px-3 py-1 text-xs font-medium text-gray-400">
+              <p className="px-3 py-1 text-xs font-medium text-gray-600">
                 Set role
               </p>
               {roles.map((role) => (

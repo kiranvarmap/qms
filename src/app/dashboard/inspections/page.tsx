@@ -239,7 +239,7 @@ export default function InspectionsPage() {
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
         {loading ? (
           <div className="flex items-center justify-center h-32">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
           </div>
         ) : tab === "inspections" ? (
           <InspectionsList
@@ -266,7 +266,7 @@ export default function InspectionsPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900">New Inspection Template</h2>
                 <button onClick={() => setShowNewTemplateModal(false)} className="p-1.5 rounded-md hover:bg-gray-100">
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
               <div className="space-y-3">
@@ -297,7 +297,7 @@ export default function InspectionsPage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Board (optional)</label>
                     {loadingBoards ? (
-                      <div className="flex items-center gap-2 text-xs text-gray-400 py-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading boards…</div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 py-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading boards…</div>
                     ) : (
                       <select
                         value={selectedBoardId}
@@ -313,7 +313,7 @@ export default function InspectionsPage() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-gray-600 mt-2">
                 Linking a board lets inspectors pick a job/project when starting an inspection.
               </p>
               <div className="flex justify-end gap-2 mt-4">
@@ -346,7 +346,7 @@ export default function InspectionsPage() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-semibold text-gray-900">Start Inspection</h2>
                 <button onClick={() => setShowStartModal(false)} className="p-1.5 rounded-md hover:bg-gray-100">
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
               <div className="space-y-3">
@@ -357,11 +357,11 @@ export default function InspectionsPage() {
                       Job / Project {tpl?.boardName ? `(${tpl.boardName})` : ""} *
                     </label>
                     {loadingItems ? (
-                      <div className="flex items-center gap-2 text-xs text-gray-400 py-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading items…</div>
+                      <div className="flex items-center gap-2 text-xs text-gray-600 py-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading items…</div>
                     ) : (
                       <>
                         <div className="relative">
-                          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
+                          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-600" />
                           <input
                             value={itemSearch}
                             onChange={(e) => setItemSearch(e.target.value)}
@@ -371,7 +371,7 @@ export default function InspectionsPage() {
                         </div>
                         <div className="max-h-40 overflow-y-auto mt-1.5 border border-gray-200 rounded-lg divide-y divide-gray-100">
                           {filteredItems.length === 0 && (
-                            <p className="text-xs text-gray-400 p-3 text-center">No items found</p>
+                            <p className="text-xs text-gray-600 p-3 text-center">No items found</p>
                           )}
                           {filteredItems.map((item) => (
                             <button
@@ -446,9 +446,9 @@ function InspectionsList({
   if (inspections.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <ClipboardList className="h-12 w-12 text-gray-200 mb-3" />
+        <ClipboardList className="h-12 w-12 text-gray-900 mb-3" />
         <h3 className="text-base font-semibold text-gray-500">No inspections yet</h3>
-        <p className="text-sm text-gray-400 mt-1 mb-4">Start your first inspection from a template</p>
+        <p className="text-sm text-gray-600 mt-1 mb-4">Start your first inspection from a template</p>
         <button
           onClick={onStartNew}
           className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -492,7 +492,7 @@ function InspectionsList({
 function InspectionRow({ inspection: i, onDelete }: { inspection: Inspection; onDelete: (id: string) => void }) {
   const isComplete = i.status === "completed";
   const score = i.score;
-  const scoreColor = score === null ? "text-gray-400" : score >= 80 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600";
+  const scoreColor = score === null ? "text-gray-600" : score >= 80 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600";
   const scoreBg = score === null ? "bg-gray-100" : score >= 80 ? "bg-green-50 border-green-200" : score >= 50 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200";
 
   return (
@@ -506,7 +506,7 @@ function InspectionRow({ inspection: i, onDelete }: { inspection: Inspection; on
       </div>
       <div className="flex-1 min-w-0">
         <div className="font-medium text-[14px] text-gray-900 truncate">{i.title}</div>
-        <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+        <div className="flex items-center gap-2 text-xs text-gray-600 mt-0.5">
           {i.linkedItemName && (
             <>
               <span className="text-indigo-500 font-medium">{i.linkedItemName}</span>
@@ -534,10 +534,10 @@ function InspectionRow({ inspection: i, onDelete }: { inspection: Inspection; on
           className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
           title={isComplete ? "View report" : "Continue inspection"}
         >
-          {isComplete ? <BarChart3 className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+          {isComplete ? <BarChart3 className="h-4 w-4 text-gray-600" /> : <ChevronRight className="h-4 w-4 text-gray-600" />}
         </Link>
         <button onClick={() => onDelete(i.id)} className="p-1.5 rounded-md hover:bg-red-50 transition-colors">
-          <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+          <Trash2 className="h-3.5 w-3.5 text-gray-600 hover:text-red-500" />
         </button>
       </div>
     </div>
@@ -559,9 +559,9 @@ function TemplatesList({
   if (templates.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <LayoutTemplate className="h-12 w-12 text-gray-200 mb-3" />
+        <LayoutTemplate className="h-12 w-12 text-gray-900 mb-3" />
         <h3 className="text-base font-semibold text-gray-500">No templates yet</h3>
-        <p className="text-sm text-gray-400 mt-1 mb-4">Create your first inspection template</p>
+        <p className="text-sm text-gray-600 mt-1 mb-4">Create your first inspection template</p>
         <button
           onClick={onCreate}
           className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -587,9 +587,9 @@ function TemplatesList({
                 </span>
               </div>
               {t.description && (
-                <p className="text-xs text-gray-400 leading-relaxed mb-3 line-clamp-2">{t.description}</p>
+                <p className="text-xs text-gray-600 leading-relaxed mb-3 line-clamp-2">{t.description}</p>
               )}
-              <div className="flex items-center gap-3 text-xs text-gray-400">
+              <div className="flex items-center gap-3 text-xs text-gray-600">
                 <span>{t.sections.length} section{t.sections.length !== 1 ? "s" : ""}</span>
                 <span>·</span>
                 <span>{totalQuestions} question{totalQuestions !== 1 ? "s" : ""}</span>
@@ -613,7 +613,7 @@ function TemplatesList({
                   Start Inspection
                 </button>
               ) : (
-                <span className="text-xs text-gray-400">Publish to start inspections</span>
+                <span className="text-xs text-gray-600">Publish to start inspections</span>
               )}
               <div className="flex items-center gap-1 ml-auto">
                 <Link
@@ -621,13 +621,13 @@ function TemplatesList({
                   className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
                   title="Edit template"
                 >
-                  <Edit3 className="h-3.5 w-3.5 text-gray-400" />
+                  <Edit3 className="h-3.5 w-3.5 text-gray-600" />
                 </Link>
                 <button
                   onClick={() => onDelete(t.id)}
                   className="p-1.5 rounded-md hover:bg-red-50 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                  <Trash2 className="h-3.5 w-3.5 text-gray-600 hover:text-red-500" />
                 </button>
               </div>
             </div>

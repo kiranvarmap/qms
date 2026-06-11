@@ -330,14 +330,14 @@ export default function PdfTemplatesPage() {
             onClick={() => setShowTemplateList(!showTemplateList)}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <LayoutTemplate className="h-3.5 w-3.5 text-gray-400" />
+            <LayoutTemplate className="h-3.5 w-3.5 text-gray-600" />
             <span className="text-sm font-medium text-gray-800 max-w-[180px] truncate">{templateName}</span>
-            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400" />
+            <ChevronDownIcon className="h-3.5 w-3.5 text-gray-600" />
           </button>
           {showTemplateList && (
             <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl border border-gray-200 shadow-2xl z-50 overflow-hidden">
               <div className="p-2 border-b border-gray-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2">Templates</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600 px-2">Templates</p>
               </div>
               <div className="max-h-48 overflow-y-auto">
                 {templates.map((t) => (
@@ -353,7 +353,7 @@ export default function PdfTemplatesPage() {
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
                       className="p-0.5 rounded hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
-                    ><Trash2 className="h-3 w-3 text-red-400" /></button>
+                    ><Trash2 className="h-3 w-3 text-red-600" /></button>
                   </div>
                 ))}
               </div>
@@ -387,7 +387,7 @@ export default function PdfTemplatesPage() {
         <div className="flex-1" />
 
         {/* Save indicator */}
-        {saving && <span className="text-xs text-gray-400 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>}
+        {saving && <span className="text-xs text-gray-600 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</span>}
         {saved && !saving && <span className="text-xs text-green-600 flex items-center gap-1"><Check className="h-3 w-3" /> Saved</span>}
 
         <button onClick={manualSave} disabled={saving} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
@@ -410,7 +410,7 @@ export default function PdfTemplatesPage() {
             <input
               value={templateName}
               onChange={(e) => { setTemplateName(e.target.value); scheduleSave(); }}
-              className="w-full text-xs text-gray-400 uppercase tracking-widest bg-transparent outline-none border-b border-transparent hover:border-gray-200 focus:border-blue-300 pb-1 transition-colors"
+              className="w-full text-xs text-gray-600 uppercase tracking-widest bg-transparent outline-none border-b border-transparent hover:border-gray-200 focus:border-blue-300 pb-1 transition-colors"
               placeholder="Template name…"
             />
           </div>
@@ -452,7 +452,7 @@ export default function PdfTemplatesPage() {
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}
                     className="p-1 rounded bg-white border border-gray-200 shadow-sm hover:bg-red-50">
-                    <Trash2 className="h-3 w-3 text-red-400" />
+                    <Trash2 className="h-3 w-3 text-red-600" />
                   </button>
                 </div>
 
@@ -460,8 +460,8 @@ export default function PdfTemplatesPage() {
                 {activeBlockId === block.id && (
                   <div className="mx-1 mt-1 mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{block.type.replace(/_/g, " ")} Settings</span>
-                      <button onClick={() => setActiveBlockId(null)} className="p-0.5 rounded hover:bg-gray-200"><X className="h-3 w-3 text-gray-400" /></button>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">{block.type.replace(/_/g, " ")} Settings</span>
+                      <button onClick={() => setActiveBlockId(null)} className="p-0.5 rounded hover:bg-gray-200"><X className="h-3 w-3 text-gray-600" /></button>
                     </div>
                     <InlineSettings block={block} onChange={(patch) => updateBlock(block.id, patch)} />
                   </div>
@@ -473,20 +473,20 @@ export default function PdfTemplatesPage() {
             <div className="mx-6 mt-4 mb-6 relative" ref={paletteRef} onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setShowPalette(!showPalette)}
-                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-400 font-medium hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-lg text-sm text-gray-600 font-medium hover:border-blue-400 hover:text-blue-500 transition-all flex items-center justify-center gap-2"
               >
                 <Plus className="h-4 w-4" /> Add block
               </button>
               {showPalette && (
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-[420px] bg-white border border-gray-200 rounded-xl shadow-2xl p-3 grid grid-cols-2 gap-1 z-50">
-                  <p className="col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 px-2 mb-1">Insert Block</p>
+                  <p className="col-span-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 px-2 mb-1">Insert Block</p>
                   {BLOCK_PALETTE.map((bt) => (
                     <button
                       key={bt.type}
                       onClick={() => addBlock(bt.type)}
                       className="flex items-center gap-2.5 px-3 py-2 text-left rounded-lg hover:bg-blue-50 transition-colors"
                     >
-                      <span className="text-gray-400">{bt.icon}</span>
+                      <span className="text-gray-600">{bt.icon}</span>
                       <span className="text-xs font-medium text-gray-700">{bt.label}</span>
                     </button>
                   ))}
@@ -579,7 +579,7 @@ function QuestionsCanvasEditor({ b, isActive, onChange }: { b: QuestionsBlock; i
               <option key={t.id} value={t.id}>{t.title} ({t.sections?.length || 0} sections)</option>
             ))}
           </select>
-          {loadingTemplates && <Loader2 className="h-3 w-3 animate-spin text-blue-400" />}
+          {loadingTemplates && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
         </div>
       )}
 
@@ -602,8 +602,8 @@ function QuestionsCanvasEditor({ b, isActive, onChange }: { b: QuestionsBlock; i
               {editingSection && si === 0 && (
                 <div className="mt-1 p-2.5 bg-white rounded-lg border border-blue-200 shadow-md space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Section Header Style</span>
-                    <button onClick={() => setEditingSection(false)} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-400" /></button>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Section Header Style</span>
+                    <button onClick={() => setEditingSection(false)} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-600" /></button>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] text-gray-500">BG:</span><Clr value={b.sectionHeaderBg} onChange={(v) => onChange({ sectionHeaderBg: v })} />
@@ -706,7 +706,7 @@ function QuestionsCanvasEditor({ b, isActive, onChange }: { b: QuestionsBlock; i
       {/* Used types summary */}
       {selectedTemplate && isActive && (
         <div className="mt-2 pt-2 border-t border-gray-100">
-          <p className="text-[10px] text-gray-400">
+          <p className="text-[10px] text-gray-600">
             Types used in this template: {usedTypes.map((t) => QUESTION_TYPE_LABELS[t]).join(", ")}
           </p>
         </div>
@@ -763,7 +763,7 @@ function QuestionTypeCard({
             </p>
             {bgc && bgc !== "#ffffff" && bgc !== "#FFFFFF" && bgc !== "" ? (
               <span
-                className="px-3 py-1 rounded text-white text-right flex-shrink-0"
+                className="px-3 py-1 rounded text-gray-900 text-right flex-shrink-0"
                 style={{ backgroundColor: bgc, fontSize: aSize + 2, fontFamily: ff(b.fontFamily) }}
               >
                 {answer}
@@ -777,8 +777,8 @@ function QuestionTypeCard({
         )}
         {isEditing && (
           <div className="flex items-center gap-2 mt-1">
-            <Palette className="h-3 w-3 text-blue-400 flex-shrink-0" />
-            <span className="text-[9px] text-blue-400">Click to edit style</span>
+            <Palette className="h-3 w-3 text-blue-600 flex-shrink-0" />
+            <span className="text-[9px] text-blue-600">Click to edit style</span>
           </div>
         )}
       </div>
@@ -793,11 +793,11 @@ function QuestionTypeCard({
               <Settings2 className="h-3 w-3 inline mr-1" />
               {QUESTION_TYPE_LABELS[qt]} Style
             </span>
-            <button onClick={onEdit} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-400" /></button>
+            <button onClick={onEdit} className="p-0.5 rounded hover:bg-gray-100"><X className="h-3 w-3 text-gray-600" /></button>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <p className="text-[9px] font-bold uppercase text-gray-400">Question</p>
+              <p className="text-[9px] font-bold uppercase text-gray-600">Question</p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-gray-500">Color:</span>
                 <Clr value={ts?.questionColor ?? b.questionColor} onChange={(v) => onUpdateStyle({ questionColor: v })} />
@@ -805,11 +805,11 @@ function QuestionTypeCard({
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-gray-500">Size:</span>
                 <SizeBtn value={ts?.questionFontSize ?? b.questionFontSize} onChange={(v) => onUpdateStyle({ questionFontSize: v })} />
-                <span className="text-[9px] text-gray-400">pt</span>
+                <span className="text-[9px] text-gray-600">pt</span>
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[9px] font-bold uppercase text-gray-400">Answer</p>
+              <p className="text-[9px] font-bold uppercase text-gray-600">Answer</p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-gray-500">Color:</span>
                 <Clr value={ts?.answerColor ?? b.answerColor} onChange={(v) => onUpdateStyle({ answerColor: v })} />
@@ -817,7 +817,7 @@ function QuestionTypeCard({
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-gray-500">Size:</span>
                 <SizeBtn value={ts?.answerFontSize ?? b.answerFontSize} onChange={(v) => onUpdateStyle({ answerFontSize: v })} />
-                <span className="text-[9px] text-gray-400">pt</span>
+                <span className="text-[9px] text-gray-600">pt</span>
               </div>
             </div>
           </div>
@@ -825,7 +825,7 @@ function QuestionTypeCard({
             <span className="text-[10px] text-gray-500">Background:</span>
             <Clr value={ts?.bgColor || "#ffffff"} onChange={(v) => onUpdateStyle({ bgColor: v })} />
             {ts?.bgColor && ts.bgColor !== "" && (
-              <button onClick={() => onUpdateStyle({ bgColor: "" })} className="text-[9px] text-red-400 hover:text-red-600">Clear</button>
+              <button onClick={() => onUpdateStyle({ bgColor: "" })} className="text-[9px] text-red-600 hover:text-red-600">Clear</button>
             )}
           </div>
         </div>
@@ -886,7 +886,7 @@ function LiveBlock({ block: b, isActive, onChange }: { block: PdfBlock; isActive
               <span style={{ color: b.valueColor }}>Sample value</span>
             </div>
           ))}
-          {active.length === 0 && <span className="text-xs text-gray-300 italic">No fields enabled — click to configure</span>}
+          {active.length === 0 && <span className="text-xs text-gray-700 italic">No fields enabled — click to configure</span>}
         </div>
       );
     }
@@ -949,7 +949,7 @@ function LiveBlock({ block: b, isActive, onChange }: { block: PdfBlock; isActive
 
     case "spacer":
       return (
-        <div className="flex items-center justify-center text-gray-300 transition-all" style={{ height: Math.min(b.height, 80) }}>
+        <div className="flex items-center justify-center text-gray-700 transition-all" style={{ height: Math.min(b.height, 80) }}>
           <span className="text-[10px] border border-dashed border-gray-200 px-2 py-0.5 rounded">↕ Spacer {b.height}pt</span>
         </div>
       );
@@ -961,7 +961,7 @@ function LiveBlock({ block: b, isActive, onChange }: { block: PdfBlock; isActive
       return (
         <div className="flex items-center gap-3 py-3 px-6">
           <span className="flex-1 border-t-2 border-dashed border-gray-300" />
-          <span className="text-[10px] font-bold tracking-widest text-gray-400 bg-gray-50 px-3 py-1 rounded-full">PAGE BREAK</span>
+          <span className="text-[10px] font-bold tracking-widest text-gray-600 bg-gray-50 px-3 py-1 rounded-full">PAGE BREAK</span>
           <span className="flex-1 border-t-2 border-dashed border-gray-300" />
         </div>
       );
@@ -996,7 +996,7 @@ function InlineSettings({ block, onChange }: { block: PdfBlock; onChange: (p: Pa
     case "signatures": return <SigInline b={block} o={onChange} />;
     case "spacer": return <div className="flex items-center gap-2"><label className="text-xs text-gray-500">Height:</label><input type="range" min={5} max={120} value={block.height} onChange={(e) => onChange({ height: parseInt(e.target.value) } as Partial<SpacerBlock>)} className="flex-1" /><span className="text-xs text-gray-500 w-8">{block.height}pt</span></div>;
     case "divider": return <div className="flex items-center gap-3"><Clr value={block.color} onChange={(v) => onChange({ color: v } as Partial<DividerBlock>)} /><label className="text-xs text-gray-500">Thickness:</label><input type="range" min={0.5} max={3} step={0.25} value={block.thickness} onChange={(e) => onChange({ thickness: parseFloat(e.target.value) } as Partial<DividerBlock>)} className="w-20" /></div>;
-    case "page_break": return <p className="text-xs text-gray-400 italic">Forces a new page in the PDF. No settings.</p>;
+    case "page_break": return <p className="text-xs text-gray-600 italic">Forces a new page in the PDF. No settings.</p>;
     case "footer": return <FooterInline b={block} o={onChange} />;
   }
 }
@@ -1039,7 +1039,7 @@ function HeaderInline({ b, o }: { b: HeaderBlock; o: (p: Partial<HeaderBlock>) =
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] text-gray-400">Logo:</span>
+        <span className="text-[10px] text-gray-600">Logo:</span>
         <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={40} />
         {b.logoUrl && (
           <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
@@ -1059,9 +1059,9 @@ function HeaderInline({ b, o }: { b: HeaderBlock; o: (p: Partial<HeaderBlock>) =
         <Tog checked={b.showStatusBadge} onChange={(v) => o({ showStatusBadge: v })} label="Badge" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.bgColor} onChange={(v) => o({ bgColor: v })} />
-        <span className="text-[10px] text-gray-400">Text:</span><Clr value={b.textColor} onChange={(v) => o({ textColor: v })} />
-        <span className="text-[10px] text-gray-400">Company:</span><Clr value={b.companyNameColor} onChange={(v) => o({ companyNameColor: v })} />
+        <span className="text-[10px] text-gray-600">BG:</span><Clr value={b.bgColor} onChange={(v) => o({ bgColor: v })} />
+        <span className="text-[10px] text-gray-600">Text:</span><Clr value={b.textColor} onChange={(v) => o({ textColor: v })} />
+        <span className="text-[10px] text-gray-600">Company:</span><Clr value={b.companyNameColor} onChange={(v) => o({ companyNameColor: v })} />
       </div>
     </div>
   );
@@ -1085,8 +1085,8 @@ function InfoFieldsInline({ b, o }: { b: InfoFieldsBlock; o: (p: Partial<InfoFie
         </select>
         <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
         <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
-        <span className="text-[10px] text-gray-400">Label:</span><Clr value={b.labelColor} onChange={(v) => o({ labelColor: v })} />
-        <span className="text-[10px] text-gray-400">Value:</span><Clr value={b.valueColor} onChange={(v) => o({ valueColor: v })} />
+        <span className="text-[10px] text-gray-600">Label:</span><Clr value={b.labelColor} onChange={(v) => o({ labelColor: v })} />
+        <span className="text-[10px] text-gray-600">Value:</span><Clr value={b.valueColor} onChange={(v) => o({ valueColor: v })} />
       </div>
     </div>
   );
@@ -1124,17 +1124,17 @@ function QuestionsInline({ b, o }: { b: QuestionsBlock; o: (p: Partial<Questions
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
-        <span className="text-[10px] text-gray-400">Flag:</span><Clr value={b.flagColor} onChange={(v) => o({ flagColor: v })} />
-        <span className="text-[10px] text-gray-400">Note:</span><Clr value={b.noteColor} onChange={(v) => o({ noteColor: v })} />
+        <span className="text-[10px] text-gray-600">Flag:</span><Clr value={b.flagColor} onChange={(v) => o({ flagColor: v })} />
+        <span className="text-[10px] text-gray-600">Note:</span><Clr value={b.noteColor} onChange={(v) => o({ noteColor: v })} />
       </div>
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-gray-100">
-        <span className="text-[10px] text-gray-400">Row Divider:</span>
+        <span className="text-[10px] text-gray-600">Row Divider:</span>
         <Clr value={b.dividerColor ?? "#DDDDDD"} onChange={(v) => o({ dividerColor: v })} />
-        <span className="text-[10px] text-gray-400">Width:</span>
+        <span className="text-[10px] text-gray-600">Width:</span>
         <input type="range" min={0.25} max={3} step={0.25} value={b.dividerThickness ?? 0.5} onChange={(e) => o({ dividerThickness: parseFloat(e.target.value) })} className="w-16" />
-        <span className="text-[9px] text-gray-400">{b.dividerThickness ?? 0.5}pt</span>
+        <span className="text-[9px] text-gray-600">{b.dividerThickness ?? 0.5}pt</span>
       </div>
-      <p className="text-[10px] text-gray-400 italic">Click any question type card or section header on the canvas above to customize individually.</p>
+      <p className="text-[10px] text-gray-600 italic">Click any question type card or section header on the canvas above to customize individually.</p>
     </div>
   );
 }
@@ -1145,8 +1145,8 @@ function ActionsInline({ b, o }: { b: ActionsBlock; o: (p: Partial<ActionsBlock>
       <input value={b.headerText} onChange={(e) => o({ headerText: e.target.value })} className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-40" />
       <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
       <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
-      <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
-      <span className="text-[10px] text-gray-400">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
+      <span className="text-[10px] text-gray-600">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
+      <span className="text-[10px] text-gray-600">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
     </div>
   );
 }
@@ -1156,8 +1156,8 @@ function SigInline({ b, o }: { b: SignaturesBlock; o: (p: Partial<SignaturesBloc
     <div className="flex flex-wrap items-center gap-2">
       <input value={b.headerText} onChange={(e) => o({ headerText: e.target.value })} className="text-[11px] border border-gray-200 rounded px-2 py-0.5 outline-none w-40" />
       <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
-      <span className="text-[10px] text-gray-400">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
-      <span className="text-[10px] text-gray-400">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
+      <span className="text-[10px] text-gray-600">BG:</span><Clr value={b.headerBg} onChange={(v) => o({ headerBg: v })} />
+      <span className="text-[10px] text-gray-600">Color:</span><Clr value={b.headerColor} onChange={(v) => o({ headerColor: v })} />
     </div>
   );
 }
@@ -1166,7 +1166,7 @@ function FooterInline({ b, o }: { b: FooterBlock; o: (p: Partial<FooterBlock>) =
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[10px] text-gray-400">Logo:</span>
+        <span className="text-[10px] text-gray-600">Logo:</span>
         <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={20} />
         {b.logoUrl && (
           <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">

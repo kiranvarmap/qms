@@ -428,7 +428,7 @@ export default function TemplateBuilderPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
       </div>
     );
   }
@@ -454,16 +454,16 @@ export default function TemplateBuilderPage() {
           <input
             value={descValue}
             onChange={(e) => handleDescChange(e.target.value)}
-            className="text-xs text-gray-400 bg-transparent border-0 outline-none w-full mt-0.5"
+            className="text-xs text-gray-600 bg-transparent border-0 outline-none w-full mt-0.5"
             placeholder="Description (optional)…"
           />
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">{totalQuestions} question{totalQuestions !== 1 ? "s" : ""}</span>
+          <span className="text-xs text-gray-600">{totalQuestions} question{totalQuestions !== 1 ? "s" : ""}</span>
           {template.boardName && (
             <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">{template.boardName}</span>
           )}
-          {saving && <span className="text-xs text-gray-400">Saving…</span>}
+          {saving && <span className="text-xs text-gray-600">Saving…</span>}
           {/* Scoring toggle */}
           <button
             onClick={toggleScoring}
@@ -482,7 +482,7 @@ export default function TemplateBuilderPage() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
               template.isPublished
                 ? "bg-green-600 text-white hover:bg-green-700"
-                : "bg-gray-900 text-white hover:bg-gray-800"
+                : "bg-white text-gray-900 hover:bg-gray-100"
             }`}
           >
             {template.isPublished ? (
@@ -498,7 +498,7 @@ export default function TemplateBuilderPage() {
         {/* Left: Pages & Sections hierarchy */}
         <div className="w-72 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
           <div className="px-4 py-3 border-b border-gray-100">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Pages & Sections</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-600">Pages & Sections</span>
           </div>
           <div className="flex-1 overflow-y-auto py-2">
             {(() => {
@@ -508,7 +508,7 @@ export default function TemplateBuilderPage() {
                 return (
                   <div key={`page-${pageNum}`} className="space-y-0.5 mb-1">
                     {/* Page header */}
-                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-gray-50">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-50">
                       Page {pageNum}
                     </div>
                     {/* Sections in this page */}
@@ -527,11 +527,11 @@ export default function TemplateBuilderPage() {
                           onClick={() => setActiveSectionId(section.id)}
                         >
                           <div className="flex items-center gap-2 mb-1">
-                            <GripVertical className="h-3.5 w-3.5 text-gray-300 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                            <GripVertical className="h-3.5 w-3.5 text-gray-700 flex-shrink-0 opacity-0 group-hover:opacity-100" />
                             <span className={`text-[13px] font-medium truncate ${activeSectionId === section.id ? "text-blue-700 font-semibold" : "text-gray-700"}`}>
                               {section.title}
                             </span>
-                            <span className="text-[10px] text-gray-400 ml-auto">{section.questions.length}q</span>
+                            <span className="text-[10px] text-gray-600 ml-auto">{section.questions.length}q</span>
                           </div>
                           {/* Repeatable & Signoff indicators */}
                           <div className="flex items-center gap-2 ml-7 text-[11px]">
@@ -545,7 +545,7 @@ export default function TemplateBuilderPage() {
                                 onChange={(e) => updateSectionSettings(section.id, { isRepeatable: e.target.checked })}
                                 className="h-3 w-3 rounded accent-orange-500"
                               />
-                              <Repeat className="h-3 w-3 text-orange-400" />
+                              <Repeat className="h-3 w-3 text-orange-600" />
                               <span className="text-gray-600">Repeat</span>
                             </label>
                             <label
@@ -571,7 +571,7 @@ export default function TemplateBuilderPage() {
                             disabled={sIdx === 0}
                             title="Move up"
                           >
-                            <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
+                            <ChevronUp className="h-3.5 w-3.5 text-gray-600" />
                           </button>
                           <button
                             className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30"
@@ -579,7 +579,7 @@ export default function TemplateBuilderPage() {
                             disabled={sIdx === pageSections.length - 1}
                             title="Move down"
                           >
-                            <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                            <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
                           </button>
                           <button
                             className="p-0.5 rounded hover:bg-red-100 disabled:opacity-30"
@@ -587,7 +587,7 @@ export default function TemplateBuilderPage() {
                             disabled={template.sections.length <= 1}
                             title="Delete section"
                           >
-                            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                            <Trash2 className="h-3.5 w-3.5 text-gray-600 hover:text-red-500" />
                           </button>
                         </div>
                       </div>
@@ -639,12 +639,12 @@ export default function TemplateBuilderPage() {
                       onChange={(e) => updateSectionSettings(activeSection.id, { isRepeatable: e.target.checked })}
                       className="h-3.5 w-3.5 rounded accent-orange-500"
                     />
-                    <Repeat className="h-3.5 w-3.5 text-orange-400" />
+                    <Repeat className="h-3.5 w-3.5 text-orange-600" />
                     <span className="text-gray-600">Repeatable</span>
                   </label>
                   {activeSection.isRepeatable && (
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-400">Max:</span>
+                      <span className="text-gray-600">Max:</span>
                       <input
                         type="number"
                         min={1}
@@ -677,7 +677,7 @@ export default function TemplateBuilderPage() {
                   )}
                   <div className="w-px h-4 bg-gray-300" />
                   <div className="flex items-center gap-1">
-                    <span className="text-gray-400">Page:</span>
+                    <span className="text-gray-600">Page:</span>
                     <input
                       type="number"
                       min={1}
@@ -694,10 +694,10 @@ export default function TemplateBuilderPage() {
                 {/* Left: Questions list */}
                 <div className="w-80 flex-shrink-0 bg-gray-50 border-r border-gray-200 overflow-y-auto p-4 space-y-2">
                   {activeSection.questions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-400 text-sm gap-2">
-                      <ClipboardList className="h-8 w-8 text-gray-200" />
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-600 text-sm gap-2">
+                      <ClipboardList className="h-8 w-8 text-gray-900" />
                       <p>No questions yet</p>
-                      <p className="text-[11px] text-gray-300">Click &quot;Add question&quot; below</p>
+                      <p className="text-[11px] text-gray-700">Click &quot;Add question&quot; below</p>
                     </div>
                   ) : (
                     activeSection.questions.map((question, qIdx) => {
@@ -715,10 +715,10 @@ export default function TemplateBuilderPage() {
                         >
                           <div className="p-3">
                             <div className="flex items-start gap-2 mb-1.5">
-                              <div className={cn("flex-shrink-0 mt-0.5", isSelected ? "text-blue-600" : "text-gray-400")}>{typeInfo?.icon}</div>
+                              <div className={cn("flex-shrink-0 mt-0.5", isSelected ? "text-blue-600" : "text-gray-600")}>{typeInfo?.icon}</div>
                               <div className="flex-1 min-w-0">
                                 <p className={cn("text-[13px] font-semibold truncate", isSelected ? "text-blue-700" : "text-gray-900")}>{question.title || "Untitled"}</p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">{typeInfo?.label}</p>
+                                <p className="text-[11px] text-gray-600 mt-0.5">{typeInfo?.label}</p>
                               </div>
                               <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0", isSelected ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-500")}>{qIdx + 1}</span>
                             </div>
@@ -745,7 +745,7 @@ export default function TemplateBuilderPage() {
                               disabled={qIdx === 0}
                               title="Move up"
                             >
-                              <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
+                              <ChevronUp className="h-3.5 w-3.5 text-gray-600" />
                             </button>
                             <button
                               className="p-1 rounded hover:bg-gray-100 disabled:opacity-30"
@@ -753,14 +753,14 @@ export default function TemplateBuilderPage() {
                               disabled={qIdx === activeSection.questions.length - 1}
                               title="Move down"
                             >
-                              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+                              <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
                             </button>
                             <button
                               className="p-1 rounded hover:bg-gray-100 ml-auto"
                               onClick={() => duplicateQuestion(question, activeSection.id)}
                               title="Duplicate"
                             >
-                              <Copy className="h-3.5 w-3.5 text-gray-400" />
+                              <Copy className="h-3.5 w-3.5 text-gray-600" />
                             </button>
                             <button
                               className="p-1 rounded hover:bg-red-50"
@@ -770,7 +770,7 @@ export default function TemplateBuilderPage() {
                               }}
                               title="Delete"
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                              <Trash2 className="h-3.5 w-3.5 text-gray-600 hover:text-red-500" />
                             </button>
                           </div>
                         </div>
@@ -816,8 +816,8 @@ export default function TemplateBuilderPage() {
                       );
                     })()
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <ClipboardList className="h-12 w-12 mb-3 text-gray-300" />
+                    <div className="flex flex-col items-center justify-center h-full text-gray-600">
+                      <ClipboardList className="h-12 w-12 mb-3 text-gray-700" />
                       <p className="text-sm">Select a question to edit</p>
                     </div>
                   )}
@@ -825,7 +825,7 @@ export default function TemplateBuilderPage() {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
+            <div className="flex items-center justify-center h-full text-gray-600">
               <p className="text-sm">Add a section to get started</p>
             </div>
           )}
@@ -842,14 +842,14 @@ export default function TemplateBuilderPage() {
                 <p className="text-xs text-gray-500 mt-0.5">Choose a PDF template for exports</p>
               </div>
               <button onClick={() => setShowPublishModal(false)} className="p-1.5 rounded-md hover:bg-gray-100">
-                <X className="h-4 w-4 text-gray-400" />
+                <X className="h-4 w-4 text-gray-600" />
               </button>
             </div>
 
             <div className="px-6 py-4 max-h-80 overflow-y-auto">
               {loadingPdfTemplates ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -905,7 +905,7 @@ export default function TemplateBuilderPage() {
 
                   {/* Create new template inline */}
                   <div className="pt-2 border-t border-gray-100 mt-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Create New PDF Template</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-600 mb-2">Create New PDF Template</p>
                     <div className="flex gap-2">
                       <input
                         value={newPdfTemplateName}
@@ -917,7 +917,7 @@ export default function TemplateBuilderPage() {
                       <button
                         onClick={createPdfTemplate}
                         disabled={!newPdfTemplateName.trim() || creatingPdfTemplate}
-                        className="px-3 py-1.5 text-xs font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium bg-white text-gray-900 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
                       >
                         {creatingPdfTemplate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                       </button>
@@ -1046,10 +1046,10 @@ function QuestionEditor({
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-1">
           <button className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-30" onClick={() => onMove("up")} disabled={qIdx === 0}>
-            <ChevronUp className="h-3.5 w-3.5 text-gray-400" />
+            <ChevronUp className="h-3.5 w-3.5 text-gray-600" />
           </button>
           <button className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-30" onClick={() => onMove("down")} disabled={qIdx === totalInSection - 1}>
-            <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+            <ChevronDown className="h-3.5 w-3.5 text-gray-600" />
           </button>
         </div>
 
@@ -1072,7 +1072,7 @@ function QuestionEditor({
                   onClick={() => setShowTypeModal(false)}
                   className="p-1 hover:bg-gray-100 rounded-md transition-colors"
                 >
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
               <div className="overflow-y-auto flex-1">
@@ -1127,7 +1127,7 @@ function QuestionEditor({
           )}
 
           <button
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-xs text-gray-600 hover:text-gray-600 transition-colors"
             onClick={() => setShowDesc(!showDesc)}
           >
             {showDesc ? "Hide hint" : "Add hint"}
@@ -1135,7 +1135,7 @@ function QuestionEditor({
 
           <button
             onClick={() => setShowInstructions(!showInstructions)}
-            className={cn("p-1 rounded transition-colors", showInstructions || question.instructions?.text || question.instructions?.mediaUrl ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-400")}
+            className={cn("p-1 rounded transition-colors", showInstructions || question.instructions?.text || question.instructions?.mediaUrl ? "bg-blue-100 text-blue-600" : "hover:bg-gray-100 text-gray-600")}
             title="Instructions / Information"
           >
             <FileText className="h-3.5 w-3.5" />
@@ -1143,7 +1143,7 @@ function QuestionEditor({
 
           <button
             onClick={() => setShowConditions(!showConditions)}
-            className={cn("p-1 rounded transition-colors", showConditions || question.conditionalRules?.length ? "bg-purple-100 text-purple-600" : "hover:bg-gray-100 text-gray-400")}
+            className={cn("p-1 rounded transition-colors", showConditions || question.conditionalRules?.length ? "bg-purple-100 text-purple-600" : "hover:bg-gray-100 text-gray-600")}
             title="Conditional logic"
           >
             <GitBranch className="h-3.5 w-3.5" />
@@ -1151,7 +1151,7 @@ function QuestionEditor({
 
           <button
             onClick={onDuplicate}
-            className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors"
+            className="p-1 rounded hover:bg-gray-100 text-gray-600 transition-colors"
             title="Duplicate"
           >
             <Copy className="h-3.5 w-3.5" />
@@ -1161,7 +1161,7 @@ function QuestionEditor({
             onClick={onDelete}
             className="p-1 rounded hover:bg-red-50 transition-colors"
           >
-            <Trash2 className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+            <Trash2 className="h-3.5 w-3.5 text-gray-600 hover:text-red-500" />
           </button>
         </div>
       </div>
@@ -1175,7 +1175,7 @@ function QuestionEditor({
             setTitleVal(e.target.value);
             saveTitle.current(e.target.value);
           }}
-          className="w-full text-[13px] text-gray-900 font-medium bg-transparent outline-none resize-none placeholder:text-gray-300 leading-snug"
+          className="w-full text-[13px] text-gray-900 font-medium bg-transparent outline-none resize-none placeholder:text-gray-700 leading-snug"
           placeholder="Question title…"
         />
         {showDesc && (
@@ -1185,7 +1185,7 @@ function QuestionEditor({
               setDescVal(e.target.value);
               saveDesc.current(e.target.value);
             }}
-            className="w-full text-xs text-gray-500 bg-transparent outline-none mt-1 placeholder:text-gray-300"
+            className="w-full text-xs text-gray-500 bg-transparent outline-none mt-1 placeholder:text-gray-700"
             placeholder="Hint or description (shown to inspector)…"
           />
         )}
@@ -1298,7 +1298,7 @@ function QuestionEditor({
       {/* Options editor for dropdown/multiple_choice/multiple_selection */}
       {hasOptions && (
         <div className="px-4 pb-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Options</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-600 mb-1.5">Options</div>
           <div className="space-y-1.5">
             {question.options.map((opt) => (
               <div key={opt.id} className="flex items-center gap-2">
@@ -1327,11 +1327,11 @@ function QuestionEditor({
                       onChange={(e) => updateOption(opt.id, "flagged", e.target.checked)}
                       className="h-3 w-3 rounded accent-red-500"
                     />
-                    <span className="text-[10px] text-gray-400">Flag</span>
+                    <span className="text-[10px] text-gray-600">Flag</span>
                   </label>
                 )}
                 <button onClick={() => deleteOption(opt.id)} className="p-0.5 hover:bg-red-50 rounded">
-                  <Trash2 className="h-3 w-3 text-gray-300 hover:text-red-500" />
+                  <Trash2 className="h-3 w-3 text-gray-700 hover:text-red-500" />
                 </button>
               </div>
             ))}
@@ -1392,7 +1392,7 @@ function QuestionEditor({
                 className="text-xs border border-gray-200 rounded px-1.5 py-1 outline-none w-20 bg-white"
                 placeholder="Value"
               />
-              <span className="text-[10px] text-gray-400">→</span>
+              <span className="text-[10px] text-gray-600">→</span>
               <select
                 value={rule.action.type}
                 onChange={(e) => updateCondition(rIdx, { ...rule, action: { ...rule.action, type: e.target.value as ConditionalRule["action"]["type"] } })}
@@ -1405,7 +1405,7 @@ function QuestionEditor({
                 <option value="notify">Notify</option>
               </select>
               <button onClick={() => removeCondition(rIdx)} className="p-0.5 rounded hover:bg-red-100">
-                <Trash2 className="h-3 w-3 text-red-400" />
+                <Trash2 className="h-3 w-3 text-red-600" />
               </button>
             </div>
           ))}
@@ -1415,7 +1415,7 @@ function QuestionEditor({
       {/* Weight (only for scored questions) */}
       {scoringEnabled && question.scoring && (
         <div className="px-4 pb-3 flex items-center gap-2">
-          <span className="text-xs text-gray-400">Weight:</span>
+          <span className="text-xs text-gray-600">Weight:</span>
           <input
             type="number"
             min={0.1}
@@ -1443,11 +1443,11 @@ function TableColumnConfig({ options, onUpdate }: {
 
   return (
     <div className="px-4 pb-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Table Columns</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-600 mb-1.5">Table Columns</div>
       <div className="space-y-1.5">
         {cols.map((col) => (
           <div key={col.id} className="flex items-center gap-2">
-            <Table className="h-3 w-3 text-gray-300 flex-shrink-0" />
+            <Table className="h-3 w-3 text-gray-700 flex-shrink-0" />
             <input
               value={col.text}
               onChange={(e) => updateCol(col.id, e.target.value)}
@@ -1455,7 +1455,7 @@ function TableColumnConfig({ options, onUpdate }: {
               placeholder="Column name…"
             />
             <button onClick={() => removeCol(col.id)} className="p-0.5 hover:bg-red-50 rounded">
-              <Trash2 className="h-3 w-3 text-gray-300 hover:text-red-500" />
+              <Trash2 className="h-3 w-3 text-gray-700 hover:text-red-500" />
             </button>
           </div>
         ))}

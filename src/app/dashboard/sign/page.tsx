@@ -158,7 +158,7 @@ export default function SignDocumentsPage() {
           ))}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -170,9 +170,9 @@ export default function SignDocumentsPage() {
 
       {/* Document List */}
       {loading ? (
-        <div className="flex justify-center py-16 text-gray-400 text-sm">Loading…</div>
+        <div className="flex justify-center py-16 text-gray-600 text-sm">Loading…</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-gray-600">
           <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No documents found</p>
           <p className="text-sm mt-1">Upload a PDF to get started</p>
@@ -202,7 +202,7 @@ export default function SignDocumentsPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{doc.title}</p>
-                          <p className="text-xs text-gray-400">{doc.fileName}</p>
+                          <p className="text-xs text-gray-600">{doc.fileName}</p>
                         </div>
                       </div>
                     </td>
@@ -252,7 +252,7 @@ export default function SignDocumentsPage() {
                         {(doc.status === "draft" || doc.status === "voided" || doc.status === "declined") && (
                           <button
                             onClick={() => handleDelete(doc.id, doc.title)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                            className="p-1.5 text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -278,7 +278,7 @@ export default function SignDocumentsPage() {
               </h2>
               <button
                 onClick={() => setShowUpload(false)}
-                className="text-gray-400 hover:text-gray-600 text-xl font-light"
+                className="text-gray-600 hover:text-gray-600 text-xl font-light"
               >
                 ×
               </button>
@@ -312,9 +312,9 @@ export default function SignDocumentsPage() {
                   </div>
                 ) : (
                   <div>
-                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <Upload className="h-8 w-8 text-gray-600 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 font-medium">Click to upload PDF</p>
-                    <p className="text-xs text-gray-400 mt-1">Maximum 20MB</p>
+                    <p className="text-xs text-gray-600 mt-1">Maximum 20MB</p>
                   </div>
                 )}
               </div>
@@ -360,7 +360,7 @@ export default function SignDocumentsPage() {
                 >
                   {uploading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-gray-200 border-t-transparent rounded-full animate-spin" />
                       Uploading…
                     </>
                   ) : (

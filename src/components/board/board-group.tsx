@@ -148,9 +148,9 @@ export function BoardGroup({
           className="p-1 rounded hover:bg-gray-100 transition-colors"
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-gray-600" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-gray-600" />
           )}
         </button>
 
@@ -180,7 +180,7 @@ export function BoardGroup({
           </button>
         )}
 
-        <span className="text-[11px] text-gray-400 tabular-nums">
+        <span className="text-[11px] text-gray-600 tabular-nums">
           {allItemCount}
         </span>
 
@@ -190,13 +190,13 @@ export function BoardGroup({
             className="p-1 rounded hover:bg-gray-100 opacity-0 group-hover/header:opacity-100 transition-opacity"
             onClick={() => setMenuOpen(!menuOpen)}
           >
-            <MoreHorizontal className="h-3.5 w-3.5 text-gray-400" />
+            <MoreHorizontal className="h-3.5 w-3.5 text-gray-600" />
           </button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
               <div className="absolute left-0 z-20 mt-1 w-44 rounded-lg bg-white shadow-xl ring-1 ring-gray-200 py-1">
-                <p className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                <p className="px-3 py-1.5 text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
                   Section Color
                 </p>
                 <div className="flex gap-1.5 px-3 py-1 flex-wrap">
@@ -351,7 +351,7 @@ export function BoardGroup({
                       onClick={() => onDeleteItem(item.id)}
                       title="Delete task"
                     >
-                      <Trash2 className="h-3 w-3 text-gray-300 hover:text-red-500" />
+                      <Trash2 className="h-3 w-3 text-gray-700 hover:text-red-500" />
                     </button>
                   </div>
                   <div className="w-[260px] pl-1 pr-3 py-[5px] border-r border-gray-200">
@@ -382,7 +382,7 @@ export function BoardGroup({
                           <button
                             onClick={() => onOpenItem(item.id)}
                             title="Open details"
-                            className="opacity-0 group-hover/name:opacity-100 p-0.5 rounded hover:bg-blue-100 text-gray-400 hover:text-blue-600 transition-opacity flex-shrink-0"
+                            className="opacity-0 group-hover/name:opacity-100 p-0.5 rounded hover:bg-blue-100 text-gray-600 hover:text-blue-600 transition-opacity flex-shrink-0"
                           >
                             <Maximize2 className="h-3 w-3" />
                           </button>
@@ -433,7 +433,7 @@ export function BoardGroup({
                         value={newItemName}
                         onChange={(e) => setNewItemName(e.target.value)}
                         placeholder="Write a task name and press Enter"
-                        className="w-full text-[13px] outline-none bg-transparent py-1 text-gray-600 placeholder:text-gray-400"
+                        className="w-full text-[13px] outline-none bg-transparent py-1 text-gray-600 placeholder:text-gray-600"
                         autoFocus
                         onBlur={() => {
                           if (!newItemName.trim()) setShowNewItemInput(false);
@@ -448,7 +448,7 @@ export function BoardGroup({
                     </form>
                   ) : (
                     <button
-                      className="text-[13px] text-gray-400 hover:text-gray-600 flex items-center gap-1.5 py-1 transition-colors"
+                      className="text-[13px] text-gray-600 hover:text-gray-600 flex items-center gap-1.5 py-1 transition-colors"
                       onClick={() => setShowNewItemInput(true)}
                     >
                       <Plus className="h-3.5 w-3.5" />

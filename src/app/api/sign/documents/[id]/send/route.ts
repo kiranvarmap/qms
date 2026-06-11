@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { signDocuments, signRecipients, signEvents, signFields } from "@/lib/db/schema";
+import { signDocuments, signRecipients, signEvents, signFields, users, notifications } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { Resend } from "resend";
 
@@ -74,6 +74,24 @@ export async function POST(
 
   for (const recipient of signers) {
     const signingUrl = `${baseUrl}/sign/${recipient.token}`;
+
+    // In-app notification if the recipient is also a platform user (match by email).
+    try {
+      const [u] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, recipient.email.toLowerCase().trim()))
+        .limit(1);
+      if (u) {
+        await db.insert(notifications).values({
+          userId: u.id,
+          type: "signature_requested",
+          title: "Signature requested",
+          body: `You've been asked to sign "${doc.title}"`,
+          meta: { signingUrl, documentId: id },
+        });
+      }
+    } catch { /* ignore */ }
 
     if (resend) {
       try {

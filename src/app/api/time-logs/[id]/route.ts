@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { timeLogs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { emitEvent } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,7 +14,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const { checkOutPhoto, notes } = body;
 
   const [existing] = await db
-    .select({ checkInAt: timeLogs.checkInAt, status: timeLogs.status })
+    .select()
     .from(timeLogs)
     .where(eq(timeLogs.id, id));
 
@@ -26,17 +28,38 @@ export async function PATCH(request: Request, { params }: Params) {
     (checkOutAt.getTime() - new Date(existing.checkInAt).getTime()) / 60000
   );
 
-  const [updated] = await db
-    .update(timeLogs)
-    .set({
-      checkOutAt,
-      checkOutPhoto: checkOutPhoto || null,
-      durationMinutes,
-      notes: notes || null,
-      status: "completed",
-    })
-    .where(eq(timeLogs.id, id))
-    .returning();
+  // Domain write + outbox event in one transaction (Labor Loop, Plan E.2 #4).
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(timeLogs)
+      .set({
+        checkOutAt,
+        checkOutPhoto: checkOutPhoto || null,
+        durationMinutes,
+        notes: notes || null,
+        status: "completed",
+      })
+      .where(eq(timeLogs.id, id))
+      .returning();
+
+    await emitEvent(tx, {
+      workspaceId: row.workspaceId,
+      eventType: "timelog.checked_out",
+      aggregateType: "time_log",
+      aggregateId: row.id,
+      payload: {
+        boardId: row.boardId,
+        groupId: row.groupId,
+        itemId: row.itemId,
+        durationMinutes,
+        summary: `Clocked out (${durationMinutes} min)`,
+      },
+    });
+
+    return row;
+  });
+
+  dispatchInline();
 
   return NextResponse.json(updated);
 }

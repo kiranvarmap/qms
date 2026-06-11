@@ -8,9 +8,7 @@ import {
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { randomUUID } from "crypto";
+import { uploadToS3 } from "@/lib/storage";
 
 // GET /api/sign/token/[token] — public: get document info + recipient's fields
 export async function GET(
@@ -209,8 +207,10 @@ async function generateSignedPdf(documentId: string, originalFilePath: string): 
 
   const signedFields = fields.filter((f) => f.value && f.completedAt);
 
-  const diskPath = path.join(process.cwd(), "public", originalFilePath);
-  const pdfBytes = await readFile(diskPath);
+  // Fetch the original PDF from object storage (Azure Blob URL), not local disk.
+  const srcRes = await fetch(originalFilePath);
+  if (!srcRes.ok) throw new Error(`Could not fetch original PDF (${srcRes.status})`);
+  const pdfBytes = new Uint8Array(await srcRes.arrayBuffer());
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const pages = pdfDoc.getPages();
   const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -262,10 +262,13 @@ async function generateSignedPdf(documentId: string, originalFilePath: string): 
   }
 
   const signedPdfBytes = await pdfDoc.save();
-  const uniqueName = `signed_${randomUUID()}.pdf`;
-  const outDir = path.join(process.cwd(), "public", "uploads", "sign", "completed");
-  await mkdir(outDir, { recursive: true });
-  await writeFile(path.join(outDir, uniqueName), signedPdfBytes);
-
-  return `/uploads/sign/completed/${uniqueName}`;
+  // Upload the completed PDF to object storage and return its URL (the container
+  // filesystem is ephemeral and not web-served, so local writes would be lost).
+  const { url } = await uploadToS3(
+    Buffer.from(signedPdfBytes),
+    "signed.pdf",
+    "application/pdf",
+    "sign/completed"
+  );
+  return url;
 }

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { forms, formFields, columns, items, cellValues, groups } from "@/lib/db/schema";
+import { forms, formFields, columns, items, cellValues, groups, boards } from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { runAutomations } from "@/lib/automations";
+import { emitEventStandalone } from "@/lib/events/outbox";
+import { dispatchInline } from "@/lib/events/dispatcher";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -72,11 +74,20 @@ export async function POST(req: Request, { params }: Params) {
   // We need a system user — use the board creator's ID or a null-safe fallback
   // For public submissions there's no session, so we need the board's owner or a system approach.
   // We'll use the form's createdBy as the item author.
+  // Denormalize the tenant onto the item (Plan D.4.3) so cross-module
+  // queries and the activity feed carry full ancestry.
+  const [board] = await db
+    .select({ workspaceId: boards.workspaceId })
+    .from(boards)
+    .where(eq(boards.id, form.boardId))
+    .limit(1);
+
   const [item] = await db
     .insert(items)
     .values({
       boardId: form.boardId,
       groupId: firstGroup.id,
+      workspaceId: board?.workspaceId ?? null,
       name: itemName,
       position: maxPos + 1,
       createdBy: form.createdBy,
@@ -156,13 +167,24 @@ export async function POST(req: Request, { params }: Params) {
     });
   }
 
-  // Fire form_submitted automations
+  // Fire form_submitted automations (board-scoped rules engine)
   void runAutomations({
     type: "form_submitted",
     boardId: form.boardId,
     itemId: item.id,
     formId: form.id,
   }).catch(() => {});
+
+  // Intake Loop (Plan E.2 #3): record on the unified event bus + activity feed.
+  void emitEventStandalone({
+    workspaceId: board?.workspaceId ?? null,
+    eventType: "form.submitted",
+    aggregateType: "form",
+    aggregateId: form.id,
+    payload: { boardId: form.boardId, itemId: item.id, summary: `Form "${form.name}" submitted` },
+  })
+    .then(() => dispatchInline())
+    .catch(() => {});
 
   return NextResponse.json({
     ok: true,

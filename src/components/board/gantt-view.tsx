@@ -40,6 +40,15 @@ export function GanttView({ board }: GanttViewProps) {
   );
 
   const getItemDateRange = (item: ItemDef): { start: Date | null; end: Date | null } => {
+    // Prefer the task's first-class Start/End dates.
+    if (item.startDate || item.endDate) {
+      const s = item.startDate ? new Date(item.startDate) : null;
+      const e = item.endDate ? new Date(item.endDate) : null;
+      s?.setHours(0, 0, 0, 0);
+      e?.setHours(0, 0, 0, 0);
+      return { start: s ?? e, end: e ?? s };
+    }
+    // Fallback: min/max of any date columns.
     let start: Date | null = null;
     let end: Date | null = null;
     for (const col of dateColumns) {
@@ -54,6 +63,8 @@ export function GanttView({ board }: GanttViewProps) {
     return { start, end };
   };
 
+  const anyItemHasDates = allItems.some((i) => i.startDate || i.endDate);
+
   const todayOffset = getDaysBetween(startDate, today);
 
   const MONTH_LABELS: string[] = [];
@@ -63,15 +74,15 @@ export function GanttView({ board }: GanttViewProps) {
     else MONTH_LABELS.push("");
   });
 
-  if (dateColumns.length === 0) {
+  if (dateColumns.length === 0 && !anyItemHasDates) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 p-12">
         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-          <CalendarDays className="h-8 w-8 text-gray-300" />
+          <CalendarDays className="h-8 w-8 text-gray-700" />
         </div>
         <div className="text-center">
-          <h3 className="text-sm font-semibold text-gray-600 mb-1">No date columns</h3>
-          <p className="text-xs text-gray-400">Add a <strong>Date</strong> column to see the Gantt chart.</p>
+          <h3 className="text-sm font-semibold text-gray-600 mb-1">No task dates yet</h3>
+          <p className="text-xs text-gray-600">Set a task&apos;s <strong>Start</strong> and <strong>End date</strong> (open a task) to see the Gantt chart.</p>
         </div>
       </div>
     );
@@ -82,13 +93,13 @@ export function GanttView({ board }: GanttViewProps) {
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-white flex-shrink-0">
         <div className="flex items-center rounded-lg border border-gray-200 overflow-hidden">
-          <button onClick={() => setOffsetWeeks(p => p - 2)} className="px-2 py-1.5 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors border-r border-gray-200">
+          <button onClick={() => setOffsetWeeks(p => p - 2)} className="px-2 py-1.5 hover:bg-gray-50 text-gray-600 hover:text-gray-600 transition-colors border-r border-gray-200">
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <button onClick={() => setOffsetWeeks(0)} className="px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors">
             Today
           </button>
-          <button onClick={() => setOffsetWeeks(p => p + 2)} className="px-2 py-1.5 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors border-l border-gray-200">
+          <button onClick={() => setOffsetWeeks(p => p + 2)} className="px-2 py-1.5 hover:bg-gray-50 text-gray-600 hover:text-gray-600 transition-colors border-l border-gray-200">
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -113,10 +124,10 @@ export function GanttView({ board }: GanttViewProps) {
                   <div key={i} className={cn("flex-shrink-0 flex flex-col items-center justify-center border-r border-gray-100 py-2",
                     isTodayDay ? "bg-blue-50" : isSun ? "bg-gray-50/60" : "bg-white")}
                     style={{ width: DAY_PX }}>
-                    {MONTH_LABELS[i] && <span className="text-[8px] font-bold text-gray-300 uppercase tracking-wider leading-none mb-0.5">{MONTH_LABELS[i]}</span>}
+                    {MONTH_LABELS[i] && <span className="text-[8px] font-bold text-gray-700 uppercase tracking-wider leading-none mb-0.5">{MONTH_LABELS[i]}</span>}
                     <span className={cn("text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full",
                       isTodayDay ? "bg-blue-600 text-white" : "text-gray-500")}>{d.getDate()}</span>
-                    <span className="text-[8px] text-gray-300 uppercase">{d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>
+                    <span className="text-[8px] text-gray-700 uppercase">{d.toLocaleDateString(undefined, { weekday: "narrow" })}</span>
                   </div>
                 );
               })}
@@ -125,7 +136,7 @@ export function GanttView({ board }: GanttViewProps) {
 
           {/* Data rows */}
           {allItems.length === 0 && (
-            <div className="py-16 text-center text-sm text-gray-400">No items in this board.</div>
+            <div className="py-16 text-center text-sm text-gray-600">No items in this board.</div>
           )}
           {allItems.map(item => {
             const { start, end } = getItemDateRange(item);
@@ -158,7 +169,7 @@ export function GanttView({ board }: GanttViewProps) {
                   {/* Bar */}
                   {barLeft !== null && barWidth !== null && barWidth > 0 && (
                     <div
-                      className="absolute top-2.5 h-[22px] rounded-lg flex items-center px-2 text-[10px] font-semibold text-white shadow-sm transition-all hover:brightness-110"
+                      className="absolute top-2.5 h-[22px] rounded-lg flex items-center px-2 text-[10px] font-semibold text-gray-900 shadow-sm transition-all hover:brightness-110"
                       style={{ left: barLeft + 3, width: Math.max(barWidth - 6, 6), backgroundColor: group?.color ?? "#6366f1" }}
                       title={item.name}>
                       {barWidth > 40 && <span className="truncate">{item.name}</span>}
@@ -166,7 +177,7 @@ export function GanttView({ board }: GanttViewProps) {
                   )}
                   {/* Single dot for single date */}
                   {barLeft !== null && barWidth === DAY_PX && (
-                    <div className="absolute top-3 w-4 h-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center"
+                    <div className="absolute top-3 w-4 h-4 rounded-full border-2 border-gray-200 shadow-sm flex items-center justify-center"
                       style={{ left: barLeft + DAY_PX / 2 - 8, backgroundColor: group?.color ?? "#6366f1" }} />
                   )}
                 </div>

@@ -57,7 +57,7 @@ export function EditOptionsModal({ column, onSave, onClose }: EditOptionsModalPr
               <h3 className="text-sm font-semibold text-gray-900">
                 Edit {column.type === "dropdown" ? "Dropdown" : column.type === "status" ? "Status" : "Priority"} Options
               </h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">
+              <p className="text-[11px] text-gray-600 mt-0.5">
                 Column: {column.name}
               </p>
             </div>
@@ -65,14 +65,14 @@ export function EditOptionsModal({ column, onSave, onClose }: EditOptionsModalPr
               className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
               onClick={onClose}
             >
-              <X className="h-4 w-4 text-gray-400" />
+              <X className="h-4 w-4 text-gray-600" />
             </button>
           </div>
 
           {/* Labels list */}
           <div className="px-5 py-3 max-h-[400px] overflow-y-auto space-y-2">
             {labels.length === 0 && (
-              <p className="text-xs text-gray-400 text-center py-6">
+              <p className="text-xs text-gray-600 text-center py-6">
                 No options yet. Click &quot;Add option&quot; to create one.
               </p>
             )}
@@ -126,7 +126,7 @@ export function EditOptionsModal({ column, onSave, onClose }: EditOptionsModalPr
                   onClick={() => deleteLabel(label.id)}
                   title="Remove option"
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-gray-300 hover:text-red-500" />
+                  <Trash2 className="h-3.5 w-3.5 text-gray-700 hover:text-red-500" />
                 </button>
               </div>
             ))}
