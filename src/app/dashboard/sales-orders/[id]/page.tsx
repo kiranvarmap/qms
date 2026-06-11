@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, XCircle, Truck, Receipt, X, AlertCircle } from "lucide-react";
+import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 
 interface Line {
   id: string; description: string; quantity: number; qtyReserved: number; qtyShipped: number;
@@ -124,6 +125,9 @@ export default function SalesOrderDetailPage() {
           <p className="text-sm text-gray-600 mt-1">{so.customer?.name ?? "—"}</p>
         </div>
         <div className="flex items-center gap-2">
+          {so.status === "draft" && (
+            <DocLinesEditor endpoint={`/api/sales-orders/${so.id}`} lines={so.lines} priceField="unitPrice" currency={so.currency} onSaved={load} />
+          )}
           {canApprove && <button onClick={() => soAct("approve")} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><CheckCircle2 className="h-4 w-4" /> Approve & reserve</button>}
           {canShip && <button onClick={() => setShowShip(true)} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Truck className="h-4 w-4" /> New shipment</button>}
           {canInvoice && <button onClick={invoiceSO} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-medium rounded-md"><Receipt className="h-4 w-4" /> Invoice shipped</button>}

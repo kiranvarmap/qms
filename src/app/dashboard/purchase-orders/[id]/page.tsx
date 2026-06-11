@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, CheckCircle2, PackageCheck, X, AlertCircle } from "lucide-react";
+import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 import { AttachmentsSection } from "@/components/shared/attachments-section";
 
 interface Line {
@@ -119,6 +120,9 @@ export default function PurchaseOrderDetailPage() {
           <p className="text-sm text-gray-600 mt-1">{po.vendor?.name ?? "—"}</p>
         </div>
         <div className="flex items-center gap-2">
+          {po.status === "draft" && (
+            <DocLinesEditor endpoint={`/api/purchase-orders/${po.id}`} lines={po.lines} priceField="unitCost" currency={po.currency} onSaved={load} />
+          )}
           {po.status === "draft" && (
             <button onClick={async () => (await act("submit")) && load()} disabled={busy} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-medium rounded-md">
               <Send className="h-4 w-4" /> Submit for approval

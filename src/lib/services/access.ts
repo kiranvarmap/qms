@@ -7,7 +7,7 @@
  */
 
 import { db } from "@/lib/db";
-import { workspaceMembers } from "@/lib/db/schema";
+import { workspaceMembers, memberPermissionSets, permissionSetEntries } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 
 export type ModuleFlag =
@@ -35,6 +35,34 @@ export async function getMembership(workspaceId: string, userId: string): Promis
  * True when the user may use `flag` in this workspace. Global admins and
  * workspace owners/admins always pass; otherwise the boolean flag must be set.
  */
+/** RBAC v2 module key for each legacy boolean flag. */
+const FLAG_MODULE: Record<ModuleFlag, string> = {
+  canAccessVendors: "vendors",
+  canAccessPurchasing: "purchasing",
+  canAccessInventory: "inventory",
+  canAccessInvoicing: "invoicing",
+  canAccessExpenses: "expenses",
+  canAccessHR: "hr",
+  canAccessTraining: "training",
+};
+
+/** Any permission-set grant (any action) for this module? (RBAC v2 dual-read.) */
+async function hasSetGrant(workspaceId: string, userId: string, module: string): Promise<boolean> {
+  const [grant] = await db
+    .select({ id: permissionSetEntries.id })
+    .from(memberPermissionSets)
+    .innerJoin(permissionSetEntries, eq(permissionSetEntries.setId, memberPermissionSets.setId))
+    .where(
+      and(
+        eq(memberPermissionSets.workspaceId, workspaceId),
+        eq(memberPermissionSets.userId, userId),
+        eq(permissionSetEntries.module, module)
+      )
+    )
+    .limit(1);
+  return Boolean(grant);
+}
+
 export async function hasModuleAccess(
   workspaceId: string,
   userId: string,
@@ -45,7 +73,10 @@ export async function hasModuleAccess(
   const m = await getMembership(workspaceId, userId);
   if (!m) return false;
   if (m.role === "owner" || m.role === "admin") return true;
-  return Boolean(m[flag]);
+  if (m[flag]) return true;
+  // RBAC v2: a permission-set grant also opens the module (dual-read shim —
+  // blueprint 02 §3; booleans become derived/removable once sets are adopted).
+  return hasSetGrant(workspaceId, userId, FLAG_MODULE[flag]);
 }
 
 /** True when the user can administer the workspace (owner/admin or global admin). */

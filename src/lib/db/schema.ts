@@ -1084,6 +1084,62 @@ export const entityLinks = pgTable(
 );
 
 // ════════════════════════════════════════════════════════════════════
+// RBAC v2 — PERMISSION SETS (blueprint 02 §3). Named bundles of
+// module × action grants, assignable to members. The access service
+// dual-reads: legacy canAccess* booleans OR a set grant both pass, so
+// migration is incremental and nothing breaks.
+// ════════════════════════════════════════════════════════════════════
+
+export const permissionActionEnum = pgEnum("permission_action", ["view", "create", "edit", "approve", "admin"]);
+
+export const permissionSets = pgTable(
+  "permission_sets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [unique("permission_sets_ws_name_uq").on(t.workspaceId, t.name)]
+);
+
+export const permissionSetEntries = pgTable(
+  "permission_set_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    setId: uuid("set_id")
+      .notNull()
+      .references(() => permissionSets.id, { onDelete: "cascade" }),
+    // 'boards' | 'inspections' | 'docsign' | 'timeclock' | 'vendors' |
+    // 'purchasing' | 'inventory' | 'invoicing' | 'expenses' | 'hr' | 'training'
+    module: varchar("module", { length: 30 }).notNull(),
+    action: permissionActionEnum("action").notNull(),
+  },
+  (t) => [unique("permission_set_entries_uq").on(t.setId, t.module, t.action)]
+);
+
+export const memberPermissionSets = pgTable(
+  "member_permission_sets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    setId: uuid("set_id")
+      .notNull()
+      .references(() => permissionSets.id, { onDelete: "cascade" }),
+  },
+  (t) => [unique("member_permission_sets_uq").on(t.workspaceId, t.userId, t.setId)]
+);
+
+// ════════════════════════════════════════════════════════════════════
 // OUTBOUND WEBHOOKS (blueprint 06 §4) — external systems subscribe to the
 // same event bus the platform runs on. Deliveries are HMAC-signed; repeated
 // failures auto-disable the subscription.
