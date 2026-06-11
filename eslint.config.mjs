@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
       "react-hooks/preserve-manual-memoization": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/refs": "warn",
+      "react-hooks/error-boundaries": "warn",
+      "react-hooks/use-memo": "warn",
     },
   },
   // Override default ignores of eslint-config-next.
