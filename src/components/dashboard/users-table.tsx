@@ -52,7 +52,7 @@ const columns = [
   { id: "status", title: "Status", width: 110 },
   { id: "employee", title: "Employee Link", width: 190 },
   { id: "joined", title: "Joined", width: 120 },
-  { id: "actions", title: "", width: 150 },
+  { id: "actions", title: "", width: 90 },
 ];
 
 export function UsersTable() {
