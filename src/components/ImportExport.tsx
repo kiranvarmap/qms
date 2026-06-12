@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, Upload, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Upload, CloseSmall as X, Completed as CheckCircle2, Alert as AlertCircle } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 
 interface ImportResult {
   total: number; created: number; updated: number; failed: number;

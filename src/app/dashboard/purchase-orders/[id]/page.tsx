@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, CheckCircle2, PackageCheck, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Send, Completed as CheckCircle2, Completed as PackageCheck, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 import { AttachmentsSection } from "@/components/shared/attachments-section";
 
@@ -203,10 +204,10 @@ export default function PurchaseOrderDetailPage() {
             </div>
             <label className="block mb-3">
               <span className="text-xs text-gray-500">Receive into warehouse</span>
-              <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+              <NativeSelect value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
                 <option value="">— none (no stock update) —</option>
                 {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
+              </NativeSelect>
             </label>
             <div className="space-y-2">
               {po.lines.filter((l) => l.qtyReceived < l.quantity).map((l) => (

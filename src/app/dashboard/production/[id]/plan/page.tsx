@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, AlertCircle, CheckCircle2, Lock, FlaskConical } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Retry as RefreshCw, Alert as AlertCircle, Completed as CheckCircle2, Locked as Lock, Idea as FlaskConical } from "@vibe/icons";
 
 interface Material { description: string; required: number; available: number; reserved: number; incoming: number; incomingDate: string | null; shortage: number; critical: boolean; unit: string; status: string }
 interface SkillNeed { skillId: string; skillName: string; required: number; available: number }

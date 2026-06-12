@@ -1,16 +1,11 @@
 "use client";
 
+import { NativeSelect, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  ArrowLeft, Plus, Trash2, Loader2, FileText, Check, X,
-  ChevronUp, ChevronDown, ChevronDown as ChevronDownIcon,
-  Type, Columns, AlignLeft, BarChart3, ShieldCheck, PenLine,
-  Minus, Copy, GripVertical, Save,
-  Bold, Italic,
-  LayoutTemplate, Upload, Palette, Settings2, Link2,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Doc as FileText, Check, CloseSmall as X, NavigationChevronUp as ChevronUp, NavigationChevronDown as ChevronDown, NavigationChevronDown as ChevronDownIcon, Text as Type, Column as Columns, Description as AlignLeft, Chart as BarChart3, Security as ShieldCheck, Signature as PenLine, Remove as Minus, Duplicate as Copy, Drag as GripVertical, Update as Save, Bold, Italic, Board as LayoutTemplate, Upload, Wand as Palette, Settings as Settings2, Link as Link2 } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import type {
   PdfTemplate, PdfTemplateConfig, PdfBlock, PdfBlockType,
   HeaderBlock, InfoFieldsBlock, TextBlock, QuestionsBlock,
@@ -114,6 +109,7 @@ function LogoUpload({ url, onUpload, onRemove, maxHeight = 40 }: { url: string; 
 
 // ════════════════════════════════════════════════════════════════════
 export default function PdfTemplatesPage() {
+  const confirmAction = useConfirm();
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -246,7 +242,7 @@ export default function PdfTemplatesPage() {
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm("Delete this template?")) return;
+    if (!(await confirmAction("Delete this template?"))) return;
     await fetch(`/api/pdf-templates/${id}`, { method: "DELETE" });
     const remaining = templates.filter((t) => t.id !== id);
     setTemplates(remaining);
@@ -369,20 +365,20 @@ export default function PdfTemplatesPage() {
         <div className="h-5 w-px bg-gray-200" />
 
         {/* Page settings inline */}
-        <select
-          value={config.pageSize}
-          onChange={(e) => { setConfig((prev) => ({ ...prev, pageSize: e.target.value as "letter" | "a4" })); scheduleSave(); }}
+        <NativeSelect
+ value={config.pageSize}
+ onChange={(e) => { setConfig((prev) => ({ ...prev, pageSize: e.target.value as "letter" | "a4" })); scheduleSave(); }}
           className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 outline-none hover:bg-gray-100"
         >
           <option value="letter">Letter</option><option value="a4">A4</option>
-        </select>
-        <select
-          value={config.orientation}
-          onChange={(e) => { setConfig((prev) => ({ ...prev, orientation: e.target.value as "portrait" | "landscape" })); scheduleSave(); }}
+        </NativeSelect>
+        <NativeSelect
+ value={config.orientation}
+ onChange={(e) => { setConfig((prev) => ({ ...prev, orientation: e.target.value as "portrait" | "landscape" })); scheduleSave(); }}
           className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 outline-none hover:bg-gray-100"
         >
           <option value="portrait">Portrait</option><option value="landscape">Landscape</option>
-        </select>
+        </NativeSelect>
 
         <div className="flex-1" />
 
@@ -569,16 +565,16 @@ function QuestionsCanvasEditor({ b, isActive, onChange }: { b: QuestionsBlock; i
         <div className="flex items-center gap-2 mb-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
           <Link2 className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
           <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider flex-shrink-0">Preview with:</span>
-          <select
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
+          <NativeSelect
+ value={selectedTemplateId}
+ onChange={(e) => setSelectedTemplateId(e.target.value)}
             className="flex-1 text-[11px] bg-white border border-blue-200 rounded px-2 py-1 outline-none"
           >
             <option value="">All Question Types (Default)</option>
             {inspTemplates.map((t) => (
               <option key={t.id} value={t.id}>{t.title} ({t.sections?.length || 0} sections)</option>
             ))}
-          </select>
+          </NativeSelect>
           {loadingTemplates && <Loader2 className="h-3 w-3 animate-spin text-blue-600" />}
         </div>
       )}
@@ -1024,9 +1020,9 @@ function Tog({ checked, onChange, label }: { checked: boolean; onChange: (v: boo
 
 function FontBtn({ value, onChange }: { value: FontFamily; onChange: (v: FontFamily) => void }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value as FontFamily)} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+    <NativeSelect value={value} onChange={(e) => onChange(e.target.value as FontFamily)} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
       <option value="helvetica">Helvetica</option><option value="times">Times</option><option value="courier">Courier</option>
-    </select>
+    </NativeSelect>
   );
 }
 
@@ -1042,20 +1038,20 @@ function HeaderInline({ b, o }: { b: HeaderBlock; o: (p: Partial<HeaderBlock>) =
         <span className="text-[10px] text-gray-600">Logo:</span>
         <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={40} />
         {b.logoUrl && (
-          <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+          <NativeSelect value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
             <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
-          </select>
+          </NativeSelect>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <select value={b.titleSource} onChange={(e) => o({ titleSource: e.target.value as "template_name" | "custom" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-1 outline-none">
+        <NativeSelect value={b.titleSource} onChange={(e) => o({ titleSource: e.target.value as "template_name" | "custom" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-1 outline-none">
           <option value="template_name">Auto title</option><option value="custom">Custom title</option>
-        </select>
+        </NativeSelect>
         <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
         <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
-        <select value={b.alignment} onChange={(e) => o({ alignment: e.target.value as HeaderBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+        <NativeSelect value={b.alignment} onChange={(e) => o({ alignment: e.target.value as HeaderBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
           <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
-        </select>
+        </NativeSelect>
         <Tog checked={b.showStatusBadge} onChange={(v) => o({ showStatusBadge: v })} label="Badge" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -1080,9 +1076,9 @@ function InfoFieldsInline({ b, o }: { b: InfoFieldsBlock; o: (p: Partial<InfoFie
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <select value={b.layout} onChange={(e) => o({ layout: e.target.value as "vertical" | "two_column" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+        <NativeSelect value={b.layout} onChange={(e) => o({ layout: e.target.value as "vertical" | "two_column" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
           <option value="two_column">Two columns</option><option value="vertical">Single column</option>
-        </select>
+        </NativeSelect>
         <FontBtn value={b.fontFamily} onChange={(v) => o({ fontFamily: v })} />
         <SizeBtn value={b.fontSize} onChange={(v) => o({ fontSize: v })} />
         <span className="text-[10px] text-gray-600">Label:</span><Clr value={b.labelColor} onChange={(v) => o({ labelColor: v })} />
@@ -1104,9 +1100,9 @@ function TextInline({ b, o }: { b: TextBlock; o: (p: Partial<TextBlock>) => void
       <button onClick={() => o({ italic: !b.italic })} className={cn("p-1 rounded border", b.italic ? "bg-blue-100 border-blue-300" : "border-gray-200 hover:bg-gray-100")}>
         <Italic className="h-3 w-3" />
       </button>
-      <select value={b.alignment} onChange={(e) => o({ alignment: e.target.value as TextBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+      <NativeSelect value={b.alignment} onChange={(e) => o({ alignment: e.target.value as TextBlock["alignment"] })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
         <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
-      </select>
+      </NativeSelect>
     </div>
   );
 }
@@ -1169,9 +1165,9 @@ function FooterInline({ b, o }: { b: FooterBlock; o: (p: Partial<FooterBlock>) =
         <span className="text-[10px] text-gray-600">Logo:</span>
         <LogoUpload url={b.logoUrl ?? ""} onUpload={(url) => o({ logoUrl: url })} onRemove={() => o({ logoUrl: "" })} maxHeight={20} />
         {b.logoUrl && (
-          <select value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
+          <NativeSelect value={b.logoPosition ?? "left"} onChange={(e) => o({ logoPosition: e.target.value as "left" | "center" | "right" })} className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 outline-none">
             <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
-          </select>
+          </NativeSelect>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">

@@ -1,8 +1,9 @@
 "use client";
 
+import { DateInput } from "@/components/ui";
 import { useState, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, FlaskConical, Play } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Idea as FlaskConical, Play } from "@vibe/icons";
 
 interface Result { feasible: boolean; plannedEnd: string; deliveryRisk: string; conflicts: { description: string; severity: string }[] }
 
@@ -58,7 +59,7 @@ export default function SimulatePage({ params }: { params: Promise<{ id: string 
           <label className="block"><span className="text-xs text-gray-500">Extra crew (info)</span>
             <input type="number" value={extraCrew} onChange={(e) => setExtraCrew(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
           <label className="block"><span className="text-xs text-gray-500">Earliest start</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+            <DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 w-full" /></label>
         </div>
         <button onClick={run} disabled={busy} className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Play className="h-4 w-4" /> {busy ? "Running…" : "Run simulation"}</button>
       </div>

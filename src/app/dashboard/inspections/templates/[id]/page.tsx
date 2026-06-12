@@ -1,44 +1,12 @@
 "use client";
 
+import { NativeSelect, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Settings2,
-  CheckSquare,
-  Type,
-  Hash,
-  Calendar,
-  Camera,
-  ChevronRight as DropdownIcon,
-  List,
-  Star,
-  PenLine,
-  GripVertical,
-  Eye,
-  EyeOff,
-  Loader2,
-  Check,
-  Copy,
-  Table,
-  FileText,
-  MapPin,
-  Building,
-  Briefcase,
-  GitBranch,
-  Repeat,
-  ShieldCheck,
-  ListChecks,
-  X,
-  ClipboardList,
-  Upload,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, NavigationChevronUp as ChevronUp, NavigationChevronDown as ChevronDown, Settings as Settings2, Checkbox as CheckSquare, Text as Type, Numbers as Hash, Calendar, Image as Camera, NavigationChevronRight as DropdownIcon, Bullets as List, Favorite as Star, Signature as PenLine, Drag as GripVertical, Show as Eye, Hide as EyeOff, Check, Duplicate as Copy, Table, Doc as FileText, Location as MapPin, Location as Building, Work as Briefcase, Workflow as GitBranch, Rotate as Repeat, Security as ShieldCheck, CheckList as ListChecks, CloseSmall as X, CheckList as ClipboardList, Upload } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import type { InspectionTemplate, TemplateQuestion, TemplateSection, QuestionType, ConditionalRule, PdfTemplate } from "@/lib/types";
 
 const QUESTION_TYPES: { value: QuestionType; label: string; icon: React.ReactNode; desc: string }[] = [
@@ -72,6 +40,7 @@ function debounce<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 export default function TemplateBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const confirmAction = useConfirm();
   const [template, setTemplate] = useState<InspectionTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -259,7 +228,7 @@ export default function TemplateBuilderPage() {
 
   const deleteSection = async (sectionId: string) => {
     if (!template || template.sections.length <= 1) return;
-    if (!confirm("Delete this section and all its questions?")) return;
+    if (!(await confirmAction("Delete this section and all its questions?"))) return;
     await fetch(`/api/inspection-templates/${id}/sections/${sectionId}`, { method: "DELETE" });
     setTemplate((prev) => {
       if (!prev) return prev;
@@ -1270,9 +1239,9 @@ function QuestionEditor({
               </div>
               <div className="w-24">
                 <label className="block text-[10px] font-medium text-gray-500 mb-1">Type</label>
-                <select
-                  value={instrMediaType}
-                  onChange={(e) => {
+                <NativeSelect
+ value={instrMediaType}
+ onChange={(e) => {
                     const mt = e.target.value as "image" | "video" | "";
                     setInstrMediaType(mt);
                     saveInstructions.current(instrText, instrMediaUrl, mt);
@@ -1282,7 +1251,7 @@ function QuestionEditor({
                   <option value="">Auto</option>
                   <option value="image">Image</option>
                   <option value="video">Video</option>
-                </select>
+                </NativeSelect>
               </div>
             </div>
             {instrMediaUrl && instrMediaType === "image" && (
@@ -1365,19 +1334,19 @@ function QuestionEditor({
           </div>
           {(question.conditionalRules ?? []).map((rule, rIdx) => (
             <div key={rIdx} className="flex items-center gap-2 mb-2 bg-purple-50 rounded-lg p-2">
-              <select
-                value={rule.condition.questionId}
-                onChange={(e) => updateCondition(rIdx, { ...rule, condition: { ...rule.condition, questionId: e.target.value } })}
+              <NativeSelect
+ value={rule.condition.questionId}
+ onChange={(e) => updateCondition(rIdx, { ...rule, condition: { ...rule.condition, questionId: e.target.value } })}
                 className="text-xs border border-gray-200 rounded px-1.5 py-1 outline-none flex-1 bg-white"
               >
                 <option value="">Source question…</option>
                 {allQuestions.filter(q => q.id !== question.id).map(q => (
                   <option key={q.id} value={q.id}>{q.title.substring(0, 40)}</option>
                 ))}
-              </select>
-              <select
-                value={rule.condition.operator}
-                onChange={(e) => updateCondition(rIdx, { ...rule, condition: { ...rule.condition, operator: e.target.value as ConditionalRule["condition"]["operator"] } })}
+              </NativeSelect>
+              <NativeSelect
+ value={rule.condition.operator}
+ onChange={(e) => updateCondition(rIdx, { ...rule, condition: { ...rule.condition, operator: e.target.value as ConditionalRule["condition"]["operator"] } })}
                 className="text-xs border border-gray-200 rounded px-1.5 py-1 outline-none bg-white w-20"
               >
                 <option value="equals">equals</option>
@@ -1385,7 +1354,7 @@ function QuestionEditor({
                 <option value="contains">contains</option>
                 <option value="greater_than">{">"}</option>
                 <option value="less_than">{"<"}</option>
-              </select>
+              </NativeSelect>
               <input
                 value={String(rule.condition.value ?? "")}
                 onChange={(e) => updateCondition(rIdx, { ...rule, condition: { ...rule.condition, value: e.target.value } })}
@@ -1393,9 +1362,9 @@ function QuestionEditor({
                 placeholder="Value"
               />
               <span className="text-[10px] text-gray-600">→</span>
-              <select
-                value={rule.action.type}
-                onChange={(e) => updateCondition(rIdx, { ...rule, action: { ...rule.action, type: e.target.value as ConditionalRule["action"]["type"] } })}
+              <NativeSelect
+ value={rule.action.type}
+ onChange={(e) => updateCondition(rIdx, { ...rule, action: { ...rule.action, type: e.target.value as ConditionalRule["action"]["type"] } })}
                 className="text-xs border border-gray-200 rounded px-1.5 py-1 outline-none bg-white w-24"
               >
                 <option value="show">Show</option>
@@ -1403,7 +1372,7 @@ function QuestionEditor({
                 <option value="require_note">Require note</option>
                 <option value="require_media">Require media</option>
                 <option value="notify">Notify</option>
-              </select>
+              </NativeSelect>
               <button onClick={() => removeCondition(rIdx)} className="p-0.5 rounded hover:bg-red-100">
                 <Trash2 className="h-3 w-3 text-red-600" />
               </button>

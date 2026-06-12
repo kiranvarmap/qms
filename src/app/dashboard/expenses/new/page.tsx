@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, AlertCircle, Upload } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Alert as AlertCircle, Upload } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Account { id: string; name: string; code: string; type: string }
@@ -111,25 +112,25 @@ export default function NewExpensePage() {
 
       {workspaces.length > 1 && (
         <div className="mb-5"><label className="text-xs text-gray-500">Workspace</label>
-          <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+          <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</NativeSelect>
         </div>
       )}
 
       <div className="grid grid-cols-[1fr_320px] gap-8">
         <div className="space-y-4">
-          <Row label="Date" required><input type="date" value={f.spentAt} onChange={(e) => set("spentAt", e.target.value)} className={inp} /></Row>
+          <Row label="Date" required><DateInput value={f.spentAt} onChange={(e) => set("spentAt", e.target.value)} /></Row>
 
           <Row label="Expense Account" required>
-            <select value={f.expenseAccountId} onChange={(e) => set("expenseAccountId", e.target.value)} className={inp}>
+            <NativeSelect value={f.expenseAccountId} onChange={(e) => set("expenseAccountId", e.target.value)} className={inp}>
               <option value="">Select an account</option>
               {expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+            </NativeSelect>
           </Row>
 
           {mode === "expense" ? (
             <Row label="Amount" required>
               <div className="flex">
-                <select value={f.currency} onChange={(e) => set("currency", e.target.value)} className="bg-white border border-gray-300 rounded-l-md px-2 py-2 text-sm text-gray-900 border-r-0">{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+                <NativeSelect value={f.currency} onChange={(e) => set("currency", e.target.value)} className="bg-white border border-gray-300 rounded-l-md px-2 py-2 text-sm text-gray-900 border-r-0">{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</NativeSelect>
                 <input type="number" step="0.01" value={f.amount} onChange={(e) => set("amount", e.target.value)} className="w-full bg-white border border-gray-300 rounded-r-md px-3 py-2 text-sm text-gray-900 focus:border-blue-500" />
               </div>
             </Row>
@@ -138,7 +139,7 @@ export default function NewExpensePage() {
               <Row label="Distance" required><input type="number" step="0.1" value={f.mileageDistance} onChange={(e) => set("mileageDistance", e.target.value)} className={inp} /></Row>
               <Row label="Rate / unit" required>
                 <div className="flex">
-                  <select value={f.currency} onChange={(e) => set("currency", e.target.value)} className="bg-white border border-gray-300 rounded-l-md px-2 py-2 text-sm text-gray-900 border-r-0">{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</select>
+                  <NativeSelect value={f.currency} onChange={(e) => set("currency", e.target.value)} className="bg-white border border-gray-300 rounded-l-md px-2 py-2 text-sm text-gray-900 border-r-0">{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</NativeSelect>
                   <input type="number" step="0.01" value={f.mileageRate} onChange={(e) => set("mileageRate", e.target.value)} className="w-full bg-white border border-gray-300 rounded-r-md px-3 py-2 text-sm text-gray-900 focus:border-blue-500" />
                 </div>
               </Row>
@@ -146,10 +147,10 @@ export default function NewExpensePage() {
           )}
 
           <Row label="Paid Through" required>
-            <select value={f.paidThroughAccountId} onChange={(e) => set("paidThroughAccountId", e.target.value)} className={inp}>
+            <NativeSelect value={f.paidThroughAccountId} onChange={(e) => set("paidThroughAccountId", e.target.value)} className={inp}>
               <option value="">Select an account</option>
               {paidThroughAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+            </NativeSelect>
           </Row>
 
           <Row label="Expense Type" required>
@@ -162,11 +163,11 @@ export default function NewExpensePage() {
           <Row label="SAC"><input value={f.sacCode} onChange={(e) => set("sacCode", e.target.value)} className={inp} /></Row>
 
           <Row label="Vendor">
-            <select value={f.vendorId} onChange={(e) => set("vendorId", e.target.value)} className={inp}><option value="">Select a vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
+            <NativeSelect value={f.vendorId} onChange={(e) => set("vendorId", e.target.value)} className={inp}><option value="">Select a vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</NativeSelect>
           </Row>
 
           <Row label="GST Treatment" required>
-            <select value={f.gstTreatment} onChange={(e) => set("gstTreatment", e.target.value)} className={inp}><option value="">Select a GST treatment</option>{GST_TREATMENTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+            <NativeSelect value={f.gstTreatment} onChange={(e) => set("gstTreatment", e.target.value)} className={inp}><option value="">Select a GST treatment</option>{GST_TREATMENTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</NativeSelect>
           </Row>
 
           <Row label="Source of Supply" required><input value={f.sourceOfSupply} onChange={(e) => set("sourceOfSupply", e.target.value)} placeholder="State / Province" className={inp} /></Row>
@@ -177,7 +178,7 @@ export default function NewExpensePage() {
           </Row>
 
           <Row label="Tax">
-            <select value={f.taxRateId} onChange={(e) => set("taxRateId", e.target.value)} className={inp}><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name} ({(t.rateBasisPoints / 100).toFixed(0)}%)</option>)}</select>
+            <NativeSelect value={f.taxRateId} onChange={(e) => set("taxRateId", e.target.value)} className={inp}><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name} ({(t.rateBasisPoints / 100).toFixed(0)}%)</option>)}</NativeSelect>
           </Row>
 
           <Row label="Amount Is">
@@ -193,7 +194,7 @@ export default function NewExpensePage() {
 
           <div className="border-t border-gray-200 pt-4 space-y-4">
             <Row label="Customer Name">
-              <select value={f.customerId} onChange={(e) => set("customerId", e.target.value)} className={inp}><option value="">Select or add a customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+              <NativeSelect value={f.customerId} onChange={(e) => set("customerId", e.target.value)} className={inp}><option value="">Select or add a customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect>
             </Row>
             {f.customerId && (
               <Row label="Billable">

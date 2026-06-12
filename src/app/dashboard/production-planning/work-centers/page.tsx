@@ -1,7 +1,8 @@
 "use client";
 
+import { NativeSelect, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Factory, X, AlertCircle, Settings2, Trash2 } from "lucide-react";
+import { Add as Plus, Work as Factory, CloseSmall as X, Alert as AlertCircle, Settings as Settings2, Delete as Trash2 } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface WorkCenter { id: string; name: string; code: string | null; type: string; department: string | null; location: string | null; capacityHoursPerDay: number; isActive: boolean }
@@ -12,6 +13,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const emptyWc = { name: "", code: "", type: "machine", department: "", location: "", capacityHoursPerDay: "8" };
 
 export default function WorkCentersPage() {
+  const confirmAction = useConfirm();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [centers, setCenters] = useState<WorkCenter[]>([]);
@@ -21,6 +23,7 @@ export default function WorkCentersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<WorkCenter | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", code: "", type: "machine", department: "", capacityHoursPerDay: "8", location: "" });
   const [machines, setMachines] = useState<Machine[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
 
@@ -55,6 +58,10 @@ export default function WorkCentersPage() {
 
   const openEdit = async (wc: WorkCenter) => {
     setEditing(wc);
+    setEditForm({
+      name: wc.name ?? "", code: wc.code ?? "", type: wc.type ?? "machine",
+      department: wc.department ?? "", capacityHoursPerDay: String(wc.capacityHoursPerDay ?? 8), location: wc.location ?? "",
+    });
     const full = await fetch(`/api/work-centers/${wc.id}`).then((r) => r.json());
     setMachines(full?.machines ?? []);
     setShifts(full?.shifts ?? []);
@@ -63,13 +70,17 @@ export default function WorkCentersPage() {
   const saveResources = async () => {
     if (!editing) return;
     setSaving(true);
+    await fetch(`/api/work-centers/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      name: editForm.name || undefined, code: editForm.code || undefined, type: editForm.type || undefined,
+      department: editForm.department || undefined, capacityHoursPerDay: Number(editForm.capacityHoursPerDay) || undefined, location: editForm.location || undefined,
+    }) });
     await fetch(`/api/work-centers/${editing.id}/machines`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ machines: machines.map((m) => ({ name: m.name, capacityPct: Number(m.capacityPct) || 100, setupMinutes: Number(m.setupMinutes) || 0 })) }) });
     await fetch(`/api/work-centers/${editing.id}/shifts`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shifts: shifts.map((s) => ({ dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime, breakMinutes: Number(s.breakMinutes) || 0 })) }) });
-    setSaving(false); setEditing(null);
+    setSaving(false); setEditing(null); load();
   };
 
   const del = async (wc: WorkCenter) => {
-    if (!confirm(`Delete work center "${wc.name}"?`)) return;
+    if (!(await confirmAction(`Delete work center "${wc.name}"?`))) return;
     await fetch(`/api/work-centers/${wc.id}`, { method: "DELETE" });
     load();
   };
@@ -86,10 +97,10 @@ export default function WorkCentersPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -138,9 +149,9 @@ export default function WorkCentersPage() {
                 <label className="block"><span className="text-xs text-gray-500">Code</span>
                   <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
                 <label className="block"><span className="text-xs text-gray-500">Type</span>
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="machine">Machine</option><option value="manual">Manual</option><option value="hybrid">Hybrid</option>
-                  </select></label>
+                  </NativeSelect></label>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-xs text-gray-500">Department</span>
@@ -163,8 +174,28 @@ export default function WorkCentersPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditing(null)}>
           <div className="bg-white border border-gray-200 rounded-lg w-full max-w-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">{editing.name} — Machines & Shifts</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Edit — {editing.name}</h2>
               <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="mb-5 border-b border-gray-100 pb-5">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Details</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block"><span className="text-xs text-gray-500">Name *</span>
+                  <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Code</span>
+                  <input value={editForm.code} onChange={(e) => setEditForm({ ...editForm, code: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Type</span>
+                  <NativeSelect value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                    <option value="machine">Machine</option><option value="manual">Manual</option><option value="hybrid">Hybrid</option>
+                  </NativeSelect></label>
+                <label className="block"><span className="text-xs text-gray-500">Department</span>
+                  <input value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Capacity (h/day)</span>
+                  <input type="number" value={editForm.capacityHoursPerDay} onChange={(e) => setEditForm({ ...editForm, capacityHoursPerDay: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Location</span>
+                  <input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+              </div>
             </div>
 
             <div className="mb-5">
@@ -187,9 +218,9 @@ export default function WorkCentersPage() {
               {shifts.length === 0 && <p className="text-xs text-gray-400">No shifts — defaults to 8h/day Mon–Fri.</p>}
               {shifts.map((s, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 mb-2 items-center">
-                  <select value={s.dayOfWeek} onChange={(e) => { const x = [...shifts]; x[i] = { ...s, dayOfWeek: Number(e.target.value) }; setShifts(x); }} className="col-span-3 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+                  <NativeSelect value={s.dayOfWeek} onChange={(e) => { const x = [...shifts]; x[i] = { ...s, dayOfWeek: Number(e.target.value) }; setShifts(x); }} className="col-span-3 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm">
                     {DAYS.map((d, j) => <option key={j} value={j}>{d}</option>)}
-                  </select>
+                  </NativeSelect>
                   <input type="time" value={s.startTime} onChange={(e) => { const x = [...shifts]; x[i] = { ...s, startTime: e.target.value }; setShifts(x); }} className="col-span-3 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm" />
                   <input type="time" value={s.endTime} onChange={(e) => { const x = [...shifts]; x[i] = { ...s, endTime: e.target.value }; setShifts(x); }} className="col-span-3 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm" />
                   <input type="number" placeholder="Break" value={s.breakMinutes} onChange={(e) => { const x = [...shifts]; x[i] = { ...s, breakMinutes: Number(e.target.value) }; setShifts(x); }} className="col-span-2 bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm" />

@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Wrench, X, AlertCircle, ArrowLeft } from "lucide-react";
+import { Add as Plus, Settings as Wrench, CloseSmall as X, Alert as AlertCircle, MoveArrowLeft as ArrowLeft } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Asset { id: string; code: string | null; name: string; type: string | null; location: string | null; status: string; criticality: string; }
@@ -73,10 +74,10 @@ export default function AssetsPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -101,12 +102,12 @@ export default function AssetsPage() {
                 <td className="px-4 py-3 text-gray-600">{a.location || "—"}</td>
                 <td className="px-4 py-3 text-gray-600 capitalize">{a.criticality}</td>
                 <td className="px-4 py-3">
-                  <select value={a.status} onChange={(e) => changeStatus(a.id, e.target.value)} className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 ${statusBadge[a.status] || "bg-gray-100 text-gray-700"}`}>
+                  <NativeSelect value={a.status} onChange={(e) => changeStatus(a.id, e.target.value)} className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 ${statusBadge[a.status] || "bg-gray-100 text-gray-700"}`}>
                     <option value="up">up</option>
                     <option value="down">down</option>
                     <option value="maintenance">maintenance</option>
                     <option value="retired">retired</option>
-                  </select>
+                  </NativeSelect>
                 </td>
               </tr>
             ))}
@@ -131,11 +132,11 @@ export default function AssetsPage() {
               <Field label="Location" value={form.location} onChange={(v) => setForm({ ...form, location: v })} />
               <label className="block">
                 <span className="text-xs text-gray-500">Criticality</span>
-                <select value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.criticality} onChange={(e) => setForm({ ...form, criticality: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
-                </select>
+                </NativeSelect>
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">

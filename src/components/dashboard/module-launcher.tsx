@@ -1,20 +1,20 @@
 import Link from "next/link";
-import {
-  Inbox, BarChart3, Users2, FileText, ClipboardList, Receipt, Building2, ShoppingCart,
-  Boxes, Warehouse, Wallet, Clock, UserCog, CalendarDays, GraduationCap, FileSignature,
-  type LucideIcon,
-} from "lucide-react";
+import { Inbox, Chart as BarChart3, Group as Users2, Doc as FileText, CheckList as ClipboardList, Doc as Receipt, Location as Building2, Item as ShoppingCart, Item as Boxes, Work as Warehouse, CreditCard as Wallet, Time as Clock, Person as UserCog, Event as CalendarDays, Academy as GraduationCap, Signature as FileSignature } from "@vibe/icons";
+type LucideIcon = React.ComponentType<{ className?: string; size?: string | number }>;
 
 interface Tile { name: string; href: string; icon: LucideIcon }
-interface Group { label: string; tiles: Tile[] }
+interface Group { label: string; chip: string; hover: string; tiles: Tile[] }
 
 // Role-aware quick-launch grid for the Home dashboard. Static links only.
+// Each suite carries a Vibe content color (monday-style module identity).
 export function ModuleLauncher({ role }: { role?: string }) {
   const mgr = role === "admin" || role === "manager";
 
   const groups: Group[] = [
     {
       label: "Workspace",
+      chip: "bg-blue-50 text-primary",
+      hover: "hover:border-blue-300",
       tiles: [
         { name: "Approvals", href: "/dashboard/approvals", icon: Inbox },
         ...(mgr ? [{ name: "Reports", href: "/dashboard/reports", icon: BarChart3 }] : []),
@@ -24,6 +24,8 @@ export function ModuleLauncher({ role }: { role?: string }) {
     },
     ...(mgr ? [{
       label: "Sales",
+      chip: "bg-purple-50 text-purple-600",
+      hover: "hover:border-purple-300",
       tiles: [
         { name: "Customers", href: "/dashboard/customers", icon: Users2 },
         { name: "Estimates", href: "/dashboard/estimates", icon: FileText },
@@ -33,6 +35,8 @@ export function ModuleLauncher({ role }: { role?: string }) {
     }] : []),
     ...(mgr ? [{
       label: "Procurement & Inventory",
+      chip: "bg-orange-50 text-orange-600",
+      hover: "hover:border-orange-300",
       tiles: [
         { name: "Vendors", href: "/dashboard/vendors", icon: Building2 },
         { name: "Purchase Orders", href: "/dashboard/purchase-orders", icon: ShoppingCart },
@@ -42,6 +46,8 @@ export function ModuleLauncher({ role }: { role?: string }) {
     }] : []),
     {
       label: "People & Finance",
+      chip: "bg-teal-50 text-teal-600",
+      hover: "hover:border-teal-300",
       tiles: [
         { name: "Time Clock", href: "/dashboard/time-clock", icon: Clock },
         ...(mgr ? [
@@ -55,19 +61,21 @@ export function ModuleLauncher({ role }: { role?: string }) {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {groups.map((g) => (
         <div key={g.label}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">{g.label}</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2.5">{g.label}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {g.tiles.map((t) => (
               <Link
                 key={t.name}
                 href={t.href}
-                className="flex flex-col items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg p-4 text-center hover:border-blue-300 hover:shadow-sm transition-all"
+                className={`group flex flex-col items-center justify-center gap-2.5 bg-white border border-gray-200 rounded-lg px-4 py-5 text-center shadow-[var(--box-shadow-xs)] hover:shadow-[var(--box-shadow-small)] hover:-translate-y-0.5 transition-all duration-150 ${g.hover}`}
               >
-                <t.icon className="h-6 w-6 text-blue-500" />
-                <span className="text-xs font-medium text-gray-700">{t.name}</span>
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg transition-transform duration-150 group-hover:scale-110 ${g.chip}`}>
+                  <t.icon className="h-5 w-5" />
+                </span>
+                <span className="text-[13px] font-medium text-gray-700 group-hover:text-gray-900">{t.name}</span>
               </Link>
             ))}
           </div>

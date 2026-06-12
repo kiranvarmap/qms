@@ -1,21 +1,9 @@
 "use client";
+import { useConfirm, useToast } from "@/components/ui";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  FileText,
-  Upload,
-  Plus,
-  Search,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Eye,
-  Settings,
-  Trash2,
-  Send,
-} from "lucide-react";
+import { Doc as FileText, Upload, Add as Plus, Search, Time as Clock, Completed as CheckCircle2, CloseRound as XCircle, Alert as AlertCircle, Show as Eye, Settings, Delete as Trash2, Send } from "@vibe/icons";
 
 type DocStatus = "draft" | "pending" | "completed" | "voided" | "declined";
 
@@ -47,6 +35,8 @@ const TABS: { id: "all" | DocStatus; label: string }[] = [
 ];
 
 export default function SignDocumentsPage() {
+  const confirmAction = useConfirm();
+  const { toast } = useToast();
   const [docs, setDocs] = useState<SignDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"all" | DocStatus>("all");
@@ -86,7 +76,7 @@ export default function SignDocumentsPage() {
       const res = await fetch("/api/sign/documents", { method: "POST", body: fd });
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || "Upload failed");
+        toast(err.error || "Upload failed", "warning");
         return;
       }
       const doc = await res.json();
@@ -102,13 +92,13 @@ export default function SignDocumentsPage() {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    if (!(await confirmAction(`Delete "${title}"? This cannot be undone.`))) return;
     await fetch(`/api/sign/documents/${id}`, { method: "DELETE" });
     setDocs((prev) => prev.filter((d) => d.id !== id));
   };
 
   const handleVoid = async (id: string) => {
-    if (!confirm("Void this document? All pending signatures will be cancelled.")) return;
+    if (!(await confirmAction("Void this document? All pending signatures will be cancelled."))) return;
     await fetch(`/api/sign/documents/${id}/void`, { method: "POST" });
     load();
   };
@@ -123,7 +113,7 @@ export default function SignDocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)] flex items-center gap-2">
             <FileText className="h-7 w-7 text-blue-600" />
             Document Signing
           </h1>

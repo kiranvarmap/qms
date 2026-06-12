@@ -1,26 +1,12 @@
 "use client";
 
+import { NativeSelect, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  Plus,
-  ClipboardList,
-  LayoutTemplate,
-  ChevronRight,
-  Loader2,
-  Trash2,
-  Play,
-  CheckCircle2,
-  Clock,
-  Edit3,
-  Eye,
-  EyeOff,
-  BarChart3,
-  X,
-  Search,
-} from "lucide-react";
+import { Add as Plus, CheckList as ClipboardList, Board as LayoutTemplate, NavigationChevronRight as ChevronRight, Delete as Trash2, Play, Completed as CheckCircle2, Time as Clock, Edit as Edit3, Show as Eye, Hide as EyeOff, Chart as BarChart3, CloseSmall as X, Search } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import type { InspectionTemplate, Inspection } from "@/lib/types";
 
 interface WorkspaceSummary { id: string; name: string; }
@@ -29,6 +15,7 @@ interface BoardItem { id: string; name: string; groupId: string; }
 
 export default function InspectionsPage() {
   const router = useRouter();
+  const confirmAction = useConfirm();
   const [tab, setTab] = useState<"inspections" | "templates">("inspections");
   const [templates, setTemplates] = useState<InspectionTemplate[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -115,7 +102,7 @@ export default function InspectionsPage() {
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm("Delete this template? All inspections using it will remain, but new ones cannot be started.")) return;
+    if (!(await confirmAction("Delete this template? All inspections using it will remain, but new ones cannot be started."))) return;
     await fetch(`/api/inspection-templates/${id}`, { method: "DELETE" });
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   };
@@ -166,7 +153,7 @@ export default function InspectionsPage() {
   };
 
   const deleteInspection = async (id: string) => {
-    if (!confirm("Delete this inspection and all its data?")) return;
+    if (!(await confirmAction("Delete this inspection and all its data?"))) return;
     await fetch(`/api/inspections/${id}`, { method: "DELETE" });
     setInspections((prev) => prev.filter((i) => i.id !== id));
   };
@@ -281,16 +268,16 @@ export default function InspectionsPage() {
                 {/* Workspace selector */}
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Workspace (optional)</label>
-                  <select
-                    value={selectedWorkspaceId}
-                    onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+                  <NativeSelect
+ value={selectedWorkspaceId}
+ onChange={(e) => setSelectedWorkspaceId(e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">— Select workspace —</option>
                     {workspaces.map((w) => (
                       <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
                 {/* Board selector — shown when workspace is selected */}
                 {selectedWorkspaceId && (
@@ -299,16 +286,16 @@ export default function InspectionsPage() {
                     {loadingBoards ? (
                       <div className="flex items-center gap-2 text-xs text-gray-600 py-2"><Loader2 className="h-3 w-3 animate-spin" /> Loading boards…</div>
                     ) : (
-                      <select
-                        value={selectedBoardId}
-                        onChange={(e) => setSelectedBoardId(e.target.value)}
+                      <NativeSelect
+ value={selectedBoardId}
+ onChange={(e) => setSelectedBoardId(e.target.value)}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">— Select board —</option>
                         {boards.map((b) => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     )}
                   </div>
                 )}

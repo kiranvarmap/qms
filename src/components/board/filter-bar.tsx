@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, Filter as FilterIcon, X } from "lucide-react";
+import { NativeSelect } from "@/components/ui";
+import { Add as Plus, Filter as FilterIcon, CloseSmall as X } from "@vibe/icons";
 import type { ColumnDef } from "@/lib/types";
 
 export interface FilterCondition {
@@ -78,23 +79,22 @@ export function FilterBar({ columns, filters, onChange }: FilterBarProps) {
           )}
 
           {/* Column selector */}
-          <select
-            className="bg-transparent outline-none text-gray-700 font-medium cursor-pointer max-w-[120px]"
-            value={filter.columnId}
-            onChange={(e) => updateFilter(filter.id, { columnId: e.target.value })}
+          <NativeSelect
+ className="max-w-[120px]"
+ value={filter.columnId}
+ onChange={(e) => updateFilter(filter.id, { columnId: e.target.value })}
           >
             {columns.map((col) => (
               <option key={col.id} value={col.id}>
                 {col.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
 
           {/* Operator selector */}
-          <select
-            className="bg-transparent outline-none text-gray-500 cursor-pointer"
-            value={filter.operator}
-            onChange={(e) =>
+          <NativeSelect
+ value={filter.operator}
+ onChange={(e) =>
               updateFilter(filter.id, {
                 operator: e.target.value as FilterCondition["operator"],
               })
@@ -105,7 +105,7 @@ export function FilterBar({ columns, filters, onChange }: FilterBarProps) {
                 {op.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
 
           {/* Value input */}
           {!NO_VALUE_OPS.has(filter.operator) && (

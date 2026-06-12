@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { CalendarRange } from "lucide-react";
+import { Timeline as CalendarRange } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Block { id: string; workOrderId: string; number: string; stageName: string; plannedStart: string | null; plannedEnd: string | null; status: string; priority: string }
@@ -55,10 +56,10 @@ export default function TimelinePage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-6"><CalendarRange className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Production Timeline</h1></div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       {loading ? <p className="text-gray-500">Loading…</p> : byJob.size === 0 ? (
         <div className="bg-white border border-gray-200 rounded-lg p-10 text-center text-gray-500 shadow-sm">No scheduled stages. Plan some work orders to populate the timeline.</div>

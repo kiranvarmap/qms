@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft } from "@vibe/icons";
 
 interface Level { warehouseId: string; warehouseName: string | null; onHand: number; committed: number; available: number }
 interface Product {

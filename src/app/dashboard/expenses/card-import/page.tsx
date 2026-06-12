@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, CreditCard, Upload, Link2 } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, CreditCard, Upload, Link as Link2 } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Expense { id: string; docNumber: string; amountMinor: number }
@@ -55,9 +56,9 @@ export default function CardImportPage() {
       <Link href="/dashboard/expenses" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"><ArrowLeft className="h-4 w-4" /> Expenses</Link>
       <div className="flex items-center gap-3 mb-6"><CreditCard className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Corporate Card Import</h1></div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-6">
         <div className="text-sm font-medium text-gray-900 mb-2">Paste transactions (CSV: description, amount, last4)</div>
@@ -79,7 +80,7 @@ export default function CardImportPage() {
                 <td className="px-4 py-3"><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${t.status === "matched" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>{t.status}</span></td>
                 <td className="px-4 py-3">
                   {t.status === "matched" ? <span className="inline-flex items-center gap-1 text-xs text-green-700"><Link2 className="h-3.5 w-3.5" /> linked</span>
-                  : <select onChange={(e) => match(t.id, e.target.value)} defaultValue="" className="bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-900"><option value="">Match to expense…</option>{expenses.map((x) => <option key={x.id} value={x.id}>{x.docNumber} · {(x.amountMinor / 100).toFixed(2)}</option>)}</select>}
+                  : <NativeSelect onChange={(e) => match(t.id, e.target.value)} defaultValue="" className="bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-900"><option value="">Match to expense…</option>{expenses.map((x) => <option key={x.id} value={x.id}>{x.docNumber} · {(x.amountMinor / 100).toFixed(2)}</option>)}</NativeSelect>}
                 </td>
               </tr>
             ))}

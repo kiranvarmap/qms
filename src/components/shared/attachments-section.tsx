@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Paperclip, Upload, Trash2, FileText } from "lucide-react";
+import { Attach as Paperclip, Upload, Delete as Trash2, Doc as FileText } from "@vibe/icons";
 
 interface Attachment {
   id: string;

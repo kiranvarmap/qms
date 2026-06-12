@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Factory, X, AlertCircle } from "lucide-react";
+import { Add as Plus, Work as Factory, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Product { id: string; name: string; sku: string | null }
@@ -92,10 +93,10 @@ export default function ProductionPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -137,17 +138,17 @@ export default function ProductionPage() {
             <div className="space-y-3">
               <label className="block">
                 <span className="text-xs text-gray-500">Product *</span>
-                <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value, bomId: "" })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value, bomId: "" })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Select…</option>
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <label className="block">
                 <span className="text-xs text-gray-500">BOM (optional — explodes into materials)</span>
-                <select value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })} disabled={!form.productId} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 disabled:opacity-50">
+                <NativeSelect value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })} disabled={!form.productId} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 disabled:opacity-50">
                   <option value="">None</option>
                   {boms.map((b) => <option key={b.id} value={b.id}>{b.version}{b.name ? ` — ${b.name}` : ""}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
@@ -156,15 +157,15 @@ export default function ProductionPage() {
                 </label>
                 <label className="block">
                   <span className="text-xs text-gray-500">Due date</span>
-                  <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
+                  <DateInput value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="mt-1 w-full" />
                 </label>
               </div>
               <label className="block">
                 <span className="text-xs text-gray-500">Warehouse (components / finished goods)</span>
-                <select value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Default</option>
                   {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                </NativeSelect>
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">

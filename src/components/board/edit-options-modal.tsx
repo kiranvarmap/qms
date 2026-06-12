@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Add as Plus, Delete as Trash2, CloseSmall as X } from "@vibe/icons";
 import type { LabelConfig, ColumnDef } from "@/lib/types";
 
 const PRESET_COLORS = [

@@ -4,18 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  FileText,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Eye,
-  Download,
-  AlertCircle,
-  User,
-  Calendar,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Doc as FileText, Completed as CheckCircle2, Time as Clock, CloseRound as XCircle, Show as Eye, Download, Alert as AlertCircle, Person as User, Calendar } from "@vibe/icons";
 
 const PdfReadonlyViewer = dynamic(() => import("@/components/sign/PdfReadonlyViewer"), { ssr: false });
 
@@ -144,7 +133,7 @@ export default function ViewDocPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{doc.title}</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{doc.title}</h1>
           <div className="flex items-center gap-3 mt-1">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${statusCfg.color}`}>
               <StatusIcon className="h-3 w-3" />

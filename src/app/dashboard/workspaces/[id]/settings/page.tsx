@@ -1,12 +1,14 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, Tag, Users, Trash2, Plus, Check } from "lucide-react";
+import { Update as Save, Tags as Tag, Group as Users, Delete as Trash2, Add as Plus, Check } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceLabel {
@@ -172,7 +174,7 @@ export default function WorkspaceSettingsPage() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Workspace Settings</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Workspace Settings</h1>
         <p className="text-sm text-gray-500 mt-1">
           Configure labels, members, and access permissions for this workspace.
         </p>
@@ -264,9 +266,9 @@ export default function WorkspaceSettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="flex gap-3">
-                <select
-                  value={addUserId}
-                  onChange={(e) => setAddUserId(e.target.value)}
+                <NativeSelect
+ value={addUserId}
+ onChange={(e) => setAddUserId(e.target.value)}
                   className="flex-1 h-9 rounded-md border border-gray-200 px-3 text-sm bg-white"
                 >
                   <option value="">Select a user…</option>
@@ -275,7 +277,7 @@ export default function WorkspaceSettingsPage() {
                       {u.name ?? u.email} ({u.email})
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <Button size="sm" onClick={addMember} disabled={!addUserId || addingMember}>
                   {addingMember ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -328,15 +330,15 @@ export default function WorkspaceSettingsPage() {
                         <p className="text-sm font-medium text-gray-900">{m.userName ?? m.userEmail}</p>
                         <p className="text-xs text-gray-600">{m.userEmail}</p>
                       </div>
-                      <select
-                        value={m.role}
-                        onChange={(e) => updateMemberPermission(m.userId, "role", e.target.value)}
+                      <NativeSelect
+ value={m.role}
+ onChange={(e) => updateMemberPermission(m.userId, "role", e.target.value)}
                         className="h-7 rounded border border-gray-200 px-2 text-xs bg-white"
                       >
                         <option value="owner">Owner</option>
                         <option value="admin">Admin</option>
                         <option value="member">Member</option>
-                      </select>
+                      </NativeSelect>
                       {(
                         [
                           ["canAccessBoards", "boards"],

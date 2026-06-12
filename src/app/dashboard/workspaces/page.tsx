@@ -1,4 +1,5 @@
 "use client";
+import { useConfirm } from "@/components/ui";
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -12,15 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Plus,
-  Loader2,
-  FolderKanban,
-  X,
-  MoreHorizontal,
-  Trash2,
-  Pencil,
-} from "lucide-react";
+import { Add as Plus, Folder as FolderKanban, CloseSmall as X, MoreActions as MoreHorizontal, Delete as Trash2, Edit as Pencil } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 
 interface Workspace {
   id: string;
@@ -46,6 +40,7 @@ const COLORS = [
 ];
 
 export default function WorkspacesPage() {
+  const confirmAction = useConfirm();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -94,7 +89,7 @@ export default function WorkspacesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this workspace and all its boards?")) return;
+    if (!(await confirmAction("Delete this workspace and all its boards?"))) return;
     await fetch(`/api/workspaces/${id}`, { method: "DELETE" });
     setWorkspaces(workspaces.filter((w) => w.id !== id));
     setMenuOpenId(null);
@@ -125,7 +120,7 @@ export default function WorkspacesPage() {
     <div className="px-8 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workspaces</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Workspaces</h1>
           <p className="mt-1 text-sm text-gray-500">
             Organize your projects into workspaces
           </p>

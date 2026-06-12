@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Users, Pencil, X, CalendarDays } from "lucide-react";
+import { Group as Users, Edit as Pencil, CloseSmall as X, Event as CalendarDays } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Department { id: string; name: string }
@@ -90,10 +91,10 @@ export default function HrPage() {
         <Link href="/dashboard/leave" className="inline-flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:text-gray-900 border border-gray-200 rounded-md"><CalendarDays className="h-4 w-4" /> Leave</Link>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -143,13 +144,13 @@ export default function HrPage() {
             <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-semibold text-gray-900">Edit — {edit.name}</h2><button onClick={() => setEdit(null)} className="text-gray-500 hover:text-gray-700"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Department</span>
-                <select value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
+                <NativeSelect value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</NativeSelect>
               </label>
               <label className="block"><span className="text-xs text-gray-500">Manager</span>
-                <select value={form.managerEmployeeId} onChange={(e) => setForm({ ...form, managerEmployeeId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{employees.filter((x) => x.id !== edit.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+                <NativeSelect value={form.managerEmployeeId} onChange={(e) => setForm({ ...form, managerEmployeeId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{employees.filter((x) => x.id !== edit.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</NativeSelect>
               </label>
               <label className="block"><span className="text-xs text-gray-500">Employment type</span>
-                <select value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{EMP_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}</select>
+                <NativeSelect value={form.employmentType} onChange={(e) => setForm({ ...form, employmentType: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{EMP_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}</NativeSelect>
               </label>
               <label className="block"><span className="text-xs text-gray-500">Designation</span><input value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
             </div>

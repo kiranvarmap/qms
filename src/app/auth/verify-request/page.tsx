@@ -5,7 +5,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Mail } from "lucide-react";
+import { Email as Mail } from "@vibe/icons";
 
 export default function VerifyRequestPage() {
   return (

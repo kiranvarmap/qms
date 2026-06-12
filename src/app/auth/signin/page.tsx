@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
+import { AttentionBox, Button, TextField } from "@vibe/core";
 
 function SignInForm() {
   const searchParams = useSearchParams();
@@ -37,51 +38,44 @@ function SignInForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="hello@test.com"
-          autoComplete="email"
-        />
-      </div>
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="••••••••"
-          autoComplete="current-password"
-        />
-      </div>
-      <button
+      {error && <AttentionBox type="negative" text={error} compact />}
+      <TextField
+        id="email"
+        title="Email"
+        type="email"
+        required
+        value={email}
+        onChange={(value: string) => setEmail(value)}
+        placeholder="hello@test.com"
+        autoComplete="email"
+        size="medium"
+      />
+      <TextField
+        id="password"
+        title="Password"
+        type="password"
+        required
+        value={password}
+        onChange={(value: string) => setPassword(value)}
+        placeholder="••••••••"
+        autoComplete="current-password"
+        size="medium"
+      />
+      <Button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+        loading={loading}
+        size="medium"
+        className="w-full"
       >
-        {loading ? "Signing in…" : "Sign in"}
-      </button>
-      <p className="text-center text-sm text-gray-500">
+        Sign in
+      </Button>
+      <p className="text-center text-sm text-[var(--secondary-text-color)]">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="font-medium text-blue-600 hover:underline">
+        <Link
+          href="/auth/signup"
+          className="font-medium text-[var(--link-color)] hover:underline"
+        >
           Sign up
         </Link>
       </p>

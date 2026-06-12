@@ -1,21 +1,26 @@
 "use client";
+import { useConfirm } from "@/components/ui";
 
 import { useEffect, useState, useCallback } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  MoreHorizontal,
-  Shield,
-  ShieldCheck,
-  User,
-  Loader2,
-  Check,
-  X,
-  Trash2,
-  Link,
-  Unlink,
-} from "lucide-react";
+  IconButton,
+  Label as VibeLabel,
+  Loader,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHeader,
+  TableHeaderCell,
+  TableRow,
+} from "@vibe/core";
+import { Check, CloseSmall, Delete } from "@vibe/icons";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Locked as Shield, Security as ShieldCheck, Person as User, Link, CloseRound as Unlink } from "@vibe/icons";
 
 interface UserData {
   id: string;
@@ -41,13 +46,17 @@ const roleIcons = {
   user: User,
 };
 
-const statusVariant = {
-  active: "success" as const,
-  inactive: "destructive" as const,
-  pending: "warning" as const,
-};
+const columns = [
+  { id: "user", title: "User" },
+  { id: "role", title: "Role", width: 130 },
+  { id: "status", title: "Status", width: 110 },
+  { id: "employee", title: "Employee Link", width: 190 },
+  { id: "joined", title: "Joined", width: 120 },
+  { id: "actions", title: "", width: 150 },
+];
 
 export function UsersTable() {
+  const confirmAction = useConfirm();
   const [users, setUsers] = useState<UserData[]>([]);
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +112,7 @@ export function UsersTable() {
   };
 
   const deleteUser = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    if (!(await confirmAction("Are you sure you want to delete this user?"))) return;
 
     setActionLoading(id);
     try {
@@ -126,7 +135,7 @@ export function UsersTable() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
+        <Loader size="small" />
       </div>
     );
   }
@@ -134,7 +143,7 @@ export function UsersTable() {
   if (users.length === 0) {
     return (
       <Card>
-        <CardContent className="py-12 text-center text-gray-500">
+        <CardContent className="py-12 text-center text-text-secondary">
           No users found.
         </CardContent>
       </Card>
@@ -142,32 +151,20 @@ export function UsersTable() {
   }
 
   return (
-    <Card>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-6 py-3 text-left font-medium text-gray-500">
-                User
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500">
-                Role
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500">
-                Employee Link
-              </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500">
-                Joined
-              </th>
-              <th className="px-6 py-3 text-right font-medium text-gray-500">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
+    <Card className="overflow-visible">
+      <div className="overflow-x-auto rounded-lg">
+        <Table
+          columns={columns}
+          emptyState={<div />}
+          errorState={<div />}
+          style={{ width: "100%" }}
+        >
+          <TableHeader>
+            {columns.map((col) => (
+              <TableHeaderCell key={col.id} title={col.title} />
+            ))}
+          </TableHeader>
+          <TableBody>
             {users.map((user) => {
               const RoleIcon = roleIcons[user.role];
               const isLoading = actionLoading === user.id;
@@ -176,27 +173,35 @@ export function UsersTable() {
               );
 
               return (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
+                <TableRow key={user.id}>
+                  <TableCell>
                     <div>
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-text-primary">
                         {user.name || "—"}
                       </p>
-                      <p className="text-gray-500 text-xs">{user.email}</p>
+                      <p className="text-text-secondary text-xs">
+                        {user.email}
+                      </p>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <RoleIcon className="h-3.5 w-3.5 text-gray-600" />
+                      <RoleIcon className="h-3.5 w-3.5 text-gray-400" />
                       <span className="capitalize">{user.role}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge variant={statusVariant[user.status]}>
-                      {user.status}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4">
+                  </TableCell>
+                  <TableCell>
+                    {user.status === "active" && (
+                      <VibeLabel text="Active" color="positive" />
+                    )}
+                    {user.status === "inactive" && (
+                      <VibeLabel text="Inactive" color="negative" />
+                    )}
+                    {user.status === "pending" && (
+                      <Badge variant="warning">pending</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <EmployeeLinker
                       linkedEmployee={linkedEmployee}
                       employees={employees}
@@ -210,92 +215,97 @@ export function UsersTable() {
                       onLink={(empId) => linkEmployee(user.id, empId)}
                       onUnlink={() => linkEmployee(user.id, null)}
                     />
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-text-secondary">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+                        <Loader size="xs" />
                       ) : (
                         <>
-                          {/* Quick status toggles */}
                           {user.status === "pending" && (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Approve"
+                              <IconButton
+                                icon={Check}
+                                size="xs"
+                                aria-label="Approve"
                                 onClick={() =>
                                   updateUser(user.id, { status: "active" })
                                 }
-                              >
-                                <Check className="h-4 w-4 text-green-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Reject"
+                              />
+                              <IconButton
+                                icon={CloseSmall}
+                                size="xs"
+                                aria-label="Reject"
                                 onClick={() =>
                                   updateUser(user.id, { status: "inactive" })
                                 }
-                              >
-                                <X className="h-4 w-4 text-red-600" />
-                              </Button>
+                              />
                             </>
                           )}
 
                           {user.status === "active" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Deactivate"
+                            <IconButton
+                              icon={CloseSmall}
+                              size="xs"
+                              aria-label="Deactivate"
                               onClick={() =>
                                 updateUser(user.id, { status: "inactive" })
                               }
-                            >
-                              <X className="h-4 w-4 text-red-500" />
-                            </Button>
+                            />
                           )}
 
                           {user.status === "inactive" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Activate"
+                            <IconButton
+                              icon={Check}
+                              size="xs"
+                              aria-label="Activate"
                               onClick={() =>
                                 updateUser(user.id, { status: "active" })
                               }
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
+                            />
                           )}
 
-                          {/* Role dropdown */}
-                          <RoleMenu
-                            currentRole={user.role}
-                            onSelect={(role) => updateUser(user.id, { role })}
-                          />
+                          <MenuButton size="xs" aria-label="Change role">
+                            <Menu id={`role-menu-${user.id}`} size="medium">
+                              <MenuTitle caption="Set role" />
+                              {(["admin", "manager", "user"] as const).map(
+                                (role) => (
+                                  <MenuItem
+                                    key={role}
+                                    title={
+                                      role.charAt(0).toUpperCase() +
+                                      role.slice(1) +
+                                      (role === user.role ? " ✓" : "")
+                                    }
+                                    onClick={() =>
+                                      updateUser(user.id, { role })
+                                    }
+                                  />
+                                )
+                              )}
+                            </Menu>
+                          </MenuButton>
 
-                          {/* Delete */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="Delete user"
+                          <IconButton
+                            icon={Delete}
+                            size="xs"
+                            aria-label="Delete user"
                             onClick={() => deleteUser(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600 hover:text-red-600" />
-                          </Button>
+                          />
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </Card>
   );
@@ -323,26 +333,24 @@ function EmployeeLinker({
     <div className="relative">
       {linkedEmployee ? (
         <div className="flex items-center gap-1.5">
-          <span className="text-gray-800 font-medium text-xs">
+          <span className="text-text-primary font-medium text-xs">
             {linkedEmployee.name}
           </span>
-          <span className="text-gray-600 text-xs">
+          <span className="text-gray-400 text-xs">
             ({linkedEmployee.employeeId})
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 ml-1"
+          <button
+            className="p-0.5 rounded hover:bg-gray-100 transition-colors"
             title="Change / Unlink"
             onClick={onOpen}
           >
-            <Link className="h-3 w-3 text-blue-500" />
-          </Button>
+            <Link className="h-3 w-3 text-primary" />
+          </button>
         </div>
       ) : (
         <button
           onClick={onOpen}
-          className="flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 transition-colors"
+          className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary transition-colors"
         >
           <Link className="h-3 w-3" />
           Link employee
@@ -352,14 +360,14 @@ function EmployeeLinker({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={onClose} />
-          <div className="absolute left-0 z-20 mt-1 w-64 rounded-md bg-white shadow-lg ring-1 ring-gray-200 max-h-64 overflow-y-auto">
+          <div className="absolute left-0 z-20 mt-1 w-64 rounded-lg bg-white shadow-lg ring-1 ring-gray-200 max-h-64 overflow-y-auto">
             <div className="py-1">
-              <p className="px-3 py-1.5 text-xs font-medium text-gray-600 sticky top-0 bg-white border-b border-gray-100">
+              <p className="px-3 py-1.5 text-xs font-medium text-gray-400 sticky top-0 bg-white border-b border-gray-100">
                 Select employee
               </p>
               {linkedEmployee && (
                 <button
-                  className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 flex items-center gap-1.5"
+                  className="w-full px-3 py-1.5 text-left text-xs text-negative hover:bg-red-50 flex items-center gap-1.5"
                   onClick={() => {
                     onUnlink();
                     onClose();
@@ -370,7 +378,7 @@ function EmployeeLinker({
                 </button>
               )}
               {employees.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-gray-600">
+                <p className="px-3 py-2 text-xs text-gray-400">
                   No employees found
                 </p>
               ) : (
@@ -379,8 +387,8 @@ function EmployeeLinker({
                     key={emp.id}
                     className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 ${
                       emp.id === linkedEmployee?.id
-                        ? "text-blue-600 font-medium"
-                        : "text-gray-700"
+                        ? "text-primary font-medium"
+                        : "text-text-primary"
                     }`}
                     onClick={() => {
                       onLink(emp.id);
@@ -388,11 +396,11 @@ function EmployeeLinker({
                     }}
                   >
                     <span className="font-medium">{emp.name}</span>
-                    <span className="text-gray-600 ml-1">
+                    <span className="text-gray-400 ml-1">
                       #{emp.employeeId}
                     </span>
                     {emp.department && (
-                      <span className="text-gray-600 ml-1">
+                      <span className="text-gray-400 ml-1">
                         · {emp.department}
                       </span>
                     )}
@@ -406,63 +414,3 @@ function EmployeeLinker({
     </div>
   );
 }
-
-// Simple role selector menu
-function RoleMenu({
-  currentRole,
-  onSelect,
-}: {
-  currentRole: string;
-  onSelect: (role: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const roles = ["admin", "manager", "user"];
-
-  return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Change role"
-        onClick={() => setOpen(!open)}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 z-20 mt-1 w-36 rounded-md bg-white shadow-lg ring-1 ring-gray-200">
-            <div className="py-1">
-              <p className="px-3 py-1 text-xs font-medium text-gray-600">
-                Set role
-              </p>
-              {roles.map((role) => (
-                <button
-                  key={role}
-                  className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-50 capitalize ${
-                    role === currentRole
-                      ? "text-blue-600 font-medium"
-                      : "text-gray-700"
-                  }`}
-                  onClick={() => {
-                    onSelect(role);
-                    setOpen(false);
-                  }}
-                >
-                  {role}
-                  {role === currentRole && " ✓"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-

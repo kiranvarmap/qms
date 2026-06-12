@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, AlertCircle, ArrowDown } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Alert as AlertCircle, MoveArrowDown as ArrowDown } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 type Tab = "other" | "address" | "contacts" | "bank" | "custom" | "tags" | "remarks";
@@ -96,13 +97,13 @@ export default function NewVendorPage() {
   return (
     <div className="p-8 max-w-5xl mx-auto pb-28">
       <Link href="/dashboard/vendors" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-3"><ArrowLeft className="h-4 w-4" /> Vendors</Link>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">New Vendor</h1>
+      <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)] mb-6">New Vendor</h1>
 
       {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
 
       {workspaces.length > 1 && (
         <div className="mb-5"><label className="text-xs text-gray-500">Workspace</label>
-          <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+          <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</NativeSelect>
         </div>
       )}
 
@@ -116,7 +117,7 @@ export default function NewVendorPage() {
         </Row>
         <Row label="Primary Contact">
           <div className="grid grid-cols-3 gap-2">
-            <select value={f.salutation} onChange={(e) => set("salutation", e.target.value)} className={inp}><option value="">Salutation</option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select>
+            <NativeSelect value={f.salutation} onChange={(e) => set("salutation", e.target.value)} className={inp}><option value="">Salutation</option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></NativeSelect>
             <input value={f.firstName} onChange={(e) => set("firstName", e.target.value)} placeholder="First Name" className={inp} />
             <input value={f.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="Last Name" className={inp} />
           </div>
@@ -131,7 +132,7 @@ export default function NewVendorPage() {
           </div>
         </Row>
         <Row label="Vendor Language">
-          <select value={f.vendorLanguage} onChange={(e) => set("vendorLanguage", e.target.value)} className={`${inp} max-w-xs`}><option>English</option><option>Hindi</option><option>Spanish</option><option>French</option><option>German</option><option>Arabic</option></select>
+          <NativeSelect value={f.vendorLanguage} onChange={(e) => set("vendorLanguage", e.target.value)} className={`${inp} max-w-xs`}><option>English</option><option>Hindi</option><option>Spanish</option><option>French</option><option>German</option><option>Arabic</option></NativeSelect>
         </Row>
       </div>
 
@@ -144,7 +145,7 @@ export default function NewVendorPage() {
       <div className="py-6">
         {tab === "other" && (
           <div className="space-y-4 max-w-2xl">
-            <Row label="GST Treatment"><select value={f.gstTreatment} onChange={(e) => set("gstTreatment", e.target.value)} className={inp}><option value="">Select a GST treatment</option>{GST_TREATMENTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Row>
+            <Row label="GST Treatment"><NativeSelect value={f.gstTreatment} onChange={(e) => set("gstTreatment", e.target.value)} className={inp}><option value="">Select a GST treatment</option>{GST_TREATMENTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</NativeSelect></Row>
             <Row label="Place of Supply"><input value={f.placeOfSupply} onChange={(e) => set("placeOfSupply", e.target.value)} placeholder="State / state code" className={inp} /></Row>
             <Row label="GSTIN"><input value={f.gstin} onChange={(e) => set("gstin", e.target.value)} className={inp} /></Row>
             <Row label="PAN"><input value={f.pan} onChange={(e) => set("pan", e.target.value)} className={inp} /></Row>
@@ -154,9 +155,9 @@ export default function NewVendorPage() {
                 <label className="inline-flex items-center gap-2"><input type="radio" checked={f.taxPreference === "tax_exempt"} onChange={() => set("taxPreference", "tax_exempt")} /> Tax Exempt</label>
               </div>
             </Row>
-            <Row label="Currency"><select value={f.currency} onChange={(e) => set("currency", e.target.value)} className={inp}>{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</select></Row>
+            <Row label="Currency"><NativeSelect value={f.currency} onChange={(e) => set("currency", e.target.value)} className={inp}>{CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}</NativeSelect></Row>
             <Row label="Opening Balance"><input type="number" value={f.openingBalance} onChange={(e) => set("openingBalance", e.target.value)} className={inp} /></Row>
-            <Row label="Payment Terms"><select value={f.paymentTermsLabel} onChange={(e) => set("paymentTermsLabel", e.target.value)} className={inp}>{PAYMENT_TERMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Row>
+            <Row label="Payment Terms"><NativeSelect value={f.paymentTermsLabel} onChange={(e) => set("paymentTermsLabel", e.target.value)} className={inp}>{PAYMENT_TERMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</NativeSelect></Row>
           </div>
         )}
 
@@ -176,7 +177,7 @@ export default function NewVendorPage() {
               <tbody>
                 {contacts.map((c, i) => (
                   <tr key={i} className="border-b border-gray-100">
-                    <td className="px-1 py-1"><select value={c.salutation} onChange={(e) => setContacts(contacts.map((x, j) => j === i ? { ...x, salutation: e.target.value } : x))} className={inp}><option value=""></option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select></td>
+                    <td className="px-1 py-1"><NativeSelect value={c.salutation} onChange={(e) => setContacts(contacts.map((x, j) => j === i ? { ...x, salutation: e.target.value } : x))} className={inp}><option value=""></option><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></NativeSelect></td>
                     <td className="px-1 py-1"><input value={c.firstName} onChange={(e) => setContacts(contacts.map((x, j) => j === i ? { ...x, firstName: e.target.value } : x))} className={inp} /></td>
                     <td className="px-1 py-1"><input value={c.lastName} onChange={(e) => setContacts(contacts.map((x, j) => j === i ? { ...x, lastName: e.target.value } : x))} className={inp} /></td>
                     <td className="px-1 py-1"><input value={c.email} onChange={(e) => setContacts(contacts.map((x, j) => j === i ? { ...x, email: e.target.value } : x))} className={inp} /></td>

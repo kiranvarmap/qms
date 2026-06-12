@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${figtree.variable} ${poppins.variable} antialiased`}
+        className={`${figtree.variable} ${poppins.variable} light-app-theme antialiased`}
         suppressHydrationWarning
       >
         <Providers>{children}</Providers>

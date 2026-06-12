@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, CornerDownLeft } from "lucide-react";
+import { Search, Enter as CornerDownLeft } from "@vibe/icons";
 
 interface Hit { type: string; id: string; title: string; subtitle: string | null; href: string }
 interface Workspace { id: string; name: string }

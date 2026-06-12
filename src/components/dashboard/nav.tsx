@@ -9,16 +9,7 @@ function handleSignOut() {
 }
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  Users,
-  UserCircle,
-  LogOut,
-  Shield,
-  Menu,
-  X,
-  FolderKanban,
-} from "lucide-react";
+import { Dashboard as LayoutDashboard, Group as Users, PersonRound as UserCircle, LogOut, Locked as Shield, Menu, CloseSmall as X, Folder as FolderKanban } from "@vibe/icons";
 import { useState } from "react";
 
 interface NavProps {

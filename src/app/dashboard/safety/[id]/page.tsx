@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ShieldAlert, Search, CheckCircle2, Plus, Lock } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Warning as ShieldAlert, Search, Completed as CheckCircle2, Add as Plus, Locked as Lock } from "@vibe/icons";
 
 interface Incident { id: string; number: string; type: string; severity: string; status: string; location: string | null; description: string | null; rootCause: string | null; }
 interface Action { id: string; description: string; status: string; dueDate: string | null; }

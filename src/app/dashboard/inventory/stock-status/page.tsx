@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldX, Check } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, CloseRound as ShieldX, Check } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Product { id: string; name: string; sku: string | null }
@@ -52,29 +53,29 @@ export default function StockStatusPage() {
       <Link href="/dashboard/inventory" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"><ArrowLeft className="h-4 w-4" /> Inventory</Link>
       <div className="flex items-center gap-3 mb-6"><ShieldX className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Damaged / Quarantine / Scrap</h1></div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm space-y-3">
         <label className="block"><span className="text-xs text-gray-500">Action</span>
-          <select value={form.move} onChange={(e) => setForm({ ...form, move: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+          <NativeSelect value={form.move} onChange={(e) => setForm({ ...form, move: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
             <option value="damage">Mark damaged (on-hand → damaged)</option>
             <option value="quarantine">Quarantine (on-hand → quarantine)</option>
             <option value="quarantine_release">Release quarantine (→ on-hand)</option>
             <option value="scrap">Scrap (remove from stock)</option>
-          </select>
+          </NativeSelect>
         </label>
         <label className="block"><span className="text-xs text-gray-500">Product</span>
-          <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+          <NativeSelect value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
             <option value="">Select…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>)}
-          </select>
+          </NativeSelect>
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block"><span className="text-xs text-gray-500">Warehouse</span>
-            <select value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+            <NativeSelect value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
               <option value="">Select…</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            </NativeSelect>
           </label>
           <label className="block"><span className="text-xs text-gray-500">Quantity</span>
             <input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />

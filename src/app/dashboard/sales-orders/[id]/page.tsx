@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, XCircle, Truck, Receipt, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Completed as CheckCircle2, CloseRound as XCircle, MoveArrowRight as Truck, Doc as Receipt, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 
 interface Line {

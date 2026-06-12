@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, Boxes, Warehouse as WarehouseIcon, SlidersHorizontal, X, AlertCircle, AlertTriangle } from "lucide-react";
+import { Add as Plus, Search, Item as Boxes, Work as WarehouseIcon, Filter as SlidersHorizontal, CloseSmall as X, Alert as AlertCircle, Warning as AlertTriangle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Warehouse { id: string; name: string }
@@ -134,10 +135,10 @@ export default function InventoryPage() {
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+        <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
           {workspaces.length === 0 && <option value="">No workspaces</option>}
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+        </NativeSelect>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products…" className="w-full bg-white border border-gray-200 rounded-md pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-500" />
@@ -206,10 +207,10 @@ export default function InventoryPage() {
             <Field label="SKU" value={form.sku} onChange={(v) => setForm({ ...form, sku: v })} />
             <label className="block">
               <span className="text-xs text-gray-500">Type</span>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+              <NativeSelect value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
                 <option value="good">Good (tracked)</option>
                 <option value="service">Service (not tracked)</option>
-              </select>
+              </NativeSelect>
             </label>
             <Field label="Category" value={form.category} onChange={(v) => setForm({ ...form, category: v })} />
             <Field label="Unit" value={form.unit} onChange={(v) => setForm({ ...form, unit: v })} />
@@ -225,9 +226,9 @@ export default function InventoryPage() {
         <Modal title={`Adjust — ${adjust.name}`} onClose={() => setAdjust(null)} error={error}>
           <label className="block mb-3">
             <span className="text-xs text-gray-500">Warehouse</span>
-            <select value={adjustForm.warehouseId} onChange={(e) => setAdjustForm({ ...adjustForm, warehouseId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+            <NativeSelect value={adjustForm.warehouseId} onChange={(e) => setAdjustForm({ ...adjustForm, warehouseId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
               {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            </NativeSelect>
           </label>
           <Field label="Quantity (+/−)" value={adjustForm.quantity} onChange={(v) => setAdjustForm({ ...adjustForm, quantity: v })} type="number" />
           <div className="mt-3"><Field label="Note" value={adjustForm.note} onChange={(v) => setAdjustForm({ ...adjustForm, note: v })} /></div>

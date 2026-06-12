@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { GraduationCap, Plus, Award, X, AlertCircle } from "lucide-react";
+import { Academy as GraduationCap, Add as Plus, Academy as Award, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Course { id: string; title: string; category: string | null; isPublished: boolean }
@@ -72,10 +73,10 @@ export default function TrainingPage() {
         <button onClick={() => { setError(""); setShowCourse(true); }} disabled={!workspaceId} className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Course</button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2">
@@ -130,7 +131,7 @@ export default function TrainingPage() {
             <Field label="Name *" value={certForm.name} onChange={(v) => setCertForm({ ...certForm, name: v })} />
             <Field label="Validity (months, 0 = none)" value={certForm.validityMonths} onChange={(v) => setCertForm({ ...certForm, validityMonths: v })} type="number" />
             <label className="block"><span className="text-xs text-gray-500">Auto-issue on course completion</span>
-              <select value={certForm.requiresCourseId} onChange={(e) => setCertForm({ ...certForm, requiresCourseId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select>
+              <NativeSelect value={certForm.requiresCourseId} onChange={(e) => setCertForm({ ...certForm, requiresCourseId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">None</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</NativeSelect>
             </label>
           </div>
           <Actions onCancel={() => setShowCert(false)} onSave={createCert} />

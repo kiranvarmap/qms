@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Update as Save, Completed as CheckCircle2 } from "@vibe/icons";
 
 interface CC { id: string; status: string; note: string | null; }
 interface Line { id: string; productId: string; systemQty: number; countedQty: number | null; }

@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Vendor { id: string; name: string }
@@ -104,18 +105,18 @@ export default function NewPurchaseOrderPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto pb-28">
       <Link href="/dashboard/purchase-orders" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-3"><ArrowLeft className="h-4 w-4" /> Purchase Orders</Link>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">New Purchase Order</h1>
+      <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)] mb-6">New Purchase Order</h1>
       {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
 
       {workspaces.length > 1 && (
         <div className="mb-5"><label className="text-xs text-gray-500">Workspace</label>
-          <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+          <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className={`${inp} max-w-xs mt-1`}>{workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</NativeSelect>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-x-10 gap-y-4 max-w-4xl">
         <Row label="Vendor Name" required>
-          <select value={h.vendorId} onChange={(e) => setF("vendorId", e.target.value)} className={inp}><option value="">Select a Vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
+          <NativeSelect value={h.vendorId} onChange={(e) => setF("vendorId", e.target.value)} className={inp}><option value="">Select a Vendor</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</NativeSelect>
         </Row>
         <div />
         <Row label="Delivery Address" required>
@@ -125,13 +126,13 @@ export default function NewPurchaseOrderPage() {
           </div>
         </Row>
         {h.deliveryAddressType === "customer"
-          ? <Row label="Deliver to Customer"><select value={h.deliveryCustomerId} onChange={(e) => setF("deliveryCustomerId", e.target.value)} className={inp}><option value="">Select a customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Row>
+          ? <Row label="Deliver to Customer"><NativeSelect value={h.deliveryCustomerId} onChange={(e) => setF("deliveryCustomerId", e.target.value)} className={inp}><option value="">Select a customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect></Row>
           : <div />}
         <Row label="Reference#"><input value={h.reference} onChange={(e) => setF("reference", e.target.value)} className={inp} /></Row>
         <div />
-        <Row label="Date"><input type="date" value={h.orderDate} onChange={(e) => setF("orderDate", e.target.value)} className={inp} /></Row>
-        <Row label="Delivery Date"><input type="date" value={h.expectedDate} onChange={(e) => setF("expectedDate", e.target.value)} className={inp} /></Row>
-        <Row label="Payment Terms"><select value={h.paymentTermsLabel} onChange={(e) => setF("paymentTermsLabel", e.target.value)} className={inp}>{PAYMENT_TERMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Row>
+        <Row label="Date"><DateInput value={h.orderDate} onChange={(e) => setF("orderDate", e.target.value)} /></Row>
+        <Row label="Delivery Date"><DateInput value={h.expectedDate} onChange={(e) => setF("expectedDate", e.target.value)} /></Row>
+        <Row label="Payment Terms"><NativeSelect value={h.paymentTermsLabel} onChange={(e) => setF("paymentTermsLabel", e.target.value)} className={inp}>{PAYMENT_TERMS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</NativeSelect></Row>
         <Row label="Shipment Preference"><input value={h.shipmentPreference} onChange={(e) => setF("shipmentPreference", e.target.value)} placeholder="Choose the shipment preference" className={inp} /></Row>
         <Row label="">
           <label className="inline-flex items-center gap-2 text-sm text-gray-700 pt-1"><input type="checkbox" checked={h.reverseCharge} onChange={(e) => setF("reverseCharge", e.target.checked)} /> This transaction is applicable for reverse charge</label>
@@ -150,12 +151,12 @@ export default function NewPurchaseOrderPage() {
               return (
                 <tr key={i} className="border-b border-gray-100 align-top">
                   <td className="px-2 py-2">
-                    <select value={l.productId} onChange={(e) => { const p = products.find((x) => x.id === e.target.value); setLines(lines.map((x, j) => j === i ? { ...x, productId: e.target.value, description: p?.name ?? x.description, unitCost: p?.costMinor != null ? String(p.costMinor / 100) : x.unitCost } : x)); }} className={`${inp} mb-1`}><option value="">Type or click to select an item</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                    <NativeSelect value={l.productId} onChange={(e) => { const p = products.find((x) => x.id === e.target.value); setLines(lines.map((x, j) => j === i ? { ...x, productId: e.target.value, description: p?.name ?? x.description, unitCost: p?.costMinor != null ? String(p.costMinor / 100) : x.unitCost } : x)); }} className={`${inp} mb-1`}><option value="">Type or click to select an item</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</NativeSelect>
                     <input value={l.description} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, description: e.target.value } : x))} placeholder="Description" className={inp} />
                   </td>
                   <td className="px-2 py-2"><input type="number" value={l.quantity} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} className={`${inp} text-right`} /></td>
                   <td className="px-2 py-2"><input type="number" value={l.unitCost} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, unitCost: e.target.value } : x))} className={`${inp} text-right`} /></td>
-                  <td className="px-2 py-2"><select value={l.taxRateId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, taxRateId: e.target.value } : x))} className={inp}><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name} ({(t.rateBasisPoints / 100).toFixed(0)}%)</option>)}</select></td>
+                  <td className="px-2 py-2"><NativeSelect value={l.taxRateId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, taxRateId: e.target.value } : x))} className={inp}><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name} ({(t.rateBasisPoints / 100).toFixed(0)}%)</option>)}</NativeSelect></td>
                   <td className="px-4 py-2 text-right text-gray-900">{money(amt)}</td>
                   <td className="px-1 py-2">{lines.length > 1 && <button onClick={() => setLines(lines.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>}</td>
                 </tr>
@@ -177,7 +178,7 @@ export default function NewPurchaseOrderPage() {
             <span className="text-gray-700">Discount</span>
             <div className="flex items-center gap-1">
               <input type="number" value={h.discountValue} onChange={(e) => setF("discountValue", e.target.value)} className="w-20 bg-white border border-gray-300 rounded-md px-2 py-1 text-right text-sm" />
-              <select value={h.discountType} onChange={(e) => setF("discountType", e.target.value)} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-sm"><option value="percent">%</option><option value="amount">amt</option></select>
+              <NativeSelect value={h.discountType} onChange={(e) => setF("discountType", e.target.value)} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-sm"><option value="percent">%</option><option value="amount">amt</option></NativeSelect>
               <span className="w-20 text-right text-gray-600">-{money(totals.discount)}</span>
             </div>
           </div>
@@ -188,7 +189,7 @@ export default function NewPurchaseOrderPage() {
               {h.withholdingType && <button onClick={() => { setF("withholdingType", ""); setF("withholdingTaxRateId", ""); }} className="text-xs text-gray-400 hover:text-gray-700">clear</button>}
             </div>
             <div className="flex items-center gap-1">
-              <select value={h.withholdingTaxRateId} onChange={(e) => setF("withholdingTaxRateId", e.target.value)} disabled={!h.withholdingType} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-sm disabled:opacity-50"><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+              <NativeSelect value={h.withholdingTaxRateId} onChange={(e) => setF("withholdingTaxRateId", e.target.value)} disabled={!h.withholdingType} className="bg-white border border-gray-300 rounded-md px-2 py-1 text-sm disabled:opacity-50"><option value="">Select a Tax</option>{taxRates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</NativeSelect>
               <span className="w-20 text-right text-gray-600">{h.withholdingType === "tcs" ? "+" : "-"}{money(totals.wh)}</span>
             </div>
           </div>

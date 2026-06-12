@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, Check, Loader2, Trash2, Bot, Mail, Zap, FileText, AtSign, Info, Settings } from "lucide-react";
+import { Notifications as Bell, Check, Delete as Trash2, Robot as Bot, Email as Mail, Bolt as Zap, Doc as FileText, Mention as AtSign, Info, Settings } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 

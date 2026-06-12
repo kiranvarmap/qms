@@ -14,7 +14,7 @@ export default async function UsersPage() {
     <div className="px-8 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">User Management</h1>
           <p className="mt-1 text-sm text-gray-500">
             Manage users, roles, and permissions
           </p>

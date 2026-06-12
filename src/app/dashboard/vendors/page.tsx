@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, Building2, Pencil, Trash2, X, AlertCircle } from "lucide-react";
+import { Add as Plus, Search, Location as Building2, Edit as Pencil, Delete as Trash2, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 import ImportExport from "@/components/ImportExport";
 
 interface Workspace { id: string; name: string; color: string }
@@ -122,14 +123,14 @@ export default function VendorsPage() {
       </div>
 
       <div className="flex items-center gap-3 mb-4">
-        <select
-          value={workspaceId}
-          onChange={(e) => setWorkspaceId(e.target.value)}
+        <NativeSelect
+ value={workspaceId}
+ onChange={(e) => setWorkspaceId(e.target.value)}
           className="bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
         >
           {workspaces.length === 0 && <option value="">No workspaces</option>}
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+        </NativeSelect>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <input

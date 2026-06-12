@@ -1,7 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
-import { X, Shield, Bell, Loader2, Plus, Trash2, Check } from "lucide-react";
+import { CloseSmall as X, Locked as Shield, Notifications as Bell, Add as Plus, Delete as Trash2, Check } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 import type { ColumnDef } from "@/lib/types";
 
@@ -263,29 +265,29 @@ export function BoardSettingsPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">User</label>
-                    <select
-                      value={newPermUserId}
-                      onChange={(e) => setNewPermUserId(e.target.value)}
+                    <NativeSelect
+ value={newPermUserId}
+ onChange={(e) => setNewPermUserId(e.target.value)}
                       className="w-full h-8 rounded border border-gray-200 px-2 text-xs bg-white"
                     >
                       <option value="">Select user…</option>
                       {systemUsers.map((u) => (
                         <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Column (blank = all)</label>
-                    <select
-                      value={newPermColumnId}
-                      onChange={(e) => setNewPermColumnId(e.target.value)}
+                    <NativeSelect
+ value={newPermColumnId}
+ onChange={(e) => setNewPermColumnId(e.target.value)}
                       className="w-full h-8 rounded border border-gray-200 px-2 text-xs bg-white"
                     >
                       <option value="">All columns</option>
                       {columns.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
                 <button
@@ -374,22 +376,22 @@ export function BoardSettingsPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Column</label>
-                    <select
-                      value={newRuleColumnId}
-                      onChange={(e) => { setNewRuleColumnId(e.target.value); setNewRuleTrigger(""); }}
+                    <NativeSelect
+ value={newRuleColumnId}
+ onChange={(e) => { setNewRuleColumnId(e.target.value); setNewRuleTrigger(""); }}
                       className="w-full h-8 rounded border border-gray-200 px-2 text-xs bg-white"
                     >
                       <option value="">Select column…</option>
                       {columns.filter((c) => ["status", "dropdown", "priority"].includes(c.type)).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Trigger value</label>
-                    <select
-                      value={newRuleTrigger}
-                      onChange={(e) => setNewRuleTrigger(e.target.value)}
+                    <NativeSelect
+ value={newRuleTrigger}
+ onChange={(e) => setNewRuleTrigger(e.target.value)}
                       className="w-full h-8 rounded border border-gray-200 px-2 text-xs bg-white"
                       disabled={!newRuleColumnId}
                     >
@@ -397,7 +399,7 @@ export function BoardSettingsPanel({
                       {getColumnOptions(newRuleColumnId).map((opt) => (
                         <option key={opt.id} value={opt.text}>{opt.text}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
                 <div>

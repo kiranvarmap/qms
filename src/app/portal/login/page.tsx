@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogIn, AlertCircle } from "lucide-react";
+import { Enter as LogIn, Alert as AlertCircle } from "@vibe/icons";
 
 export default function PortalLoginPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function PortalLoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Customer Portal</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Customer Portal</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to view your estimates and invoices.</p>
         </div>
         <form onSubmit={submit} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-4">

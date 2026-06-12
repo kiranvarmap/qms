@@ -1,16 +1,10 @@
 "use client";
+import { useToast } from "@/components/ui";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import {
-  Shield,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  PenLine,
-  Trash2,
-} from "lucide-react";
+import { Locked as Shield, Completed as CheckCircle2, CloseRound as XCircle, Alert as AlertCircle, Signature as PenLine, Delete as Trash2 } from "@vibe/icons";
 import SignaturePad from "signature_pad";
 
 const PdfSignViewer = dynamic(() => import("@/components/sign/PdfSignViewer"), { ssr: false });
@@ -49,6 +43,7 @@ type PageState = "loading" | "ready" | "already_signed" | "error" | "submitted" 
 export default function SignPage() {
   const params = useParams();
   const token = params.token as string;
+  const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("loading");
   const [doc, setDoc] = useState<SignDocInfo | null>(null);
@@ -124,7 +119,7 @@ export default function SignPage() {
   const handleApplySignature = () => {
     if (!sigPadRef.current || !sigModal) return;
     if (sigPadRef.current.isEmpty()) {
-      alert("Please draw your signature first");
+      toast("Please draw your signature first", "warning");
       return;
     }
     const dataUrl = sigPadRef.current.toDataURL("image/png");

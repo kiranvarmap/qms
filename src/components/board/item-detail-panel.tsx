@@ -1,7 +1,9 @@
 "use client";
 
+import { DateInput } from "@/components/ui";
 import { useEffect, useState, useRef } from "react";
-import { X, ClipboardList, Clock, Link2, Loader2, CheckCircle2, AlertCircle, Plus, MessageSquare, Send, Pencil, Trash2, Activity } from "lucide-react";
+import { CloseSmall as X, CheckList as ClipboardList, Time as Clock, Link as Link2, Completed as CheckCircle2, Alert as AlertCircle, Add as Plus, Comment as MessageSquare, Send, Edit as Pencil, Delete as Trash2, Activity } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
 interface LinkedInspection {
@@ -180,22 +182,20 @@ export function ItemDetailPanel({ itemId, itemName, boardId, currentUserId, star
         <div className="flex items-center gap-4 px-5 py-3 border-b border-gray-200 flex-shrink-0">
           <div className="flex flex-col">
             <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium mb-1">Start date</label>
-            <input
-              type="date"
-              value={start}
-              onChange={(e) => { setStart(e.target.value); saveDates({ startDate: e.target.value || null }); }}
-              className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            <DateInput
+ value={start}
+ onChange={(e) => { setStart(e.target.value); saveDates({ startDate: e.target.value || null }); }}
+ 
+ />
           </div>
           <div className="flex flex-col">
             <label className="text-[11px] uppercase tracking-wider text-gray-600 font-medium mb-1">End date</label>
-            <input
-              type="date"
-              value={end}
-              min={start || undefined}
-              onChange={(e) => { setEnd(e.target.value); saveDates({ endDate: e.target.value || null }); }}
-              className="text-sm border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            <DateInput
+ value={end}
+ min={start || undefined}
+ onChange={(e) => { setEnd(e.target.value); saveDates({ endDate: e.target.value || null }); }}
+ 
+ />
           </div>
         </div>
 

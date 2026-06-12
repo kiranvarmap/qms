@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Wrench, X, AlertCircle, Boxes, Play, CheckCircle2, CalendarClock } from "lucide-react";
+import { Add as Plus, Settings as Wrench, CloseSmall as X, Alert as AlertCircle, Item as Boxes, Play, Completed as CheckCircle2, Calendar as CalendarClock } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Asset { id: string; name: string; code: string | null }
@@ -97,10 +98,10 @@ export default function MaintenancePage() {
         </div>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -148,27 +149,27 @@ export default function MaintenancePage() {
             <div className="space-y-3">
               <label className="block">
                 <span className="text-xs text-gray-500">Asset *</span>
-                <select value={form.assetId} onChange={(e) => setForm({ ...form, assetId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.assetId} onChange={(e) => setForm({ ...form, assetId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Select…</option>
                   {assets.map((a) => <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ""}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-xs text-gray-500">Type</span>
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="corrective">Corrective</option>
                     <option value="preventive">Preventive</option>
-                  </select>
+                  </NativeSelect>
                 </label>
                 <label className="block">
                   <span className="text-xs text-gray-500">Priority</span>
-                  <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="low">Low</option>
                     <option value="normal">Normal</option>
                     <option value="high">High</option>
                     <option value="urgent">Urgent</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               </div>
               <label className="block">
@@ -177,7 +178,7 @@ export default function MaintenancePage() {
               </label>
               <label className="block">
                 <span className="text-xs text-gray-500">Scheduled date</span>
-                <input type="date" value={form.scheduledDate} onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
+                <DateInput value={form.scheduledDate} onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })} className="mt-1 w-full" />
               </label>
             </div>
             <div className="flex justify-end gap-2 mt-5">
@@ -203,10 +204,10 @@ export default function MaintenancePage() {
             <div className="space-y-2 mb-3">
               {parts.map((p, i) => (
                 <div key={i} className="flex gap-2">
-                  <select value={p.partProductId} onChange={(e) => setParts(parts.map((x, j) => j === i ? { ...x, partProductId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={p.partProductId} onChange={(e) => setParts(parts.map((x, j) => j === i ? { ...x, partProductId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="">Select part…</option>
                     {products.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
-                  </select>
+                  </NativeSelect>
                   <input type="number" value={p.qtyUsed} onChange={(e) => setParts(parts.map((x, j) => j === i ? { ...x, qtyUsed: e.target.value } : x))} className="w-20 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
                 </div>
               ))}

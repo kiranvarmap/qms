@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Wrench, CalendarClock, Activity } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Settings as Wrench, Calendar as CalendarClock, Activity } from "@vibe/icons";
 
 interface Order { id: string; number: string; type: string; status: string; priority: string; fault: string | null; scheduledDate: string | null; createdAt: string }
 interface Schedule { id: string; name: string; intervalDays: number; nextDue: string | null; isActive: boolean }
@@ -66,12 +67,12 @@ export default function AssetDetailPage() {
             <p className="text-sm text-gray-500">{[asset.type, asset.location].filter(Boolean).join(" · ") || "—"} · criticality {asset.criticality}</p>
           </div>
         </div>
-        <select value={asset.status} onChange={(e) => changeStatus(e.target.value)} className={`rounded-full px-2.5 py-1 text-xs font-medium border-0 ${statusBadge[asset.status] || "bg-gray-100"}`}>
+        <NativeSelect value={asset.status} onChange={(e) => changeStatus(e.target.value)} className={`rounded-full px-2.5 py-1 text-xs font-medium border-0 ${statusBadge[asset.status] || "bg-gray-100"}`}>
           <option value="up">up</option>
           <option value="down">down</option>
           <option value="maintenance">maintenance</option>
           <option value="retired">retired</option>
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">

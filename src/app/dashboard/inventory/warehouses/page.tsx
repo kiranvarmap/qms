@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Warehouse as WarehouseIcon, Trash2, ArrowLeft, X, AlertCircle } from "lucide-react";
+import { Add as Plus, Work as WarehouseIcon, Delete as Trash2, MoveArrowLeft as ArrowLeft, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Warehouse { id: string; name: string; code: string | null; location: string | null; isDefault: boolean; isActive: boolean }
@@ -75,10 +76,10 @@ export default function WarehousesPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">

@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { Alert as AlertCircle } from "@vibe/icons";
 
 const errors: Record<string, string> = {
   Configuration: "There is a problem with the server configuration.",

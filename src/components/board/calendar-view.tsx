@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { BoardData, ItemDef } from "@/lib/types";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { NavigationChevronLeft as ChevronLeft, NavigationChevronRight as ChevronRight, Event as CalendarDays } from "@vibe/icons";
 
 interface CalendarViewProps { board: BoardData; }
 

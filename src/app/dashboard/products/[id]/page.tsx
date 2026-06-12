@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Layers, GitBranch, ListTree } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Subitems as Layers, Workflow as GitBranch, Subitems as ListTree } from "@vibe/icons";
 
 interface Product { id: string; name: string; sku: string | null; category: string | null; unit: string; lifecycleStatus?: string; currentRevision?: string | null; }
 interface BomLine { id: string; description: string | null; quantity: number; unit: string; scrapPct: number; }
@@ -49,7 +50,7 @@ export default function ProductDetailPage() {
       <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{product.name}</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{product.name}</h1>
             <p className="text-sm text-gray-500 mt-1">
               {product.sku ? <span className="font-mono">{product.sku}</span> : "No SKU"} · {product.category || "Uncategorized"} · per {product.unit}
               {product.currentRevision ? <> · Rev <span className="font-medium text-gray-700">{product.currentRevision}</span></> : null}
@@ -57,11 +58,11 @@ export default function ProductDetailPage() {
           </div>
           <label className="text-sm">
             <span className="text-xs text-gray-500 block mb-1">Lifecycle</span>
-            <select value={product.lifecycleStatus || "active"} onChange={(e) => setLifecycle(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900">
+            <NativeSelect value={product.lifecycleStatus || "active"} onChange={(e) => setLifecycle(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm text-gray-900">
               <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="obsolete">Obsolete</option>
-            </select>
+            </NativeSelect>
           </label>
         </div>
       </div>

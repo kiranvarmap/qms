@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Boxes, Plus, X } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Item as Boxes, Add as Plus, CloseSmall as X } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Product { id: string; name: string; sku: string | null; tracksLots?: boolean }
@@ -64,12 +65,12 @@ export default function LotsPage() {
       </div>
 
       <div className="flex gap-2 mb-4">
-        <select value={workspaceId} onChange={(e) => { setWorkspaceId(e.target.value); setProductId(""); }} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        <NativeSelect value={workspaceId} onChange={(e) => { setWorkspaceId(e.target.value); setProductId(""); }} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
-        <select value={productId} onChange={(e) => setProductId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        </NativeSelect>
+        <NativeSelect value={productId} onChange={(e) => setProductId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
           <option value="">Select product…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -101,8 +102,8 @@ export default function LotsPage() {
               <label className="block"><span className="text-xs text-gray-500">Lot number</span><input value={form.lotNumber} onChange={(e) => setForm({ ...form, lotNumber: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               <label className="block"><span className="text-xs text-gray-500">Supplier lot number</span><input value={form.supplierLotNumber} onChange={(e) => setForm({ ...form, supplierLotNumber: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block"><span className="text-xs text-gray-500">Mfg date</span><input type="date" value={form.mfgDate} onChange={(e) => setForm({ ...form, mfgDate: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-                <label className="block"><span className="text-xs text-gray-500">Expiry date</span><input type="date" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Mfg date</span><DateInput value={form.mfgDate} onChange={(e) => setForm({ ...form, mfgDate: e.target.value })} className="mt-1 w-full" /></label>
+                <label className="block"><span className="text-xs text-gray-500">Expiry date</span><DateInput value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} className="mt-1 w-full" /></label>
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-5"><button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button><button onClick={create} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md">{saving ? "Saving…" : "Create"}</button></div>

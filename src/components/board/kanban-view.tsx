@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { BoardData, ItemDef, CellValue, LabelConfig } from "@/lib/types";
-import { KanbanSquare } from "lucide-react";
+import { Board as KanbanSquare } from "@vibe/icons";
 
 interface KanbanViewProps {
   board: BoardData;
@@ -73,15 +74,15 @@ export function KanbanView({ board, onUpdateCell, onItemClick }: KanbanViewProps
     <div className="h-full px-6 py-4 overflow-x-auto">
       {statusColumns.length > 1 && (
         <div className="mb-3">
-          <select
-            value={statusColumn.id}
-            onChange={(e) => setStatusColumnId(e.target.value)}
+          <NativeSelect
+ value={statusColumn.id}
+ onChange={(e) => setStatusColumnId(e.target.value)}
             className="bg-white border border-gray-200 rounded-md px-2.5 py-1.5 text-xs text-gray-700"
           >
             {statusColumns.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       )}
       <div className="flex gap-4 items-start min-h-[60vh]">

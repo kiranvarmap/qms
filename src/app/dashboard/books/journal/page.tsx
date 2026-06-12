@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { BookText, Plus, X, ScrollText } from "lucide-react";
+import { Note as BookText, Add as Plus, CloseSmall as X, Doc as ScrollText } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Account { id: string; code: string; name: string }
@@ -62,9 +63,9 @@ export default function JournalPage() {
         </div>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -93,7 +94,7 @@ export default function JournalPage() {
             <div className="space-y-2 mb-2">
               {lines.map((l, i) => (
                 <div key={i} className="flex gap-2">
-                  <select value={l.accountId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, accountId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Account…</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}</select>
+                  <NativeSelect value={l.accountId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, accountId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Account…</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.code} — {a.name}</option>)}</NativeSelect>
                   <input type="number" value={l.debit} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, debit: e.target.value } : x))} placeholder="Debit" className="w-24 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
                   <input type="number" value={l.credit} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, credit: e.target.value } : x))} placeholder="Credit" className="w-24 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
                 </div>

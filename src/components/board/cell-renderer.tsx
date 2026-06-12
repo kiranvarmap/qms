@@ -1,8 +1,10 @@
 "use client";
 
+import { DateInput } from "@/components/ui";
+import { DatePicker, DialogContentContainer } from "@vibe/core";
 import { useState, useRef } from "react";
 import type { ColumnDef, CellValue, BoardMember, LabelConfig } from "@/lib/types";
-import { Check, Star, ExternalLink, Upload, FileText, Trash2 } from "lucide-react";
+import { Check, Favorite as Star, ExternalPage as ExternalLink, Upload, Doc as FileText, Delete as Trash2 } from "@vibe/icons";
 
 interface CellRendererProps {
   column: ColumnDef;
@@ -322,31 +324,15 @@ function DateCell({
   value: string | null | undefined;
   onChange: (v: string | null) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const dateStr = value ? new Date(value).toISOString().split("T")[0] : "";
-
-  const openPicker = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    // showPicker() opens the native calendar reliably; fall back to focus.
-    if (typeof el.showPicker === "function") {
-      try {
-        el.showPicker();
-        return;
-      } catch {
-        /* showPicker can throw if not user-activated — fall through to focus */
-      }
-    }
-    el.focus();
-    el.click();
-  };
 
   return (
     <div className="relative">
       <button
         type="button"
         className="w-full text-xs text-gray-700 px-2 py-1 rounded hover:bg-gray-100 text-center min-h-[28px]"
-        onClick={openPicker}
+        onClick={() => setOpen((o) => !o)}
       >
         {dateStr
           ? new Date(dateStr).toLocaleDateString("en-US", {
@@ -355,16 +341,26 @@ function DateCell({
             })
           : <span className="text-gray-700">—</span>}
       </button>
-      {/* Visually hidden (not overlaying the button, so clicks reach it), but
-          still in the DOM so showPicker() works. */}
-      <input
-        ref={inputRef}
-        type="date"
-        className="sr-only"
-        tabIndex={-1}
-        value={dateStr}
-        onChange={(e) => onChange(e.target.value || null)}
-      />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-[calc(100%+4px)] z-50">
+            <DialogContentContainer>
+              <DatePicker
+                date={dateStr ? new Date(dateStr) : undefined}
+                onDateChange={(date) => {
+                  if (!date) { onChange(null); setOpen(false); return; }
+                  const y = date.getFullYear();
+                  const m = String(date.getMonth() + 1).padStart(2, "0");
+                  const d = String(date.getDate()).padStart(2, "0");
+                  onChange(`${y}-${m}-${d}`);
+                  setOpen(false);
+                }}
+              />
+            </DialogContentContainer>
+          </div>
+        </>
+      )}
     </div>
   );
 }

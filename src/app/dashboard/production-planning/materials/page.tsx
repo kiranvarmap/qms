@@ -1,7 +1,8 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
-import { Boxes } from "lucide-react";
+import { Item as Boxes } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Req { componentProductId: string | null; description: string; unit: string; required: number; available: number; shortage: number }
@@ -33,10 +34,10 @@ export default function MaterialRequirementsPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6"><Boxes className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Material Requirements</h1></div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <p className="mb-4 text-sm text-gray-500">Outstanding component demand across all open work orders, against current available stock.</p>
 

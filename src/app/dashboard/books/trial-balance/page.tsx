@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, ScrollText } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Doc as ScrollText } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Row { accountId: string; code: string; name: string; type: string; debit: number; credit: number; balanceMinor: number; }
@@ -37,9 +38,9 @@ export default function TrialBalancePage() {
     <div className="p-8 max-w-4xl mx-auto">
       <Link href="/dashboard/books/journal" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"><ArrowLeft className="h-4 w-4" /> Journal</Link>
       <div className="flex items-center gap-3 mb-6"><ScrollText className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Trial Balance</h1></div>
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">

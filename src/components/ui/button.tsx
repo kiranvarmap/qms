@@ -1,11 +1,15 @@
+"use client";
+
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Button as VibeButton } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
-// Vibe-styled button: 4px radius, Figtree medium weight, Vibe semantic colors.
+/* Vibe-styled classes, used for the `asChild` path (links styled as buttons)
+   so they match the real @vibe/core Button rendered otherwise. */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-[var(--border-radius-small)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--border-radius-small)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40",
   {
     variants: {
       variant: {
@@ -39,17 +43,92 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
 }
 
+const vibeKind: Record<string, "primary" | "secondary" | "tertiary"> = {
+  default: "primary",
+  destructive: "primary",
+  outline: "secondary",
+  secondary: "secondary",
+  ghost: "tertiary",
+  link: "tertiary",
+};
+
+const vibeSize: Record<string, "xs" | "small" | "medium"> = {
+  default: "small",
+  sm: "xs",
+  lg: "medium",
+  icon: "small",
+};
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      loading,
+      type,
+      disabled,
+      onClick,
+      onFocus,
+      onBlur,
+      name,
+      id,
+      style,
+      children,
+      ...rest
+    },
+    ref
+  ) => {
+    if (asChild) {
+      return (
+        <Slot
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...rest}
+        >
+          {children}
+        </Slot>
+      );
+    }
+
+    const v = variant ?? "default";
+    const s = size ?? "default";
+    const ariaProps = Object.fromEntries(
+      Object.entries(rest).filter(
+        ([key]) => key.startsWith("aria-") || key.startsWith("data-")
+      )
+    );
+
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+      <VibeButton
         ref={ref}
-        {...props}
-      />
+        kind={vibeKind[v]}
+        color={v === "destructive" ? "negative" : "primary"}
+        size={vibeSize[s]}
+        type={(type as "button" | "submit" | "reset") ?? "button"}
+        disabled={disabled}
+        loading={loading}
+        onClick={
+          onClick as ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined
+        }
+        onFocus={onFocus}
+        onBlur={onBlur}
+        name={name}
+        id={id}
+        style={style}
+        className={cn(
+          v === "link" && "underline-offset-4 hover:underline",
+          s === "icon" && "!px-1 aspect-square",
+          className
+        )}
+        {...ariaProps}
+      >
+        {children}
+      </VibeButton>
     );
   }
 );

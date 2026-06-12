@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Trash2,
-  MoreHorizontal,
-  Settings2,
-  Maximize2,
-} from "lucide-react";
+import { NavigationChevronDown as ChevronDown, NavigationChevronRight as ChevronRight, Add as Plus, Delete as Trash2, MoreActions as MoreHorizontal, Settings as Settings2, Fullscreen as Maximize2 } from "@vibe/icons";
 import type {
   GroupDef,
   ColumnDef,

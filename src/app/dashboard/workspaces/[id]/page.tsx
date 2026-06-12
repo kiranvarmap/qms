@@ -1,4 +1,5 @@
 "use client";
+import { useConfirm } from "@/components/ui";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -13,14 +14,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Plus,
-  Loader2,
-  ArrowLeft,
-  Table2,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Add as Plus, MoveArrowLeft as ArrowLeft, Table as Table2, Delete as Trash2, CloseSmall as X } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 
 interface Board {
   id: string;
@@ -48,6 +43,7 @@ export default function WorkspaceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const workspaceId = params.id as string;
+  const confirmAction = useConfirm();
 
   const [workspace, setWorkspace] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,7 +92,7 @@ export default function WorkspaceDetailPage() {
   };
 
   const handleDeleteBoard = async (boardId: string) => {
-    if (!confirm("Delete this board and all its data?")) return;
+    if (!(await confirmAction("Delete this board and all its data?"))) return;
     await fetch(`/api/boards/${boardId}`, { method: "DELETE" });
     await fetchWorkspace();
   };
@@ -128,7 +124,7 @@ export default function WorkspaceDetailPage() {
             {workspace.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{workspace.name}</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{workspace.name}</h1>
             {workspace.description && (
               <p className="text-sm text-gray-500">{workspace.description}</p>
             )}

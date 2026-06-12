@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bell, Check } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Notifications as Bell, Check } from "@vibe/icons";
 
 // The notifiable events (mirrors the runNotifications catalogue + targeted
 // pings). '*' would be a global default; we keep explicit rows per event.

@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Check, BookOpen, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Check, LearnMore as BookOpen, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Lesson { id: string; title: string; contentType: string; contentText: string | null; contentUrl: string | null }
 interface Course { id: string; workspaceId: string; title: string; description: string | null; category: string | null; isPublished: boolean; lessons: Lesson[] }
@@ -97,7 +98,7 @@ export default function CourseDetailPage() {
         <div>
           <h2 className="text-sm font-semibold text-gray-700 mb-2">Enrollments</h2>
           <div className="flex gap-2 mb-3">
-            <select value={enrollEmp} onChange={(e) => setEnrollEmp(e.target.value)} className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-gray-900"><option value="">Select employee…</option>{employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select>
+            <NativeSelect value={enrollEmp} onChange={(e) => setEnrollEmp(e.target.value)} className="flex-1 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm text-gray-900"><option value="">Select employee…</option>{employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</NativeSelect>
             <button onClick={enroll} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md inline-flex items-center gap-1"><Plus className="h-4 w-4" /> Enroll</button>
           </div>
           <div className="space-y-1">
@@ -134,7 +135,7 @@ export default function CourseDetailPage() {
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Title</span><input value={lessonForm.title} onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               <label className="block"><span className="text-xs text-gray-500">Type</span>
-                <select value={lessonForm.contentType} onChange={(e) => setLessonForm({ ...lessonForm, contentType: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="text">Text</option><option value="video">Video URL</option><option value="file">File URL</option></select>
+                <NativeSelect value={lessonForm.contentType} onChange={(e) => setLessonForm({ ...lessonForm, contentType: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="text">Text</option><option value="video">Video URL</option><option value="file">File URL</option></NativeSelect>
               </label>
               {lessonForm.contentType === "text"
                 ? <label className="block"><span className="text-xs text-gray-500">Content</span><textarea value={lessonForm.contentText} onChange={(e) => setLessonForm({ ...lessonForm, contentText: e.target.value })} rows={3} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>

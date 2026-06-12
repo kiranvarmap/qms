@@ -1,14 +1,11 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowLeft, Clock, LogIn, LogOut, Calendar,
-  Briefcase, Hammer, CheckSquare, TrendingUp, AlertCircle,
-  Wrench, Plus, Trash2
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Time as Clock, Enter as LogIn, LogOut, Calendar, Work as Briefcase, Work as Hammer, Checkbox as CheckSquare, Graph as TrendingUp, Alert as AlertCircle, Settings as Wrench, Add as Plus, Delete as Trash2 } from "@vibe/icons";
 import type { Employee, TimeLog } from "@/lib/types";
 
 interface EmployeeWithLogs extends Employee {
@@ -50,6 +47,7 @@ export default function EmployeeDetailPage() {
   const [skillCatalog, setSkillCatalog] = useState<{ id: string; name: string }[]>([]);
   const [empSkills, setEmpSkills] = useState<{ skillId: string; level: string }[]>([]);
   const [savingSkills, setSavingSkills] = useState(false);
+  const [skillError, setSkillError] = useState("");
   const [addSkillId, setAddSkillId] = useState("");
   const [addSkillLevel, setAddSkillLevel] = useState("qualified");
   // Effective workspace for skills: the employee's own, else the user's first
@@ -97,16 +95,36 @@ export default function EmployeeDetailPage() {
   const skillName = (sid: string) => skillCatalog.find((s) => s.id === sid)?.name ?? "skill";
 
   // Replace-all save: the PUT endpoint swaps the employee's full skill set.
+  // State is only updated from the server's confirmed result — a rejected
+  // save (e.g. missing module permission) must not look like a saved skill,
+  // because production-planning feasibility counts only persisted rows.
   const saveSkills = async (next: { skillId: string; level: string }[]) => {
     if (!workspaceId) return;
     setSavingSkills(true);
-    await fetch(`/api/employees/${id}/skills`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workspaceId, skills: next }),
-    });
-    setEmpSkills(next);
-    setSavingSkills(false);
+    setSkillError("");
+    try {
+      const res = await fetch(`/api/employees/${id}/skills`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId, skills: next }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        setSkillError(
+          e.error === "Forbidden"
+            ? "You don't have inventory/production access in this workspace, so skills can't be saved."
+            : e.error || `Failed to save skills (HTTP ${res.status}).`
+        );
+        return;
+      }
+      const saved = await res.json().catch(() => null);
+      const rows = saved?.data ?? next;
+      setEmpSkills(rows.map((x: { skillId: string; level: string }) => ({ skillId: x.skillId, level: x.level })));
+    } catch {
+      setSkillError("Network error — skills were not saved.");
+    } finally {
+      setSavingSkills(false);
+    }
   };
   const addSkill = () => {
     if (!addSkillId || empSkills.some((s) => s.skillId === addSkillId)) return;
@@ -162,7 +180,7 @@ export default function EmployeeDetailPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900">{emp.name}</h1>
+              <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{emp.name}</h1>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[emp.status]}`}>
                 {emp.status === "on_leave" ? "On Leave" : emp.status.charAt(0).toUpperCase() + emp.status.slice(1)}
               </span>
@@ -293,6 +311,12 @@ export default function EmployeeDetailPage() {
           <h3 className="text-gray-900 font-semibold mb-1 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-600" /> Production Skills</h3>
           <p className="text-gray-500 text-sm mb-4">Skills this employee holds. Production planning counts how many people have each skill when checking whether a stage&apos;s required crew is available.</p>
 
+          {skillError && (
+            <div className="mb-4 flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" /> {skillError}
+            </div>
+          )}
+
           {!workspaceId ? (
             <p className="text-sm text-amber-600">This employee isn&apos;t linked to a workspace, so skills can&apos;t be assigned.</p>
           ) : skillCatalog.length === 0 ? (
@@ -318,18 +342,18 @@ export default function EmployeeDetailPage() {
               <div className="flex items-end gap-2 border-t border-gray-100 pt-4">
                 <label className="flex-1">
                   <span className="text-xs text-gray-500">Add skill</span>
-                  <select value={addSkillId} onChange={(e) => setAddSkillId(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={addSkillId} onChange={(e) => setAddSkillId(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="">Select…</option>
                     {skillCatalog.filter((c) => !empSkills.some((s) => s.skillId === c.id)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                  </NativeSelect>
                 </label>
                 <label className="w-36">
                   <span className="text-xs text-gray-500">Level</span>
-                  <select value={addSkillLevel} onChange={(e) => setAddSkillLevel(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={addSkillLevel} onChange={(e) => setAddSkillLevel(e.target.value)} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="trainee">Trainee</option>
                     <option value="qualified">Qualified</option>
                     <option value="expert">Expert</option>
-                  </select>
+                  </NativeSelect>
                 </label>
                 <button onClick={addSkill} disabled={!addSkillId || savingSkills} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="w-4 h-4" /> Add</button>
               </div>

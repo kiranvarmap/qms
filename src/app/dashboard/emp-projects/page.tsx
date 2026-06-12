@@ -1,7 +1,8 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
-import { FolderKanban, Plus, ChevronDown, ChevronRight, Pencil, Trash2, X, Check, AlertCircle, ClipboardList } from "lucide-react";
+import { Folder as FolderKanban, Add as Plus, NavigationChevronDown as ChevronDown, NavigationChevronRight as ChevronRight, Edit as Pencil, Delete as Trash2, CloseSmall as X, Check, Alert as AlertCircle, CheckList as ClipboardList } from "@vibe/icons";
 import type { EmpProject, EmpTask, Workshop } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -190,7 +191,7 @@ export default function EmpProjectsPage() {
         <div className="flex items-center gap-3">
           <FolderKanban className="w-7 h-7 text-purple-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Projects & Tasks</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Projects & Tasks</h1>
             <p className="text-gray-600 text-sm">{projects.length} projects for employee time tracking</p>
           </div>
         </div>
@@ -320,26 +321,26 @@ export default function EmpProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Workshop</label>
-                  <select value={projectForm.workshopId} onChange={(e) => setProjectForm({ ...projectForm, workshopId: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <NativeSelect value={projectForm.workshopId} onChange={(e) => setProjectForm({ ...projectForm, workshopId: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="">— None —</option>
                     {workshops.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
+                  </NativeSelect>
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Status</label>
-                  <select value={projectForm.status} onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <NativeSelect value={projectForm.status} onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <option value="active">Active</option>
                     <option value="completed">Completed</option>
                     <option value="on_hold">On Hold</option>
-                  </select>
+                  </NativeSelect>
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Start Date</label>
-                  <input type="date" value={projectForm.startDate} onChange={(e) => setProjectForm({ ...projectForm, startDate: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <DateInput value={projectForm.startDate} onChange={(e) => setProjectForm({ ...projectForm, startDate: e.target.value })} className="w-full" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">End Date</label>
-                  <input type="date" value={projectForm.endDate} onChange={(e) => setProjectForm({ ...projectForm, endDate: e.target.value })} className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <DateInput value={projectForm.endDate} onChange={(e) => setProjectForm({ ...projectForm, endDate: e.target.value })} className="w-full" />
                 </div>
               </div>
             </div>

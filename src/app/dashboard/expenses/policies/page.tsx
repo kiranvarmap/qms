@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Check } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Security as ShieldCheck, Check } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Category { id: string; name: string; maxAmountMinor: number; receiptRequiredAboveMinor: number; }
@@ -49,9 +50,9 @@ export default function ExpensePoliciesPage() {
       <div className="flex items-center gap-3 mb-2"><ShieldCheck className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Expense Policies</h1></div>
       <p className="text-sm text-gray-500 mb-6">Per-category spend limit and receipt-required threshold. Violations are flagged when an expense is submitted. (0 = no rule.)</p>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">

@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Tags, Plus } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Tags, Add as Plus } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Product { id: string; name: string }
@@ -53,9 +54,9 @@ export default function PriceListsPage() {
     <div className="p-8 max-w-5xl mx-auto">
       <Link href="/dashboard/sales-orders" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 mb-4"><ArrowLeft className="h-4 w-4" /> Sales Orders</Link>
       <div className="flex items-center gap-3 mb-6"><Tags className="h-6 w-6 text-blue-600" /><h1 className="text-xl font-semibold text-gray-900">Price Lists</h1></div>
-      <select value={workspaceId} onChange={(e) => { setWorkspaceId(e.target.value); setSelected(""); }} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => { setWorkspaceId(e.target.value); setSelected(""); }} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
@@ -78,7 +79,7 @@ export default function PriceListsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <select value={itemForm.productId} onChange={(e) => setItemForm({ ...itemForm, productId: e.target.value })} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Product…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                <NativeSelect value={itemForm.productId} onChange={(e) => setItemForm({ ...itemForm, productId: e.target.value })} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Product…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</NativeSelect>
                 <input type="number" value={itemForm.unitPrice} onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })} placeholder="Price" className="w-24 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
                 <button onClick={addItem} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md inline-flex items-center gap-1"><Plus className="h-4 w-4" /></button>
               </div>

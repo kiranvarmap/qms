@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Hammer, Plus, Pencil, Trash2, X, Check, MapPin, AlertCircle } from "lucide-react";
+import { Work as Hammer, Add as Plus, Edit as Pencil, Delete as Trash2, CloseSmall as X, Check, Location as MapPin, Alert as AlertCircle } from "@vibe/icons";
 import type { Workshop } from "@/lib/types";
 
 const emptyForm = { name: "", location: "", description: "" };
@@ -87,7 +87,7 @@ export default function WorkshopsPage() {
         <div className="flex items-center gap-3">
           <Hammer className="w-7 h-7 text-orange-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Workshops</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Workshops</h1>
             <p className="text-gray-600 text-sm">Manage work areas and stations</p>
           </div>
         </div>

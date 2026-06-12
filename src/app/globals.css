@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/vibe/vibe-tokens.css";
+@import "@vibe/core/tokens"; /* real monday.com Vibe tokens (override the local mirror) */
 
 /*
  * Vibe-flavoured Tailwind theme.
@@ -171,6 +172,30 @@
   --color-teal-800: #2c5d63;
   --color-teal-900: #234a4f;
   --color-teal-950: #142d30;
+  /* cyan aliases the teal/aquamarine ramp */
+  --color-cyan-50: #effbfa;
+  --color-cyan-100: #d3f2f0;
+  --color-cyan-200: #a6e5e2;
+  --color-cyan-300: #79d8d4;
+  --color-cyan-400: #4eccc6;
+  --color-cyan-500: #38b3ad;
+  --color-cyan-600: #469e9b;
+  --color-cyan-700: #357580;
+  --color-cyan-800: #2c5d63;
+  --color-cyan-900: #234a4f;
+  --color-cyan-950: #142d30;
+  /* pink → Vibe lipstick (#ff5ac4) / dark-pink (#ff158a) */
+  --color-pink-50: #ffeef9;
+  --color-pink-100: #ffddf2;
+  --color-pink-200: #ffbbe6;
+  --color-pink-300: #ff99d9;
+  --color-pink-400: #ff7ace;
+  --color-pink-500: #ff5ac4;
+  --color-pink-600: #ff158a;
+  --color-pink-700: #d40f73;
+  --color-pink-800: #a80c5b;
+  --color-pink-900: #7c0943;
+  --color-pink-950: #520630;
 
   /* Yellow → Vibe warning (#ffcb00) */
   --color-yellow-50: #fffbeb;
@@ -264,6 +289,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  /* Vibe components read var(--font-family); point it at next/font Figtree
+     (declared on <body>, where --font-figtree is defined). */
+  --font-family: var(--font-figtree, Figtree), Figtree, Roboto,
+    "Noto Sans Hebrew", "Noto Kufi Arabic", "Noto Sans JP", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bookmark, Plus, Trash2, Users } from "lucide-react";
+import { Bookmark, Add as Plus, Delete as Trash2, Group as Users } from "@vibe/icons";
 import { cn } from "@/lib/utils";
 
 export interface SavedViewConfig {

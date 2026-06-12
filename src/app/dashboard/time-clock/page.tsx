@@ -1,7 +1,8 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useRef, useState } from "react";
-import { Camera, Check, X, Clock, LogIn, LogOut, AlertCircle } from "lucide-react";
+import { Image as Camera, Check, CloseSmall as X, Time as Clock, Enter as LogIn, LogOut, Alert as AlertCircle } from "@vibe/icons";
 import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -390,7 +391,7 @@ export default function TimeClockPage() {
             <div className="w-16 h-16 rounded-2xl bg-blue-600/20 flex items-center justify-center">
               <Clock className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Time Clock</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Time Clock</h1>
             <p className="text-gray-600 text-sm text-center">Enter your Employee ID / Badge Number to check in or out</p>
             <div className="w-full flex flex-col gap-3">
               <input
@@ -474,40 +475,40 @@ export default function TimeClockPage() {
             <div className="flex flex-col gap-3">
               <div>
                 <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Workshop / Work Area</label>
-                <select
-                  value={selectedWorkshop}
-                  onChange={(e) => { setSelectedWorkshop(e.target.value); setSelectedProject(""); setSelectedTask(""); }}
+                <NativeSelect
+ value={selectedWorkshop}
+ onChange={(e) => { setSelectedWorkshop(e.target.value); setSelectedProject(""); setSelectedTask(""); }}
                   className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">— Select Workshop —</option>
                   {workshops.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
 
               <div>
                 <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Project</label>
-                <select
-                  value={selectedProject}
-                  onChange={(e) => { setSelectedProject(e.target.value); setSelectedTask(""); }}
+                <NativeSelect
+ value={selectedProject}
+ onChange={(e) => { setSelectedProject(e.target.value); setSelectedTask(""); }}
                   disabled={!selectedWorkshop && projects.length === 0}
                   className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <option value="">— Select Project —</option>
                   {getProjectsForWorkshop().map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
 
               <div>
                 <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Task</label>
-                <select
-                  value={selectedTask}
-                  onChange={(e) => setSelectedTask(e.target.value)}
+                <NativeSelect
+ value={selectedTask}
+ onChange={(e) => setSelectedTask(e.target.value)}
                   disabled={!selectedProject}
                   className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <option value="">— Select Task —</option>
                   {tasks.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                </NativeSelect>
               </div>
 
               {/* ── Link to Work: Workspace → Board → Task (optional) ── */}
@@ -518,38 +519,38 @@ export default function TimeClockPage() {
                 <div className="flex flex-col gap-3">
                   <div>
                     <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Workspace</label>
-                    <select
-                      value={selectedWorkspace}
-                      onChange={(e) => { setSelectedWorkspace(e.target.value); setSelectedBoard(""); setSelectedBoardItem(""); }}
+                    <NativeSelect
+ value={selectedWorkspace}
+ onChange={(e) => { setSelectedWorkspace(e.target.value); setSelectedBoard(""); setSelectedBoardItem(""); }}
                       className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="">— Select Workspace —</option>
                       {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Board</label>
-                    <select
-                      value={selectedBoard}
-                      onChange={(e) => { setSelectedBoard(e.target.value); setSelectedBoardItem(""); }}
+                    <NativeSelect
+ value={selectedBoard}
+ onChange={(e) => { setSelectedBoard(e.target.value); setSelectedBoardItem(""); }}
                       disabled={!selectedWorkspace}
                       className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                     >
                       <option value="">— Select Board —</option>
                       {wsBoards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div>
                     <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Task</label>
-                    <select
-                      value={selectedBoardItem}
-                      onChange={(e) => setSelectedBoardItem(e.target.value)}
+                    <NativeSelect
+ value={selectedBoardItem}
+ onChange={(e) => setSelectedBoardItem(e.target.value)}
                       disabled={!selectedBoard}
                       className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
                     >
                       <option value="">— Select Task —</option>
                       {boardItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                    </select>
+                    </NativeSelect>
                   </div>
                 </div>
               </div>

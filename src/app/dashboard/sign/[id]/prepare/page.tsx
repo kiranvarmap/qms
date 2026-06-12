@@ -1,23 +1,11 @@
 "use client";
 
+import { NativeSelect, useToast } from "@/components/ui";
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  Send,
-  Plus,
-  Trash2,
-  UserPlus,
-  PenLine,
-  Type,
-  Calendar,
-  CheckSquare,
-  Fingerprint,
-  AlertCircle,
-  ChevronRight,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Send, Add as Plus, Delete as Trash2, Invite as UserPlus, Signature as PenLine, Text as Type, Calendar, Checkbox as CheckSquare, Locked as Fingerprint, Alert as AlertCircle, NavigationChevronRight as ChevronRight } from "@vibe/icons";
 
 const PdfPrepareViewer = dynamic(
   () => import("@/components/sign/PdfPrepareViewer"),
@@ -71,6 +59,7 @@ export default function PreparePage() {
   const params = useParams();
   const router = useRouter();
   const docId = params.id as string;
+  const { toast } = useToast();
 
   const [doc, setDoc] = useState<SignDocInfo | null>(null);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -131,7 +120,7 @@ export default function PreparePage() {
       }),
     });
 
-    if (!res.ok) { alert("Failed to add recipient"); return; }
+    if (!res.ok) { toast("Failed to add recipient", "warning"); return; }
     const recipient = await res.json();
     setRecipients((prev) => [...prev, recipient]);
     setActiveRecipientId(recipient.id);
@@ -313,14 +302,14 @@ export default function PreparePage() {
                   className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   required
                 />
-                <select
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value)}
+                <NativeSelect
+ value={newRole}
+ onChange={(e) => setNewRole(e.target.value)}
                   className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                 >
                   <option value="signer">Signer</option>
                   <option value="viewer">Viewer (CC only)</option>
-                </select>
+                </NativeSelect>
                 <div className="flex gap-2">
                   <button
                     type="button"

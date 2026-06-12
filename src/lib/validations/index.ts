@@ -1075,6 +1075,10 @@ export const createProductionSkillSchema = z.object({
   name:        nameSchema,
   description: z.string().max(1000).trim().optional(),
 });
+export const updateProductionSkillSchema = z.object({
+  name:        nameSchema.optional(),
+  description: z.string().max(1000).trim().nullable().optional(),
+});
 
 export const employeeSkillSchema = z.object({
   skillId:        uuidSchema,
@@ -1141,6 +1145,15 @@ export const processStageSchema = z.object({
   skills:               z.array(stageSkillSchema).optional(),
 });
 export const updateProcessStageSchema = processStageSchema.partial();
+
+export const simulateNewOrderSchema = z.object({
+  workspaceId:       uuidSchema,
+  productId:         uuidSchema,
+  qtyPlanned:        z.coerce.number().positive().default(1),
+  processTemplateId: uuidSchema.optional(),
+  dueDate:           z.string().datetime({ offset: true }).optional(),
+  requestedStartDate: z.string().datetime({ offset: true }).optional(),
+});
 
 export const simulateSchema = z.object({
   extraHeadcount:     z.record(z.string(), z.coerce.number()).optional(),

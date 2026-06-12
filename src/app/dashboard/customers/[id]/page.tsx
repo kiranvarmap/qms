@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, FileText, ShoppingCart, Receipt, Pencil, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Group as Users, Doc as FileText, Item as ShoppingCart, Doc as Receipt, Edit as Pencil, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface DocRow { id: string; docNumber: string; status: string; totalMinor: number; createdAt: string; amountPaidMinor?: number; dueDate?: string | null }
 interface Contact { id: string; firstName: string | null; lastName: string | null; email: string | null; workPhone: string | null; isPrimary: boolean }
@@ -131,10 +132,10 @@ export default function CustomerDetailPage() {
                 <label className="block"><span className="text-xs text-gray-500">Phone</span><input value={edit.workPhone} onChange={(e) => setEdit({ ...edit, workPhone: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               </div>
               <label className="block"><span className="text-xs text-gray-500">Status</span>
-                <select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
-                </select>
+                </NativeSelect>
               </label>
               <label className="block"><span className="text-xs text-gray-500">Notes</span><textarea value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} rows={2} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
             </div>

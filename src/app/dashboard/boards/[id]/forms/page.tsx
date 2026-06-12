@@ -1,15 +1,11 @@
 "use client";
 
+import { NativeSelect, DateInput, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft, Plus, Loader2, ExternalLink, Trash2, Eye, EyeOff,
-  Copy, Check, FileText, Type, Hash, Calendar,
-  ToggleLeft, Flag, Circle, AlignLeft, Link2, Settings,
-  Layers, Share2, MousePointer, ChevronDown, ChevronRight,
-  X, GripVertical,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, ExternalPage as ExternalLink, Delete as Trash2, Show as Eye, Hide as EyeOff, Duplicate as Copy, Check, Doc as FileText, Text as Type, Numbers as Hash, Calendar, Switch as ToggleLeft, Status as Flag, Radio as Circle, Description as AlignLeft, Link as Link2, Settings, Subitems as Layers, Share as Share2, Wand as MousePointer, NavigationChevronDown as ChevronDown, NavigationChevronRight as ChevronRight, CloseSmall as X, Drag as GripVertical } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -87,17 +83,17 @@ function FieldPreview({ field, col, isSelected, onClick }: {
 
       {/* Render the appropriate input widget */}
       {(type === "status" || type === "priority" || type === "dropdown") && labels.length > 0 ? (
-        <select className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 pointer-events-none text-gray-500">
+        <NativeSelect className="w-full pointer-events-none">
           <option value="">Select an option…</option>
           {labels.map(l => <option key={l.id} value={l.id}>{l.text}</option>)}
-        </select>
+        </NativeSelect>
       ) : type === "checkbox" ? (
         <div className="flex items-center gap-2 pointer-events-none">
           <div className="w-4 h-4 rounded border-2 border-gray-300 bg-gray-50 flex-shrink-0" />
           <span className="text-sm text-gray-600">{field.label}</span>
         </div>
       ) : type === "date" ? (
-        <input type="date" disabled className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
+        <DateInput disabled className="w-full" />
       ) : type === "number" ? (
         <input type="number" disabled placeholder="0" className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-600" />
       ) : type === "link" ? (
@@ -307,6 +303,7 @@ type Tab = typeof TABS[number];
 const inputCls = "w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition";
 
 export default function FormsPage() {
+  const confirmAction = useConfirm();
   const params = useParams();
   const boardId = params.id as string;
 
@@ -401,7 +398,7 @@ export default function FormsPage() {
   };
 
   const deleteForm = async (formId: string) => {
-    if (!confirm("Delete this form?")) return;
+    if (!(await confirmAction("Delete this form?"))) return;
     await fetch(`/api/forms/${formId}`, { method: "DELETE" });
     setForms(p => p.filter(f => f.id !== formId));
     if (selectedForm?.id === formId) { setSelectedForm(null); setFields([]); }
@@ -462,7 +459,7 @@ export default function FormsPage() {
   const addedColumnIds = new Set(fields.map(f => f.columnId).filter(Boolean) as string[]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#f4f5f7]">
+    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
       {/* ── Top bar ─────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <Link href={`/dashboard/boards/${boardId}`} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
@@ -568,7 +565,7 @@ export default function FormsPage() {
             {activeTab === "Build" && (
               <>
                 {/* Content tree panel */}
-                <div className="w-60 border-r border-gray-200 bg-[#fafafa] flex-shrink-0 flex flex-col">
+                <div className="w-60 border-r border-gray-200 bg-gray-50 flex-shrink-0 flex flex-col">
                   <div className="px-3 py-2.5 border-b border-gray-100">
                     <button className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 w-full">
                       <ChevronDown className="h-3 w-3" />Content
@@ -627,7 +624,7 @@ export default function FormsPage() {
                 </div>
 
                 {/* Canvas */}
-                <div className="flex-1 overflow-y-auto bg-[#f4f5f7]" onClick={() => setSelectedFieldId(null)}>
+                <div className="flex-1 overflow-y-auto bg-gray-50" onClick={() => setSelectedFieldId(null)}>
                   <div className="max-w-2xl mx-auto px-6 py-8">
                     {/* Form header */}
                     <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5 mb-4 shadow-sm">

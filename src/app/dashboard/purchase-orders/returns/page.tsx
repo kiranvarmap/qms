@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, useToast } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Undo2, Plus, X } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Undo as Undo2, Add as Plus, CloseSmall as X } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Vendor { id: string; name: string }
@@ -13,6 +14,7 @@ interface Ret { id: string; docNumber: string; status: string; vendorId: string 
 const statusBadge: Record<string, string> = { draft: "bg-gray-100 text-gray-700", posted: "bg-green-100 text-green-700", cancelled: "bg-red-100 text-red-700" };
 
 export default function ReturnsPage() {
+  const { toast } = useToast();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -54,7 +56,7 @@ export default function ReturnsPage() {
     await fetch("/api/purchase-returns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId, vendorId: form.vendorId || undefined, warehouseId: form.warehouseId || undefined, reason: form.reason.trim() || undefined, lines: payloadLines }) });
     setSaving(false); setShow(false); setForm({ vendorId: "", warehouseId: "", reason: "" }); setLines([{ productId: "", quantity: "1", unitCost: "" }]); load();
   };
-  const post = async (id: string) => { const res = await fetch(`/api/purchase-returns/${id}/post`, { method: "POST" }); if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || "Failed"); } load(); };
+  const post = async (id: string) => { const res = await fetch(`/api/purchase-returns/${id}/post`, { method: "POST" }); if (!res.ok) { const e = await res.json().catch(() => ({})); toast(e.error || "Failed", "warning"); } load(); };
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -64,9 +66,9 @@ export default function ReturnsPage() {
         <button onClick={() => setShow(true)} disabled={!workspaceId} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Return</button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -93,13 +95,13 @@ export default function ReturnsPage() {
             <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-semibold text-gray-900">New Return</h2><button onClick={() => setShow(false)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <label className="block"><span className="text-xs text-gray-500">Vendor</span><select value={form.vendorId} onChange={(e) => setForm({ ...form, vendorId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</select></label>
-                <label className="block"><span className="text-xs text-gray-500">Warehouse</span><select value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label>
+                <label className="block"><span className="text-xs text-gray-500">Vendor</span><NativeSelect value={form.vendorId} onChange={(e) => setForm({ ...form, vendorId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}</NativeSelect></label>
+                <label className="block"><span className="text-xs text-gray-500">Warehouse</span><NativeSelect value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</NativeSelect></label>
               </div>
               <label className="block"><span className="text-xs text-gray-500">Reason</span><input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               {lines.map((l, i) => (
                 <div key={i} className="flex gap-2">
-                  <select value={l.productId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, productId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Product…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                  <NativeSelect value={l.productId} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, productId: e.target.value } : x))} className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Product…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</NativeSelect>
                   <input type="number" value={l.quantity} onChange={(e) => setLines(lines.map((x, j) => j === i ? { ...x, quantity: e.target.value } : x))} placeholder="Qty" className="w-20 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
                 </div>
               ))}

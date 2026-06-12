@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, ChevronRight, ChevronDown } from "lucide-react";
+import { Time as Clock, NavigationChevronRight as ChevronRight, NavigationChevronDown as ChevronDown } from "@vibe/icons";
 
 interface Row {
   id: string;
@@ -81,7 +81,7 @@ export default function WorkTimeReportPage() {
       <div className="flex items-center gap-3 mb-6">
         <Clock className="w-6 h-6 text-blue-600" />
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Work Time</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Work Time</h1>
           <p className="text-sm text-gray-500">Labor rolled up by workspace → board → task</p>
         </div>
       </div>
@@ -90,15 +90,15 @@ export default function WorkTimeReportPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Total Hours</p>
-          <p className="text-2xl font-semibold text-gray-900">{fmt(totalMins)}</p>
+          <p className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{fmt(totalMins)}</p>
         </div>
         <div className="rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Sessions</p>
-          <p className="text-2xl font-semibold text-gray-900">{totalSessions}</p>
+          <p className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{totalSessions}</p>
         </div>
         <div className="rounded-lg border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Workspaces</p>
-          <p className="text-2xl font-semibold text-gray-900">{tree.length}</p>
+          <p className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">{tree.length}</p>
         </div>
       </div>
 

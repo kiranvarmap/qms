@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import Link from "next/link";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Users2, KeyRound, X, AlertCircle } from "lucide-react";
+import { Add as Plus, Group as Users2, Key as KeyRound, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 import ImportExport from "@/components/ImportExport";
 
 interface Workspace { id: string; name: string }
@@ -98,10 +99,10 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">

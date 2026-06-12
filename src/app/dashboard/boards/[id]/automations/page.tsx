@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -22,12 +23,8 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
 }
-import {
-  ArrowLeft, Plus, Loader2, Trash2, Zap, Mail, Bell,
-  MoveRight, ToggleLeft, ToggleRight, ChevronDown, ChevronRight,
-  Calendar, AlignLeft, Hash, Tag, RefreshCw, FileText, Bot,
-  CheckCircle2, Circle, User, Settings,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Delete as Trash2, Bolt as Zap, Email as Mail, Notifications as Bell, MoveArrowRight as MoveRight, Switch as ToggleLeft, Switch as ToggleRight, NavigationChevronDown as ChevronDown, NavigationChevronRight as ChevronRight, Calendar, Description as AlignLeft, Numbers as Hash, Tags as Tag, Retry as RefreshCw, Doc as FileText, Robot as Bot, Completed as CheckCircle2, Radio as Circle, Person as User, Settings } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
 interface Automation {
@@ -66,7 +63,7 @@ function getTrigger(v: string) { return TRIGGER_TYPES.find(t => t.value === v) ?
 function getAction(v: string)  { return ACTION_TYPES.find(a => a.value === v)  ?? ACTION_TYPES[0]; }
 
 const inputCls = "w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition";
-const selectCls = inputCls;
+const selectCls = "w-full";
 const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5";
 
 interface StepProps { auto: Partial<Automation>; columns: Column[]; members: Member[]; onChange: (u: Partial<Automation>) => void; }
@@ -82,9 +79,9 @@ function TriggerStep({ auto, columns, onChange }: StepProps) {
       </div>
       <div>
         <label className={labelCls}>When this happens…</label>
-        <select value={auto.triggerType ?? "item_created"} onChange={e => onChange({ triggerType: e.target.value, triggerConfig: {} })} className={selectCls}>
+        <NativeSelect value={auto.triggerType ?? "item_created"} onChange={e => onChange({ triggerType: e.target.value, triggerConfig: {} })} className={selectCls}>
           {TRIGGER_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
+        </NativeSelect>
       </div>
       {auto.triggerType === "column_changed" && (() => {
         const triggerCol = columns.find(c => c.id === (auto.triggerConfig?.columnId as string));
@@ -94,27 +91,27 @@ function TriggerStep({ auto, columns, onChange }: StepProps) {
           <>
             <div>
               <label className={labelCls}>Which column?</label>
-              <select
-                value={(auto.triggerConfig?.columnId as string) ?? ""}
-                onChange={e => onChange({ triggerConfig: { columnId: e.target.value } })}
+              <NativeSelect
+ value={(auto.triggerConfig?.columnId as string) ?? ""}
+ onChange={e => onChange({ triggerConfig: { columnId: e.target.value } })}
                 className={selectCls}>
                 <option value="">Select column…</option>
                 {columns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              </NativeSelect>
             </div>
             {triggerCol && (
               <div>
                 <label className={labelCls}>Changes to</label>
                 {labels.length > 0 ? (
-                  <select
-                    value={toValue}
-                    onChange={e => onChange({ triggerConfig: { ...auto.triggerConfig, toValue: e.target.value } })}
+                  <NativeSelect
+ value={toValue}
+ onChange={e => onChange({ triggerConfig: { ...auto.triggerConfig, toValue: e.target.value } })}
                     className={selectCls}>
                     <option value="">Any value (all changes)</option>
                     {labels.map(l => (
                       <option key={l.id} value={l.text}>{l.text}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 ) : (
                   <input
                     value={toValue}
@@ -147,10 +144,10 @@ function TriggerStep({ auto, columns, onChange }: StepProps) {
           </div>
           <div>
             <label className={labelCls}>Date column</label>
-            <select value={(auto.triggerConfig?.columnId as string) ?? ""} onChange={e => onChange({ triggerConfig: { ...auto.triggerConfig, columnId: e.target.value } })} className={selectCls}>
+            <NativeSelect value={(auto.triggerConfig?.columnId as string) ?? ""} onChange={e => onChange({ triggerConfig: { ...auto.triggerConfig, columnId: e.target.value } })} className={selectCls}>
               <option value="">Select column</option>
               {columns.filter(c => c.type === "date").map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </NativeSelect>
           </div>
         </div>
       )}
@@ -211,15 +208,15 @@ function FlatFieldChangesEditor({ triggerCol, toValue, columns, fieldChanges, on
                 <div className="flex-1 grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">Set column</label>
-                    <select
-                      value={row.columnId}
-                      onChange={e => updateRow(idx, { columnId: e.target.value, value: "" })}
+                    <NativeSelect
+ value={row.columnId}
+ onChange={e => updateRow(idx, { columnId: e.target.value, value: "" })}
                       className={selectCls}>
                       <option value="">Select column…</option>
                       {columns.map(c => (
                         <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
                   <div>
                     <label className="block text-[10px] font-semibold text-gray-600 uppercase tracking-wide mb-1">To value</label>
@@ -256,12 +253,12 @@ function FieldValueInput({ col, value, onChange }: { col: Column; value: string;
   if ((col.type === "status" || col.type === "priority") && labels.length > 0) {
     return (
       <div className="relative flex-1">
-        <select value={value} onChange={e => onChange(e.target.value)} className={selectCls}>
+        <NativeSelect value={value} onChange={e => onChange(e.target.value)} className={selectCls}>
           <option value="">Select value…</option>
           {labels.map(l => (
             <option key={l.id} value={l.text}>{l.text}</option>
           ))}
-        </select>
+        </NativeSelect>
         {/* Color swatch for selected label */}
         {value && labels.find(l => l.text === value)?.color && (
           <span
@@ -275,11 +272,11 @@ function FieldValueInput({ col, value, onChange }: { col: Column; value: string;
 
   if (col.type === "boolean") {
     return (
-      <select value={value} onChange={e => onChange(e.target.value)} className={selectCls + " flex-1"}>
+      <NativeSelect value={value} onChange={e => onChange(e.target.value)} className={selectCls + " flex-1"}>
         <option value="">Select…</option>
         <option value="true">True ✓</option>
         <option value="false">False ✗</option>
-      </select>
+      </NativeSelect>
     );
   }
 
@@ -292,7 +289,7 @@ function FieldValueInput({ col, value, onChange }: { col: Column; value: string;
 
   if (col.type === "date") {
     return (
-      <select value={value} onChange={e => onChange(e.target.value)} className={selectCls + " flex-1"}>
+      <NativeSelect value={value} onChange={e => onChange(e.target.value)} className={selectCls + " flex-1"}>
         <option value="">Select…</option>
         <option value="today">Today</option>
         <option value="+1">Tomorrow (+1 day)</option>
@@ -302,7 +299,7 @@ function FieldValueInput({ col, value, onChange }: { col: Column; value: string;
         <option value="+30">In 30 days</option>
         <option value="-1">Yesterday (−1 day)</option>
         <option value="-7">7 days ago</option>
-      </select>
+      </NativeSelect>
     );
   }
 
@@ -390,14 +387,14 @@ function ValueRuleRow({ rule, sourceCol, columns, onChange, onDelete }: {
                       <label className="block text-[10px] text-gray-600 font-semibold uppercase tracking-wide mb-1">
                         Set column
                       </label>
-                      <select value={chg.columnId}
-                        onChange={e => updateChange(cIdx, { columnId: e.target.value, value: "" })}
+                      <NativeSelect value={chg.columnId}
+ onChange={e => updateChange(cIdx, { columnId: e.target.value, value: "" })}
                         className={selectCls}>
                         <option value="">Select column…</option>
                         {columns.map(c => (
                           <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </div>
                     <div>
                       <label className="block text-[10px] text-gray-600 font-semibold uppercase tracking-wide mb-1">
@@ -497,12 +494,12 @@ function ValueRulesEditor({ columns, actionConfig, onChange, triggerColumnId }: 
       ) : (
         <div>
           <label className={labelCls}>Watch which column?</label>
-          <select value={sourceColumnId} onChange={e => setSourceColumn(e.target.value)} className={selectCls}>
+          <NativeSelect value={sourceColumnId} onChange={e => setSourceColumn(e.target.value)} className={selectCls}>
             <option value="">Select column…</option>
             {columns.map(c => (
               <option key={c.id} value={c.id}>{c.name} ({c.type})</option>
             ))}
-          </select>
+          </NativeSelect>
           {sourceCol && (
             <p className="text-[11px] text-gray-600 mt-1">
               When <strong>{sourceCol.name}</strong> changes to a specific value, apply the matching field changes below.
@@ -583,18 +580,18 @@ function ActionStep({ auto, columns, members, onChange }: StepProps) {
       </div>
       <div>
         <label className={labelCls}>Then do this…</label>
-        <select value={auto.actionType ?? "notify_user"} onChange={e => onChange({ actionType: e.target.value, actionConfig: {} })} className={selectCls}>
+        <NativeSelect value={auto.actionType ?? "notify_user"} onChange={e => onChange({ actionType: e.target.value, actionConfig: {} })} className={selectCls}>
           {ACTION_TYPES.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
-        </select>
+        </NativeSelect>
       </div>
       {auto.actionType === "notify_user" && (
         <>
           <div>
             <label className={labelCls}>Notify who?</label>
-            <select value={(auto.actionConfig?.userId as string) ?? ""} onChange={e => onChange({ actionConfig: { ...auto.actionConfig, userId: e.target.value } })} className={selectCls}>
+            <NativeSelect value={(auto.actionConfig?.userId as string) ?? ""} onChange={e => onChange({ actionConfig: { ...auto.actionConfig, userId: e.target.value } })} className={selectCls}>
               <option value="">Select person…</option>
               {members.map(m => <option key={m.userId} value={m.userId}>{m.name || m.email}</option>)}
-            </select>
+            </NativeSelect>
           </div>
           <div>
             <label className={labelCls}>Message</label>
@@ -651,10 +648,10 @@ function ActionStep({ auto, columns, members, onChange }: StepProps) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className={labelCls}>Date column</label>
-            <select value={(auto.actionConfig?.columnId as string) ?? ""} onChange={e => onChange({ actionConfig: { ...auto.actionConfig, columnId: e.target.value } })} className={selectCls}>
+            <NativeSelect value={(auto.actionConfig?.columnId as string) ?? ""} onChange={e => onChange({ actionConfig: { ...auto.actionConfig, columnId: e.target.value } })} className={selectCls}>
               <option value="">Select column</option>
               {columns.filter(c => c.type === "date").map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            </NativeSelect>
           </div>
           <div>
             <label className={labelCls}>Days from now</label>
@@ -871,6 +868,7 @@ const RECIPE_EXAMPLES = [
 ];
 
 export default function AutomationsPage() {
+  const confirmAction = useConfirm();
   const params = useParams();
   const boardId = params.id as string;
 
@@ -924,7 +922,7 @@ export default function AutomationsPage() {
   };
 
   const deleteAutomation = async (id: string) => {
-    if (!confirm("Delete this automation?")) return;
+    if (!(await confirmAction("Delete this automation?"))) return;
     await fetch(`/api/automations/${id}`, { method: "DELETE" });
     setAutomations(p => p.filter(a => a.id !== id));
   };
@@ -937,7 +935,7 @@ export default function AutomationsPage() {
   const activeCount = automations.filter(a => a.isActive).length;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#f8f9fc]">
+    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center gap-3">

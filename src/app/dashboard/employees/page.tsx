@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, UserCog, Pencil, Trash2, X, Check, AlertCircle } from "lucide-react";
+import { Add as Plus, Search, Person as UserCog, Edit as Pencil, Delete as Trash2, CloseSmall as X, Check, Alert as AlertCircle } from "@vibe/icons";
 import type { Employee } from "@/lib/types";
 
 const DEPARTMENTS = ["Engineering", "Production", "Quality", "Maintenance", "Logistics", "Administration", "HR", "Finance"];
@@ -123,7 +124,7 @@ export default function EmployeesPage() {
         <div className="flex items-center gap-3">
           <UserCog className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Employees</h1>
             <p className="text-gray-600 text-sm">{employees.length} total · {employees.filter((e) => e.status === "active").length} active</p>
           </div>
         </div>
@@ -146,14 +147,14 @@ export default function EmployeesPage() {
             className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-gray-900 text-sm placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+        <NativeSelect
+ value={statusFilter}
+ onChange={(e) => setStatusFilter(e.target.value)}
           className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="all">All Statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{statusLabels[s]}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
       {/* Table */}
@@ -283,14 +284,14 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Department</label>
-                  <select
-                    value={form.department}
-                    onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  <NativeSelect
+ value={form.department}
+ onChange={(e) => setForm({ ...form, department: e.target.value })}
                     className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">— Select —</option>
                     {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                  </NativeSelect>
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Designation</label>
@@ -303,12 +304,11 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-600 uppercase tracking-wider font-medium mb-1.5 block">Joining Date</label>
-                  <input
-                    type="date"
-                    value={form.joiningDate}
-                    onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
-                    className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
+                  <DateInput
+ value={form.joiningDate}
+ onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
+ className="w-full"
+ />
                 </div>
               </div>
             </div>

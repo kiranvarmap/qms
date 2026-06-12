@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Check, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }
 interface Estimate {

@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { CalendarDays, Plus, X, AlertCircle, Users } from "lucide-react";
+import { Event as CalendarDays, Add as Plus, CloseSmall as X, Alert as AlertCircle, Group as Users } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface LeaveType { id: string; name: string }
@@ -92,17 +93,17 @@ export default function LeavePage() {
         </div>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       {balances.length > 0 && (
         <div className="grid grid-cols-3 gap-3 mb-6">
           {balances.map((b) => (
             <div key={b.id} className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="text-xs text-gray-500">{b.leaveTypeName}</div>
-              <div className="text-2xl font-semibold text-gray-900 mt-1">{b.remainingDays}<span className="text-sm text-gray-500"> / {b.entitledDays} left</span></div>
+              <div className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)] mt-1">{b.remainingDays}<span className="text-sm text-gray-500"> / {b.entitledDays} left</span></div>
             </div>
           ))}
         </div>
@@ -143,11 +144,11 @@ export default function LeavePage() {
             {error && <div className="mb-3 flex items-center gap-2 text-sm text-red-600 bg-red-500/10 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Leave type</span>
-                <select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+                <NativeSelect value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</NativeSelect>
               </label>
               <div className="grid grid-cols-2 gap-3">
-                <label className="block"><span className="text-xs text-gray-500">From</span><input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-                <label className="block"><span className="text-xs text-gray-500">To</span><input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
+                <label className="block"><span className="text-xs text-gray-500">From</span><DateInput value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="mt-1 w-full" /></label>
+                <label className="block"><span className="text-xs text-gray-500">To</span><DateInput value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="mt-1 w-full" /></label>
               </div>
               {form.startDate && form.endDate && <p className="text-xs text-gray-500">{daysBetween(form.startDate, form.endDate)} day(s)</p>}
               <label className="block"><span className="text-xs text-gray-500">Reason</span><textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={2} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>

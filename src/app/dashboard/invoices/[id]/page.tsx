@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, DollarSign, X, AlertCircle, Download } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Send, CreditCard as DollarSign, CloseSmall as X, Alert as AlertCircle, Download } from "@vibe/icons";
 import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 import { AttachmentsSection } from "@/components/shared/attachments-section";
 
@@ -162,12 +163,12 @@ export default function InvoiceDetailPage() {
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Amount</span><input type="number" step="0.01" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
               <label className="block"><span className="text-xs text-gray-500">Method</span>
-                <select value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="bank_transfer">Bank transfer</option>
                   <option value="cash">Cash</option>
                   <option value="cheque">Cheque</option>
                   <option value="other">Other</option>
-                </select>
+                </NativeSelect>
               </label>
               <label className="block"><span className="text-xs text-gray-500">Reference</span><input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} className="mt-1 w-full bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
             </div>

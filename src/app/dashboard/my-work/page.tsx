@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Inbox, CheckCircle2, XCircle, ClipboardList, Send, Bell } from "lucide-react";
+import { Inbox, Completed as CheckCircle2, CloseRound as XCircle, CheckList as ClipboardList, Send, Notifications as Bell } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface ApprovalRow { id: string; subjectType: string; subjectId: string; createdAt: string; dueAt: string | null; overdue: boolean }
@@ -66,10 +67,10 @@ export default function MyWorkPage() {
             <p className="text-sm text-gray-500">Everything waiting on you, across every module.</p>
           </div>
         </div>
-        <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
           {workspaces.length === 0 && <option value="">No workspaces</option>}
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
       {loading ? (

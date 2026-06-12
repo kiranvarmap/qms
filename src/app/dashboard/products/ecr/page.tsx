@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, AlertCircle, GitPullRequestArrow } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, CloseSmall as X, Alert as AlertCircle, Workflow as GitPullRequestArrow } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Ecr { id: string; number: string; title: string; priority: string; status: string; description: string | null; }
@@ -72,10 +73,10 @@ export default function EcrPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -134,12 +135,12 @@ export default function EcrPage() {
               </label>
               <label className="block">
                 <span className="text-xs text-gray-500">Priority</span>
-                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="low">Low</option>
                   <option value="normal">Normal</option>
                   <option value="high">High</option>
                   <option value="urgent">Urgent</option>
-                </select>
+                </NativeSelect>
               </label>
               <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={form.submit} onChange={(e) => setForm({ ...form, submit: e.target.checked })} /> Submit for review immediately</label>
             </div>

@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Package, X, AlertCircle, GitPullRequestArrow } from "lucide-react";
+import { Add as Plus, Item as Package, CloseSmall as X, Alert as AlertCircle, Workflow as GitPullRequestArrow } from "@vibe/icons";
 import ImportExport from "@/components/ImportExport";
 
 interface Workspace { id: string; name: string }
@@ -91,10 +92,10 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -148,19 +149,19 @@ export default function ProductsPage() {
               <div className="grid grid-cols-3 gap-3">
                 <label className="block">
                   <span className="text-xs text-gray-500">Type</span>
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="good">Good</option>
                     <option value="service">Service</option>
-                  </select>
+                  </NativeSelect>
                 </label>
                 <Field label="Unit" value={form.unit} onChange={(v) => setForm({ ...form, unit: v })} />
                 <label className="block">
                   <span className="text-xs text-gray-500">Lifecycle</span>
-                  <select value={form.lifecycleStatus} onChange={(e) => setForm({ ...form, lifecycleStatus: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.lifecycleStatus} onChange={(e) => setForm({ ...form, lifecycleStatus: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="draft">Draft</option>
                     <option value="active">Active</option>
                     <option value="obsolete">Obsolete</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-3">

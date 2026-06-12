@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogOut, FileText, Receipt } from "lucide-react";
+import { LogOut, Doc as FileText, Doc as Receipt } from "@vibe/icons";
 
 interface Est { id: string; docNumber: string; status: string; totalMinor: number; currency: string; validUntil: string | null }
 interface Inv { id: string; docNumber: string; status: string; totalMinor: number; amountPaidMinor: number; currency: string; dueDate: string | null }

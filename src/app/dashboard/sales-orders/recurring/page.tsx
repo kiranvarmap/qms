@@ -1,14 +1,16 @@
 "use client";
 
+import { NativeSelect, useToast } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Repeat, Plus, X, Play } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Rotate as Repeat, Add as Plus, CloseSmall as X, Play } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Customer { id: string; name: string }
 interface RO { id: string; name: string; cadence: string; customerId: string; isActive: boolean; nextRunDate: string | null; }
 
 export default function RecurringOrdersPage() {
+  const { toast } = useToast();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -45,7 +47,7 @@ export default function RecurringOrdersPage() {
     await fetch("/api/recurring-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId, customerId: form.customerId, name: form.name.trim(), cadence: form.cadence, lines: [] }) });
     setSaving(false); setShow(false); setForm({ customerId: "", name: "", cadence: "monthly" }); load();
   };
-  const generate = async (id: string) => { const res = await fetch(`/api/recurring-orders/${id}/generate`, { method: "POST" }); const data = await res.json().catch(() => ({})); if (res.ok && data.salesOrderId) alert("Draft sales order generated."); load(); };
+  const generate = async (id: string) => { const res = await fetch(`/api/recurring-orders/${id}/generate`, { method: "POST" }); const data = await res.json().catch(() => ({})); if (res.ok && data.salesOrderId) toast("Draft sales order generated.", "warning"); load(); };
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -55,9 +57,9 @@ export default function RecurringOrdersPage() {
         <button onClick={() => setShow(true)} disabled={!workspaceId} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Recurring</button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -84,8 +86,8 @@ export default function RecurringOrdersPage() {
             <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-semibold text-gray-900">New Recurring Order</h2><button onClick={() => setShow(false)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Name</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
-              <label className="block"><span className="text-xs text-gray-500">Customer</span><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-              <label className="block"><span className="text-xs text-gray-500">Cadence</span><select value={form.cadence} onChange={(e) => setForm({ ...form, cadence: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option></select></label>
+              <label className="block"><span className="text-xs text-gray-500">Customer</span><NativeSelect value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect></label>
+              <label className="block"><span className="text-xs text-gray-500">Cadence</span><NativeSelect value={form.cadence} onChange={(e) => setForm({ ...form, cadence: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option></NativeSelect></label>
               <p className="text-xs text-gray-500">Template lines can be added on the generated draft order.</p>
             </div>
             <div className="flex justify-end gap-2 mt-5"><button onClick={() => setShow(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button><button onClick={create} disabled={saving} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md">{saving ? "Saving…" : "Create"}</button></div>

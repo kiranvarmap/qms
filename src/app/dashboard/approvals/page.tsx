@@ -1,7 +1,8 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
-import { CheckCircle2, XCircle, Inbox } from "lucide-react";
+import { Completed as CheckCircle2, CloseRound as XCircle, Inbox } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface ApprovalRequest {
@@ -67,14 +68,14 @@ export default function ApprovalsPage() {
         <h1 className="text-xl font-semibold text-gray-900">My Approvals</h1>
       </div>
 
-      <select
-        value={workspaceId}
-        onChange={(e) => setWorkspaceId(e.target.value)}
+      <NativeSelect
+ value={workspaceId}
+ onChange={(e) => setWorkspaceId(e.target.value)}
         className="mb-4 bg-white border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900"
       >
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="space-y-2">
         {loading ? (

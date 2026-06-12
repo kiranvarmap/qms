@@ -1,38 +1,12 @@
 "use client";
 
+import { NativeSelect, DateInput, useConfirm } from "@/components/ui";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import {
-  ChevronLeft,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  MinusCircle,
-  Flag,
-  MessageSquarePlus,
-  ChevronRight,
-  Send,
-  AlertTriangle,
-  ClipboardList,
-  Plus,
-  X,
-  Check,
-  Star,
-  StickyNote,
-  Repeat,
-  ShieldCheck,
-  Trash2,
-  PenLine,
-  Camera,
-  Download,
-  Settings2,
-  GripVertical,
-  FileText,
-  Pencil,
-  ChevronDown,
-} from "lucide-react";
+import { NavigationChevronLeft as ChevronLeft, Completed as CheckCircle2, CloseRound as XCircle, Remove as MinusCircle, Status as Flag, AddUpdate as MessageSquarePlus, NavigationChevronRight as ChevronRight, Send, Warning as AlertTriangle, CheckList as ClipboardList, Add as Plus, CloseSmall as X, Check, Favorite as Star, Note as StickyNote, Rotate as Repeat, Security as ShieldCheck, Delete as Trash2, Signature as PenLine, Image as Camera, Download, Settings as Settings2, Drag as GripVertical, Doc as FileText, Edit as Pencil, NavigationChevronDown as ChevronDown } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import type { Inspection, TemplateSection, TemplateQuestion, InspectionResponse, InspectionAction, InspectionSignature, TableColumnDef, QuestionType, PdfTemplate } from "@/lib/types";
 import { shouldShowQuestion, shouldAutoFlag } from "@/lib/conditional-logic";
 
@@ -50,6 +24,7 @@ function responseKey(questionId: string, repeatIndex: number) {
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
+  const confirmAction = useConfirm();
   const [inspection, setInspection] = useState<FullInspection | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
@@ -255,9 +230,9 @@ export default function InspectionPage() {
     if (unansweredRequired.length > 0) {
       const list = unansweredRequired.slice(0, 5).map((t) => `• ${t}`).join("\n");
       const more = unansweredRequired.length > 5 ? `\n…and ${unansweredRequired.length - 5} more` : "";
-      if (!confirm(`${unansweredRequired.length} required question(s) are unanswered:\n\n${list}${more}\n\nSubmit anyway?`)) return;
+      if (!(await confirmAction(`${unansweredRequired.length} required question(s) are unanswered:\n\n${list}${more}\n\nSubmit anyway?`))) return;
     } else {
-      if (!confirm("Submit and complete this inspection? This cannot be undone.")) return;
+      if (!(await confirmAction("Submit and complete this inspection? This cannot be undone."))) return;
     }
 
     setSubmitting(true);
@@ -941,12 +916,11 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
 
   if (q.type === "date") {
     return (
-      <input
-        type="date"
-        value={localText}
-        onChange={(e) => save(e.target.value)}
-        className="text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      <DateInput
+ value={localText}
+ onChange={(e) => save(e.target.value)}
+ 
+ />
     );
   }
 
@@ -973,14 +947,14 @@ function ResponseWidget({ question: q, sectionId, repeatIndex = 0, response, onS
   if (q.type === "dropdown") {
     const opts = q.options ?? [];
     return (
-      <select
-        value={val}
-        onChange={(e) => save(e.target.value)}
+      <NativeSelect
+ value={val}
+ onChange={(e) => save(e.target.value)}
         className="text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
       >
         <option value="">Select…</option>
         {opts.map((o) => <option key={o.id} value={o.text}>{o.text}</option>)}
-      </select>
+      </NativeSelect>
     );
   }
 

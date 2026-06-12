@@ -5,62 +5,8 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useCallback } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  LogOut,
-  Shield,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  ClipboardList,
-  Clock,
-  UserCog,
-  Hammer,
-  FolderKanban,
-  BarChart3,
-  FileSignature,
-  Settings2,
-  GitBranch,
-  CalendarRange,
-  Gauge,
-  AlertTriangle,
-  Building2,
-  Inbox,
-  ListTodo,
-  Zap,
-  ShoppingCart,
-  Boxes,
-  FileText,
-  Receipt,
-  Users2,
-  Wallet,
-  CalendarDays,
-  GraduationCap,
-  Briefcase,
-  Truck,
-  Warehouse,
-  Package,
-  Factory,
-  Wrench,
-  ShieldAlert,
-  Globe,
-  MapPin,
-  ClipboardCheck,
-  DollarSign,
-  Tags,
-  Repeat,
-  Undo2,
-  FileMinus,
-  ReceiptText,
-  BookOpen,
-  BookText,
-  ScrollText,
-  Banknote,
-  CreditCard,
-  ShieldCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { Dashboard as LayoutDashboard, Group as Users, LogOut, Locked as Shield, NavigationChevronDown as ChevronDown, NavigationChevronRight as ChevronRight, Add as Plus, CheckList as ClipboardList, Time as Clock, Person as UserCog, Work as Hammer, Folder as FolderKanban, Chart as BarChart3, Signature as FileSignature, Settings as Settings2, Workflow as GitBranch, Timeline as CalendarRange, Dashboard as Gauge, Warning as AlertTriangle, Location as Building2, Inbox, CheckList as ListTodo, Bolt as Zap, Item as ShoppingCart, Item as Boxes, Doc as FileText, Doc as Receipt, Group as Users2, CreditCard as Wallet, Event as CalendarDays, Academy as GraduationCap, Work as Briefcase, MoveArrowRight as Truck, Work as Warehouse, Item as Package, Work as Factory, Settings as Wrench, Warning as ShieldAlert, Globe, Location as MapPin, CheckList as ClipboardCheck, CreditCard as DollarSign, Tags, Rotate as Repeat, Undo as Undo2, File as FileMinus, Doc as ReceiptText, LearnMore as BookOpen, Note as BookText, Doc as ScrollText, CreditCard as Banknote, CreditCard, Security as ShieldCheck, Idea as FlaskConical } from "@vibe/icons";
+type LucideIcon = React.ComponentType<{ className?: string; size?: string | number }>;
 import { NotificationBell } from "./notification-bell";
 
 function handleSignOut() {
@@ -167,6 +113,7 @@ export function Sidebar({ user }: SidebarProps) {
     ...(mgr ? [{
       id: "production", label: "Production", icon: Factory, items: [
         { name: "Work Orders", href: "/dashboard/production", icon: Factory },
+        { name: "Planner (What-if)", href: "/dashboard/production-planning/planner", icon: FlaskConical },
         { name: "Process Templates", href: "/dashboard/production-planning/templates", icon: GitBranch },
         { name: "Work Centers", href: "/dashboard/production-planning/work-centers", icon: Factory },
         { name: "Skills", href: "/dashboard/production-planning/skills", icon: Wrench },
@@ -237,11 +184,11 @@ export function Sidebar({ user }: SidebarProps) {
   const groupOpen = (g: NavGroup) => openGroups[g.id] ?? g.items.some((i) => isActive(i.href));
 
   return (
-    <aside className="w-[240px] flex-shrink-0 bg-gray-950 text-gray-300 flex flex-col h-screen sticky top-0">
+    <aside className="w-[240px] flex-shrink-0 bg-gray-50 border-r border-gray-200 text-text-secondary flex flex-col h-screen sticky top-0">
       {/* Logo */}
-      <div className="h-14 flex items-center gap-2.5 px-5 border-b border-white/10 flex-shrink-0">
-        <Shield className="h-6 w-6 text-blue-400" />
-        <span className="font-semibold text-white text-base tracking-tight">QMS</span>
+      <div className="h-14 flex items-center gap-2.5 px-5 border-b border-gray-200 flex-shrink-0">
+        <Shield className="h-6 w-6 text-primary" />
+        <span className="font-semibold text-text-primary text-base tracking-tight">QMS</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
@@ -252,7 +199,7 @@ export function Sidebar({ user }: SidebarProps) {
             href={item.href}
             className={cn(
               "flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-colors",
-              isActive(item.href) ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+              isActive(item.href) ? "bg-blue-100 text-text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-text-primary"
             )}
           >
             <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -271,7 +218,7 @@ export function Sidebar({ user }: SidebarProps) {
                   onClick={() => setOpenGroups((p) => ({ ...p, [g.id]: !open }))}
                   className={cn(
                     "w-full flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-colors",
-                    hasActive && !open ? "text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    hasActive && !open ? "text-text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-text-primary"
                   )}
                 >
                   <g.icon className="h-4 w-4 flex-shrink-0" />
@@ -279,14 +226,14 @@ export function Sidebar({ user }: SidebarProps) {
                   {open ? <ChevronDown className="h-3.5 w-3.5 text-gray-500" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-500" />}
                 </button>
                 {open && (
-                  <div className="ml-3.5 pl-2 border-l border-white/10 mt-0.5 space-y-0.5">
+                  <div className="ml-3.5 pl-2 border-l border-gray-200 mt-0.5 space-y-0.5">
                     {g.items.map((item) => (
                       <Link
                         key={item.name}
                         href={item.href}
                         className={cn(
                           "flex items-center gap-2.5 px-2.5 py-[6px] text-[13px] rounded-md transition-colors",
-                          isActive(item.href) ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                          isActive(item.href) ? "bg-blue-100 text-text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-text-primary"
                         )}
                       >
                         <item.icon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -304,7 +251,7 @@ export function Sidebar({ user }: SidebarProps) {
         <div className="pt-5">
           <div className="flex items-center justify-between px-2.5 mb-1">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Workspaces</span>
-            <Link href="/dashboard/workspaces" className="p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors" title="All workspaces">
+            <Link href="/dashboard/workspaces" className="p-0.5 rounded hover:bg-gray-100 text-text-secondary hover:text-text-primary transition-colors" title="All workspaces">
               <Plus className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -316,7 +263,7 @@ export function Sidebar({ user }: SidebarProps) {
                   onClick={() => toggleWorkspace(ws.id)}
                   className={cn(
                     "w-full flex items-center gap-2 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-colors",
-                    pathname.includes(ws.id) ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    pathname.includes(ws.id) ? "bg-blue-100 text-text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-text-primary"
                   )}
                 >
                   {expandedWs[ws.id] ? <ChevronDown className="h-3 w-3 flex-shrink-0 text-gray-500" /> : <ChevronRight className="h-3 w-3 flex-shrink-0 text-gray-500" />}
@@ -334,7 +281,7 @@ export function Sidebar({ user }: SidebarProps) {
                         href={`/dashboard/boards/${board.id}`}
                         className={cn(
                           "flex items-center gap-2 px-2.5 py-[6px] text-[13px] rounded-md transition-colors",
-                          pathname.includes(board.id) ? "bg-white/10 text-white" : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
+                          pathname.includes(board.id) ? "bg-blue-100 text-text-primary" : "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
                         )}
                       >
                         <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: board.color }} />
@@ -345,7 +292,7 @@ export function Sidebar({ user }: SidebarProps) {
                       href={`/dashboard/workspaces/${ws.id}/settings`}
                       className={cn(
                         "flex items-center gap-2 px-2.5 py-[6px] text-[13px] rounded-md transition-colors",
-                        pathname === `/dashboard/workspaces/${ws.id}/settings` ? "bg-white/10 text-white" : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
+                        pathname === `/dashboard/workspaces/${ws.id}/settings` ? "bg-blue-100 text-text-primary" : "text-text-secondary hover:bg-gray-100 hover:text-text-primary"
                       )}
                     >
                       <Settings2 className="h-3 w-3 flex-shrink-0" />
@@ -360,13 +307,13 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* Footer / User */}
-      <div className="border-t border-white/10 px-3 py-3 flex-shrink-0">
+      <div className="border-t border-gray-200 px-3 py-3 flex-shrink-0">
         <NotificationBell />
         <Link
           href="/dashboard/profile"
           className={cn(
             "flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md transition-colors",
-            pathname === "/dashboard/profile" ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+            pathname === "/dashboard/profile" ? "bg-blue-100 text-text-primary" : "text-gray-600 hover:bg-gray-100 hover:text-text-primary"
           )}
         >
           <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
@@ -376,7 +323,7 @@ export function Sidebar({ user }: SidebarProps) {
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md text-gray-500 hover:bg-white/5 hover:text-gray-300 transition-colors w-full mt-0.5"
+          className="flex items-center gap-2.5 px-2.5 py-[7px] text-[13px] font-medium rounded-md text-text-secondary hover:bg-gray-100 hover:text-text-primary transition-colors w-full mt-0.5"
         >
           <LogOut className="h-4 w-4" />
           Sign out

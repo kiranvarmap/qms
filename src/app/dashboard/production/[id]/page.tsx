@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Factory, Play, CheckCircle2, Gauge } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Work as Factory, Play, Completed as CheckCircle2, Dashboard as Gauge } from "@vibe/icons";
 
 interface WorkOrder { id: string; number: string; productId: string; status: string; qtyPlanned: number; qtyProduced: number; qtyScrapped: number; dueDate: string | null; }
 interface Material { id: string; description: string | null; qtyRequired: number; qtyIssued: number; unit: string; }

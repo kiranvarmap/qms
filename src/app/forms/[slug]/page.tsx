@@ -1,8 +1,10 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Loader2, CheckCircle2, AlertCircle, ChevronRight } from "lucide-react";
+import { Completed as CheckCircle2, Alert as AlertCircle, NavigationChevronRight as ChevronRight } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import { cn } from "@/lib/utils";
 
 interface FormField {
@@ -101,18 +103,18 @@ export default function PublicFormPage() {
       const selectedLabel = labels.find(l => l.text === values[field.id]);
       return (
         <div className="relative">
-          <select
-            className={cn(baseCls, "appearance-none pr-8 cursor-pointer",
-              selectedLabel?.color ? "font-semibold" : "")}
-            style={selectedLabel?.color ? { backgroundColor: selectedLabel.color + "18", borderColor: selectedLabel.color + "66", color: selectedLabel.color } : {}}
-            value={values[field.id] ?? ""}
-            onChange={e => setVal(field.id, e.target.value)}
+          <NativeSelect
+ className={cn(baseCls, "appearance-none pr-8 cursor-pointer",
+ selectedLabel?.color ? "font-semibold" : "")}
+ style={selectedLabel?.color ? { backgroundColor: selectedLabel.color + "18", borderColor: selectedLabel.color + "66", color: selectedLabel.color } : {}}
+ value={values[field.id] ?? ""}
+ onChange={e => setVal(field.id, e.target.value)}
           >
             <option value="">Select an option…</option>
             {labels.map(l => (
               <option key={l.id} value={l.text} style={{ color: l.color ?? "inherit" }}>{l.text}</option>
             ))}
-          </select>
+          </NativeSelect>
           <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
             <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
@@ -154,12 +156,11 @@ export default function PublicFormPage() {
     // Date
     if (colType === "date") {
       return (
-        <input
-          type="date"
-          className={baseCls}
-          value={values[field.id] ?? ""}
-          onChange={e => setVal(field.id, e.target.value)}
-        />
+        <DateInput
+ 
+ value={values[field.id] ?? ""}
+ onChange={e => setVal(field.id, e.target.value)}
+ />
       );
     }
 

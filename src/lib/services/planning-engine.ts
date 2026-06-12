@@ -194,7 +194,46 @@ export async function runPlanning(
     .where(and(eq(workOrders.id, workOrderId), eq(workOrders.workspaceId, workspaceId)))
     .limit(1);
   if (!wo) return null;
+  return planOrder(workspaceId, wo, overrides);
+}
 
+export interface DraftOrderInput {
+  productId: string;
+  qtyPlanned?: number;
+  processTemplateId?: string | null;
+  bomId?: string | null;
+  dueDate?: string | null;
+}
+
+/**
+ * What-if for a work order that does NOT exist yet: plan a hypothetical order
+ * against the live load (existing jobs' work-center bookings + reservations
+ * all count, since the draft id matches nothing). Read-only.
+ */
+export async function runPlanningForDraft(
+  workspaceId: string,
+  draft: DraftOrderInput,
+  overrides: PlanningOverrides = {}
+): Promise<PlanningResult | null> {
+  const wo = {
+    // Random UUID: matches no existing rows, so the draft's "self-exclusion"
+    // filters exclude nothing and ALL live load is counted against it.
+    id: crypto.randomUUID(),
+    workspaceId,
+    productId: draft.productId,
+    qtyPlanned: draft.qtyPlanned ?? 1,
+    processTemplateId: draft.processTemplateId ?? null,
+    bomId: draft.bomId ?? null,
+    dueDate: draft.dueDate ? new Date(draft.dueDate) : null,
+  } as typeof workOrders.$inferSelect;
+  return planOrder(workspaceId, wo, overrides);
+}
+
+async function planOrder(
+  workspaceId: string,
+  wo: typeof workOrders.$inferSelect,
+  overrides: PlanningOverrides = {}
+): Promise<PlanningResult | null> {
   const hoursPerDay = overrides.hoursPerDay ?? 8;
   const jobQty = wo.qtyPlanned || 1;
   const conflicts: PlanningConflictResult[] = [];
@@ -315,7 +354,10 @@ export async function runPlanning(
           severity: "blocker",
           stageId: st.id,
           description: `${st.name}: needs ${reqHc}× ${skillNames[r.skillId] ?? "skill"}, ${available} available.`,
-          suggestedAction: "Add or cross-train manpower, or schedule overtime.",
+          suggestedAction:
+            available === 0
+              ? "No employee holds this skill yet — assign it from Employees → (person) → Skills, or cross-train manpower."
+              : "Add or cross-train manpower, or schedule overtime.",
         });
       }
     }

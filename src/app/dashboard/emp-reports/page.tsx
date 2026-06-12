@@ -1,11 +1,9 @@
 "use client";
 
+import { DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  BarChart3, Users, FolderKanban, Hammer, ListTodo,
-  Clock, TrendingUp, UserCheck, Activity, Download, RefreshCw
-} from "lucide-react";
+import { Chart as BarChart3, Group as Users, Folder as FolderKanban, Work as Hammer, CheckList as ListTodo, Time as Clock, Graph as TrendingUp, PersonRound as UserCheck, Activity, Download, Retry as RefreshCw } from "@vibe/icons";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -177,26 +175,24 @@ export default function EmpReportsPage() {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Employee Reports</h1>
+            <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Employee Reports</h1>
             <p className="text-gray-600 text-sm">Time tracking analytics across all dimensions</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {/* Date range */}
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="bg-transparent text-gray-900 text-sm focus:outline-none"
-            />
+            <DateInput
+ value={from}
+ onChange={(e) => setFrom(e.target.value)}
+ 
+ />
             <span className="text-gray-500 text-sm">→</span>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="bg-transparent text-gray-900 text-sm focus:outline-none"
-            />
+            <DateInput
+ value={to}
+ onChange={(e) => setTo(e.target.value)}
+ 
+ />
           </div>
           <button
             onClick={() => fetchReport(tab)}

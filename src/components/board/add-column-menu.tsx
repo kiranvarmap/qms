@@ -1,19 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import {
-  Plus,
-  Type,
-  Hash,
-  CircleDot,
-  Calendar,
-  User,
-  ChevronDown,
-  CheckSquare,
-  Link,
-  Star,
-  AlertTriangle,
-} from "lucide-react";
+import { Add as Plus, Text as Type, Numbers as Hash, Status as CircleDot, Calendar, Person as User, NavigationChevronDown as ChevronDown, Checkbox as CheckSquare, Link, Favorite as Star, Warning as AlertTriangle } from "@vibe/icons";
 
 const COLUMN_TYPES = [
   { type: "text", label: "Text", icon: Type, description: "Single line text" },

@@ -88,12 +88,45 @@ export async function setWorkCenterShifts(workCenterId: string, shifts: Array<Om
 // ── Skills ──────────────────────────────────────────────────────────────
 
 export function listSkills(workspaceId: string) {
-  return db.select().from(productionSkills).where(eq(productionSkills.workspaceId, workspaceId)).orderBy(asc(productionSkills.name));
+  // holdersCount = employees currently holding the skill (unexpired) — the
+  // same population the planning engine counts for stage feasibility, so the
+  // Skills page shows whether employee linking actually persisted.
+  return db
+    .select({
+      id: productionSkills.id,
+      workspaceId: productionSkills.workspaceId,
+      name: productionSkills.name,
+      description: productionSkills.description,
+      createdAt: productionSkills.createdAt,
+      holdersCount: sql<number>`count(${employeeSkills.id}) filter (where ${employeeSkills.certifiedUntil} is null or ${employeeSkills.certifiedUntil} > now())`,
+    })
+    .from(productionSkills)
+    .leftJoin(employeeSkills, eq(employeeSkills.skillId, productionSkills.id))
+    .where(eq(productionSkills.workspaceId, workspaceId))
+    .groupBy(productionSkills.id)
+    .orderBy(asc(productionSkills.name));
 }
 
 export async function createSkill(workspaceId: string, input: { name: string; description?: string }) {
   const [row] = await db.insert(productionSkills).values({ workspaceId, name: input.name, description: input.description ?? null }).returning();
   return row;
+}
+
+export async function updateSkill(workspaceId: string, id: string, patch: { name?: string; description?: string | null }) {
+  const [row] = await db
+    .update(productionSkills)
+    .set(patch)
+    .where(and(eq(productionSkills.id, id), eq(productionSkills.workspaceId, workspaceId)))
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteSkill(workspaceId: string, id: string) {
+  const [row] = await db
+    .delete(productionSkills)
+    .where(and(eq(productionSkills.id, id), eq(productionSkills.workspaceId, workspaceId)))
+    .returning();
+  return row ?? null;
 }
 
 export async function listEmployeeSkills(workspaceId: string, employeeId: string) {

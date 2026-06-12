@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Plus, X } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Location as MapPin, Add as Plus, CloseSmall as X } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Warehouse { id: string; name: string }
@@ -56,9 +57,9 @@ export default function LocationsPage() {
         <button onClick={() => setShowCreate(true)} disabled={!workspaceId} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Location</button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -86,14 +87,14 @@ export default function LocationsPage() {
             <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-semibold text-gray-900">New Location</h2><button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Warehouse</span>
-                <select value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
+                <NativeSelect value={form.warehouseId} onChange={(e) => setForm({ ...form, warehouseId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">Select…</option>{warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</NativeSelect>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-xs text-gray-500">Code</span><input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
                 <label className="block"><span className="text-xs text-gray-500">Kind</span>
-                  <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                  <NativeSelect value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                     <option value="zone">Zone</option><option value="aisle">Aisle</option><option value="rack">Rack</option><option value="shelf">Shelf</option><option value="bin">Bin</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               </div>
               <label className="block"><span className="text-xs text-gray-500">Name</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>

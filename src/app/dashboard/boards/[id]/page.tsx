@@ -1,4 +1,5 @@
 "use client";
+import { useConfirm, useToast } from "@/components/ui";
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,24 +8,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  Loader2,
-  ArrowLeft,
-  Plus,
-  Search,
-  Filter,
-  X,
-  Trash2,
-  Settings2,
-  Download,
-  ArrowUpDown,
-  Table2,
-  KanbanSquare,
-  GanttChartSquare,
-  Calendar,
-  Bot,
-  FormInput,
-} from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Add as Plus, Search, Filter, CloseSmall as X, Delete as Trash2, Settings as Settings2, Download, Sort as ArrowUpDown, Table as Table2, Board as KanbanSquare, Gantt as GanttChartSquare, Calendar, Robot as Bot, Form as FormInput } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 import type { BoardData, ColumnDef, ItemDef, GroupDef, CellValue, LabelConfig } from "@/lib/types";
 import { BoardGroup } from "@/components/board/board-group";
 // import { AddColumnMenu } from "@/components/board/add-column-menu";
@@ -41,6 +26,8 @@ export default function BoardPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const boardId = params.id as string;
+  const confirmAction = useConfirm();
+  const { toast } = useToast();
 
   const [board, setBoard] = useState<BoardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,10 +104,10 @@ export default function BoardPage() {
 
   const deleteGroup = async (groupId: string) => {
     if (board && board.groups.length <= 1) {
-      alert("Cannot delete the last group.");
+      toast("Cannot delete the last group.", "warning");
       return;
     }
-    if (!confirm("Delete this group and all its items?")) return;
+    if (!(await confirmAction("Delete this group and all its items?"))) return;
     await fetch(`/api/groups/${groupId}`, { method: "DELETE" });
     setBoard((prev) => {
       if (!prev) return prev;
@@ -240,7 +227,7 @@ export default function BoardPage() {
   };
 
   const deleteColumn = async (columnId: string) => {
-    if (!confirm("Delete this column and all its data?")) return;
+    if (!(await confirmAction("Delete this column and all its data?"))) return;
     await fetch(`/api/columns/${columnId}`, { method: "DELETE" });
     setBoard((prev) => {
       if (!prev) return prev;
@@ -327,7 +314,7 @@ export default function BoardPage() {
 
   // ── Bulk operations ────────────────────────────────────────────
   const bulkDelete = async () => {
-    if (!confirm(`Delete ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}?`)) return;
+    if (!(await confirmAction(`Delete ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}?`))) return;
     const ids = Array.from(selectedItems);
     await Promise.all(ids.map((id) => fetch(`/api/items/${id}`, { method: 'DELETE' })));
     setBoard((prev) => {

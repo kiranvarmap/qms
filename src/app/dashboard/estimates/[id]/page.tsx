@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send, CheckCircle2, XCircle, RotateCcw, AlertCircle, ArrowRightLeft, Download } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Send, Completed as CheckCircle2, CloseRound as XCircle, Undo as RotateCcw, Alert as AlertCircle, Switcher as ArrowRightLeft, Download } from "@vibe/icons";
 import { DocLinesEditor } from "@/components/shared/doc-lines-editor";
 
 interface Line { id: string; description: string; quantity: number; unitPriceMinor: number; amountMinor: number; lineTaxMinor: number }

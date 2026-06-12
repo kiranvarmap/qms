@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, GitBranch, X, AlertCircle } from "lucide-react";
+import { Add as Plus, Workflow as GitBranch, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Product { id: string; name: string; sku: string | null }
@@ -62,10 +63,10 @@ export default function TemplatesPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <p className="mb-4 text-sm text-gray-500">Define how each product is made — the ordered stages, their work centers, durations, materials, and manpower. The active version is what the planning engine schedules.</p>
 
@@ -97,9 +98,9 @@ export default function TemplatesPage() {
             {error && <div className="mb-3 flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
             <div className="space-y-3">
               <label className="block"><span className="text-xs text-gray-500">Product *</span>
-                <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Select…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.sku ? ` (${p.sku})` : ""}</option>)}
-                </select></label>
+                </NativeSelect></label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-xs text-gray-500">Version</span>
                   <input value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>

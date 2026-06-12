@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, useToast } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, ReceiptText, Plus, X } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Doc as ReceiptText, Add as Plus, CloseSmall as X } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Customer { id: string; name: string }
@@ -12,6 +13,7 @@ interface CN { id: string; docNumber: string; status: string; amountMinor: numbe
 const statusBadge: Record<string, string> = { draft: "bg-gray-100 text-gray-700", issued: "bg-blue-100 text-blue-700", applied: "bg-green-100 text-green-700" };
 
 export default function CreditNotesPage() {
+  const { toast } = useToast();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [workspaceId, setWorkspaceId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -48,7 +50,7 @@ export default function CreditNotesPage() {
     await fetch("/api/credit-notes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workspaceId, customerId: form.customerId || undefined, invoiceId: form.invoiceId || undefined, amount: Number(form.amount), reason: form.reason.trim() || undefined }) });
     setSaving(false); setShow(false); setForm({ customerId: "", invoiceId: "", amount: "", reason: "" }); load();
   };
-  const apply = async (id: string) => { const res = await fetch(`/api/credit-notes/${id}/apply`, { method: "POST" }); if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || "Failed"); } load(); };
+  const apply = async (id: string) => { const res = await fetch(`/api/credit-notes/${id}/apply`, { method: "POST" }); if (!res.ok) { const e = await res.json().catch(() => ({})); toast(e.error || "Failed", "warning"); } load(); };
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -58,9 +60,9 @@ export default function CreditNotesPage() {
         <button onClick={() => setShow(true)} disabled={!workspaceId} className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-md"><Plus className="h-4 w-4" /> New Credit Note</button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -86,8 +88,8 @@ export default function CreditNotesPage() {
           <div className="bg-white border border-gray-200 rounded-lg w-full max-w-md p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-semibold text-gray-900">New Credit Note</h2><button onClick={() => setShow(false)} className="text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button></div>
             <div className="space-y-3">
-              <label className="block"><span className="text-xs text-gray-500">Customer</span><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-              <label className="block"><span className="text-xs text-gray-500">Apply to invoice (optional)</span><select value={form.invoiceId} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{invoicesList.map((i) => <option key={i.id} value={i.id}>{i.docNumber}</option>)}</select></label>
+              <label className="block"><span className="text-xs text-gray-500">Customer</span><NativeSelect value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</NativeSelect></label>
+              <label className="block"><span className="text-xs text-gray-500">Apply to invoice (optional)</span><NativeSelect value={form.invoiceId} onChange={(e) => setForm({ ...form, invoiceId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"><option value="">—</option>{invoicesList.map((i) => <option key={i.id} value={i.id}>{i.docNumber}</option>)}</NativeSelect></label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-xs text-gray-500">Amount</span><input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>
                 <label className="block"><span className="text-xs text-gray-500">Reason</span><input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" /></label>

@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Webhook, Zap, Plus, Trash2, Copy, X, AlertCircle } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, API as Webhook, Bolt as Zap, Add as Plus, Delete as Trash2, Duplicate as Copy, CloseSmall as X, Alert as AlertCircle } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Sub { id: string; name: string; url: string; eventTypes: string[]; isActive: boolean; failCount: number; lastStatus: number | null; lastDeliveredAt: string | null }
@@ -124,9 +125,9 @@ export default function IntegrationsPage() {
           <h1 className="text-xl font-semibold text-gray-900">Automations & Integrations</h1>
           <p className="text-sm text-gray-500">Event recipes run inside the platform; webhooks push events to external systems.</p>
         </div>
-        <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
           {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-        </select>
+        </NativeSelect>
       </div>
 
       {error && <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-md px-3 py-2"><AlertCircle className="h-4 w-4" /> {error}</div>}
@@ -206,19 +207,19 @@ export default function IntegrationsPage() {
           </label>
           <label className="block">
             <span className="text-xs text-gray-500">Do this</span>
-            <select value={recipeForm.actionType} onChange={(e) => setRecipeForm({ ...recipeForm, actionType: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+            <NativeSelect value={recipeForm.actionType} onChange={(e) => setRecipeForm({ ...recipeForm, actionType: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
               <option value="notify_admins">Notify workspace admins</option>
               <option value="create_task">Create a board task</option>
-            </select>
+            </NativeSelect>
           </label>
           {recipeForm.actionType === "create_task" && (
             <>
               <label className="block">
                 <span className="text-xs text-gray-500">Board *</span>
-                <select value={recipeForm.boardId} onChange={(e) => setRecipeForm({ ...recipeForm, boardId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={recipeForm.boardId} onChange={(e) => setRecipeForm({ ...recipeForm, boardId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Select board…</option>
                   {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <Field label="Task title (use {event} for the event name)" value={recipeForm.titleTemplate} onChange={(v) => setRecipeForm({ ...recipeForm, titleTemplate: v })} placeholder="Follow up: {event}" />
             </>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Edit as Pencil, Add as Plus, Delete as Trash2, CloseSmall as X } from "@vibe/icons";
 
 interface LineIn {
   description: string;

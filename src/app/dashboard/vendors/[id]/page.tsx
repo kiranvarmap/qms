@@ -1,9 +1,10 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2, Plus, Trash2, Star, ShieldCheck, Send, BadgeCheck, MapPin, FileText, Landmark, BarChart3, Package, ShoppingCart, Pencil, X } from "lucide-react";
+import { MoveArrowLeft as ArrowLeft, Location as Building2, Add as Plus, Delete as Trash2, Favorite as Star, Security as ShieldCheck, Send, Completed as BadgeCheck, Location as MapPin, Doc as FileText, CreditCard as Landmark, Chart as BarChart3, Item as Package, Item as ShoppingCart, Edit as Pencil, CloseSmall as X } from "@vibe/icons";
 
 interface Vendor { id: string; name: string; code: string | null; email: string | null; phone: string | null; status: string; approvalState: string; isPreferred: boolean; }
 interface Address { id: string; kind: string; line1: string | null; city: string | null; country: string | null; }
@@ -126,10 +127,10 @@ export default function VendorDetail() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block"><span className="text-xs text-gray-500">Code</span><input value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value })} className={`mt-1 w-full ${inp}`} /></label>
                 <label className="block"><span className="text-xs text-gray-500">Status</span>
-                  <select value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className={`mt-1 w-full ${inp}`}>
+                  <NativeSelect value={edit.status} onChange={(e) => setEdit({ ...edit, status: e.target.value })} className={`mt-1 w-full ${inp}`}>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
-                  </select>
+                  </NativeSelect>
                 </label>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -170,7 +171,7 @@ function Addresses({ data, onAdd, onDel }: { data: { id: string; kind: string; l
     <Card icon={<MapPin className="h-4 w-4 text-blue-600" />} title="Addresses">
       <div className="space-y-2 mb-4">{data.map((a) => (<div key={a.id} className="flex items-center justify-between text-sm"><span className="text-gray-900"><span className="text-gray-500 capitalize">{a.kind}:</span> {[a.line1, a.city, a.country].filter(Boolean).join(", ") || "—"}</span><button onClick={() => onDel(a.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></div>))}{data.length === 0 && <p className="text-sm text-gray-500">No addresses.</p>}</div>
       <div className="flex flex-wrap gap-2">
-        <select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} className={inp}><option value="billing">Billing</option><option value="shipping">Shipping</option><option value="remit">Remit-to</option></select>
+        <NativeSelect value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })} className={inp}><option value="billing">Billing</option><option value="shipping">Shipping</option><option value="remit">Remit-to</option></NativeSelect>
         <input value={f.line1} onChange={(e) => setF({ ...f, line1: e.target.value })} placeholder="Line 1" className={`${inp} flex-1`} />
         <input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} placeholder="City" className={`${inp} w-32`} />
         <input value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} placeholder="CC" className={`${inp} w-16`} />
@@ -188,7 +189,7 @@ function Documents({ data, onAdd, onDel }: { data: { id: string; docType: string
       <div className="flex flex-wrap gap-2">
         <input value={f.docType} onChange={(e) => setF({ ...f, docType: e.target.value })} placeholder="Doc type (W-9, GST cert…)" className={`${inp} flex-1`} />
         <input value={f.number} onChange={(e) => setF({ ...f, number: e.target.value })} placeholder="Number" className={`${inp} w-32`} />
-        <input type="date" value={f.expiryDate} onChange={(e) => setF({ ...f, expiryDate: e.target.value })} className={inp} />
+        <DateInput value={f.expiryDate} onChange={(e) => setF({ ...f, expiryDate: e.target.value })} />
         <label className="flex items-center gap-1 text-sm text-gray-600"><input type="checkbox" checked={f.isMandatory} onChange={(e) => setF({ ...f, isMandatory: e.target.checked })} /> mand.</label>
         <button onClick={() => { if (!f.docType.trim()) return; onAdd({ docType: f.docType.trim(), number: f.number || undefined, expiryDate: f.expiryDate ? new Date(f.expiryDate).toISOString() : undefined, isMandatory: f.isMandatory }); setF({ docType: "", number: "", expiryDate: "", isMandatory: false }); }} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md inline-flex items-center gap-1"><Plus className="h-4 w-4" /></button>
       </div>

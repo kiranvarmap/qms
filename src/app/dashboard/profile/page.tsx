@@ -13,7 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Lock } from "lucide-react";
+import { Update as Save, Locked as Lock } from "@vibe/icons";
+import { Loader as Loader2 } from "@vibe/core";
 
 interface Profile {
   id: string;
@@ -128,7 +129,7 @@ export default function ProfilePage() {
   return (
     <div className="px-8 py-6 space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+        <h1 className="text-[24px] font-semibold tracking-tight text-gray-900 [font-family:var(--font-display)]">Profile</h1>
         <p className="mt-1 text-sm text-gray-500">
           Manage your account settings
         </p>

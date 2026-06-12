@@ -1,8 +1,9 @@
 "use client";
 
+import { NativeSelect, DateInput } from "@/components/ui";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Plus, CalendarClock, X, AlertCircle, ArrowLeft } from "lucide-react";
+import { Add as Plus, Calendar as CalendarClock, CloseSmall as X, Alert as AlertCircle, MoveArrowLeft as ArrowLeft } from "@vibe/icons";
 
 interface Workspace { id: string; name: string }
 interface Asset { id: string; name: string; code: string | null }
@@ -104,10 +105,10 @@ export default function PmSchedulesPage() {
         </button>
       </div>
 
-      <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+      <NativeSelect value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} className="mb-4 bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
         {workspaces.length === 0 && <option value="">No workspaces</option>}
         {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-      </select>
+      </NativeSelect>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
         <table className="w-full text-sm">
@@ -159,10 +160,10 @@ export default function PmSchedulesPage() {
             <div className="space-y-3">
               <label className="block">
                 <span className="text-xs text-gray-500">Asset *</span>
-                <select value={form.assetId} onChange={(e) => setForm({ ...form, assetId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+                <NativeSelect value={form.assetId} onChange={(e) => setForm({ ...form, assetId: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
                   <option value="">Select asset…</option>
                   {assets.map((a) => <option key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ""}</option>)}
-                </select>
+                </NativeSelect>
               </label>
               <label className="block">
                 <span className="text-xs text-gray-500">Schedule name *</span>
@@ -175,7 +176,7 @@ export default function PmSchedulesPage() {
                 </label>
                 <label className="block">
                   <span className="text-xs text-gray-500">First due *</span>
-                  <input type="date" value={form.nextDue} onChange={(e) => setForm({ ...form, nextDue: e.target.value })} className="mt-1 w-full bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900" />
+                  <DateInput value={form.nextDue} onChange={(e) => setForm({ ...form, nextDue: e.target.value })} className="mt-1 w-full" />
                 </label>
               </div>
               <label className="block">
